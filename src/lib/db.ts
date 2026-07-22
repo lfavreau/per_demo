@@ -3,7 +3,26 @@ import { PrismaClient } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const getDb = (): PrismaClient => {
-  // 1. Cloudflare Workers D1 Context
+  // 1. Turso Database (LibSQL) Support
+  const tursoUrl = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
+  const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (tursoUrl && (tursoUrl.startsWith("libsql:") || tursoUrl.startsWith("https:"))) {
+    try {
+      const { createClient } = require("@libsql/client");
+      const { PrismaLibSQL } = require("@prisma/adapter-libsql");
+      const libsql = createClient({
+        url: tursoUrl,
+        authToken: tursoAuthToken,
+      });
+      const adapter = new PrismaLibSQL(libsql);
+      return new PrismaClient({ adapter });
+    } catch (e) {
+      console.error("Error initializing Turso adapter:", e);
+    }
+  }
+
+  // 2. Cloudflare Workers D1 Context
   try {
     const { getCloudflareContext } = require("@opennextjs/cloudflare");
     const ctx = getCloudflareContext();
@@ -14,12 +33,12 @@ export const getDb = (): PrismaClient => {
     }
   } catch (e) {}
 
-  // 2. Vercel / Cloud Database Context (Turso, Neon, Postgres, Accelerate, etc.)
+  // 3. Other Cloud Database Context (Postgres, Neon, Accelerate)
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("file:")) {
     return new PrismaClient();
   }
 
-  // 3. Local Node.js SQLite fallback (dev.db)
+  // 4. Local Node.js SQLite fallback (dev.db)
   try {
     const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
     const dbUrl = process.env.DATABASE_URL || "file:dev.db";
