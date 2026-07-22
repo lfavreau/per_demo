@@ -18,6 +18,9 @@
 /.open-next/
 /out/
 
+# seed dumps
+seed*.sql
+
 # production
 /build
 
