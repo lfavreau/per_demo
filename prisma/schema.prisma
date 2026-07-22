@@ -1,0 +1,471 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  phone              String?
+  role               String           @default("PER") // "ADMIN", "COORDINATOR", "PER"
+  regionId           String?          // Optional scope
+  active             Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  profile            PERProfile?
+  assignedTasks      Task[]           @relation("AssignedTo")
+  createdTasks       Task[]           @relation("AssignedBy")
+  createdInstruments Instrument[]
+  auditLogs          AuditLog[]
+  documentRecords    DocumentRecord[]
+  notifications      Notification[]
+}
+
+model PERProfile {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  regionId            String
+  coordinatorId       String?
+  generation          String           // "PRIMERA", "SEGUNDA", "TERCERA", "OTRA"
+  certificationStatus String           @default("PENDIENTE") // "PENDIENTE", "HABILITADO", "NO_HABILITADO"
+  certificationNote   String?
+  certifiedByUserId   String?
+  certifiedAt         DateTime?
+  ethicsCodeStatus    String           @default("PENDIENTE") // "PENDIENTE", "FIRMADO", "VALIDADO"
+  gender              String?
+  inductionCompleted  Boolean          @default(false)
+  driveFolderId       String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  cases               PACase[]
+  trainingRecords     TrainingRecord[]
+}
+
+model PACandidate {
+  id                             String    @id @default(cuid())
+  regionId                       String
+  sourceCenter                   String?
+  status                         String    // "DERIVADA", "CONTACTADA", "PREINSCRITA", "ENTREVISTADA", "ADMISIBLE", "NO_ADMISIBLE", "SELECCIONADA", "EN_ESPERA", "DESCARTADA"
+  preRegistrationFormResponseRef String?
+  interviewDriveFileId           String?
+  notes                          String?
+  convertedToCaseId              String?
+  gender                         String?
+  birthDate                      DateTime?
+  ageRange                       String?
+  educationLevel                 String?
+  employmentStatus               String?
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime  @updatedAt
+  cases                          PACase[]  @relation("CandidateOrigin")
+}
+
+model PACase {
+  id                          String              @id @default(cuid())
+  code                        String              @unique // PA-{REGION}-{NNN}
+  type                        String              // "NUEVO", "CONTINUIDAD"
+  regionId                    String
+  perId                       String
+  per                         PERProfile          @relation(fields: [perId], references: [id])
+  coordinatorId               String
+  candidateId                 String?
+  candidate                   PACandidate?        @relation("CandidateOrigin", fields: [candidateId], references: [id])
+  status                      String              // "REGISTRADA", "VINCULACION", "CONEXION", "FINALIZACION", "EGRESO", "RETIRO_VOLUNTARIO", "DESERCION", "SUSPENDIDA"
+  matchStatus                 String              @default("PROPUESTO") // "PROPUESTO", "VALIDADO", "FORMALIZADO"
+  matchRationale              String?
+  actaPrimerEncuentroDriveId  String?
+  intensityLevel              String?             // "BASICO", "INTERMEDIO", "INTENSIVO"
+  genderSelfId                String?
+  birthDate                   DateTime?
+  ageRange                    String?
+  educationLevel              String?
+  employmentStatus            String?
+  stage                       String              @default("VINCULACION") // "VINCULACION", "CONEXION", "FINALIZACION"
+  startDate                   DateTime?
+  lastSessionDate             DateTime?
+  stageEnteredAt              DateTime            @default(now())
+  exAnteTaskId                String?
+  exPostTaskId                String?
+  satisfactionTaskId          String?
+  driveFolderId               String?
+  driveFolderRegionId         String?
+  driveFolderPerId            String?
+  driveFolderCaseId           String?
+  driveFolderVinculacionId    String?
+  driveFolderConexionId       String?
+  driveFolderFinalizacionId   String?
+  driveFolderValidadosId      String?
+  notes                       String?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  statusHistory               CaseStatusHistory[]
+  stageHistory                CaseStageHistory[]
+  contactAttempts             ContactAttempt[]
+  tasks                       Task[]
+  iapRecords                  IAPRecord[]
+  sessionLogs                 SessionLog[]
+  documentRecords             DocumentRecord[]
+  networkActivations          NetworkActivation[]
+}
+
+model CaseStatusHistory {
+  id         String   @id @default(cuid())
+  paCaseId   String
+  paCase     PACase   @relation(fields: [paCaseId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  reason     String?
+  byUserId   String
+  at         DateTime @default(now())
+}
+
+model ContactAttempt {
+  id       String   @id @default(cuid())
+  paCaseId String
+  paCase   PACase   @relation(fields: [paCaseId], references: [id], onDelete: Cascade)
+  perId    String
+  date     DateTime @default(now())
+  channel  String   // "TELEFONO", "VISITA", "WHATSAPP"
+  outcome  String   // "CONTACTADA", "NO_CONTESTA", "RECHAZA"
+  note     String?
+}
+
+model Instrument {
+  id                 String           @id @default(cuid())
+  name               String
+  description        String?
+  type               String           // "GOOGLE_FORM", "GOOGLE_DOC", "GOOGLE_SHEET", "DRIVE_FILE", "DRIVE_FOLDER", "CALENDAR_EVENT", "MANUAL_TASK"
+  googleResourceId   String?
+  googleUrl          String?
+  phaseId            String
+  stageId            String?
+  targetRole         String           // "ADMIN", "COORDINATOR", "PER"
+  scope              String           // "NACIONAL", "REGIONAL"
+  regionId           String?
+  version            String
+  status             String           // "BORRADOR", "VIGENTE", "ARCHIVADO"
+  effectiveFrom      DateTime?
+  templateFileId     String?
+  mandatory          Boolean          @default(true)
+  blocksProgress     Boolean          @default(false)
+  criticalTask       Boolean          @default(false)
+  defaultDueDays     Int?
+  validationRequired Boolean          @default(true)
+  createdByUserId    String
+  creator            User             @relation(fields: [createdByUserId], references: [id])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  tasks              Task[]
+  documentRecords    DocumentRecord[]
+}
+
+model Task {
+  id               String      @id @default(cuid())
+  title            String
+  description      String?
+  instrumentId     String?
+  instrument       Instrument? @relation(fields: [instrumentId], references: [id])
+  assignedToUserId String
+  assignedTo       User        @relation("AssignedTo", fields: [assignedToUserId], references: [id])
+  assignedByUserId String
+  assignedBy       User        @relation("AssignedBy", fields: [assignedByUserId], references: [id])
+  regionId         String
+  perId            String?
+  paCaseId         String?
+  paCase           PACase?     @relation(fields: [paCaseId], references: [id])
+  dueDate          DateTime?
+  status           String      @default("PENDIENTE") // "PENDIENTE", "EN_CURSO", "ENVIADA", "EN_REVISION", "VALIDADA", "DEVUELTA", "ATRASADA", "CANCELADA", "NO_APLICA"
+  priority         String      @default("MEDIA") // "BAJA", "MEDIA", "ALTA", "CRITICA"
+  googleUrl        String?
+  driveFileId      String?
+  formResponseRef  String?
+  calendarEventId  String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  events           TaskEvent[]
+  feedbacks        Feedback[]
+}
+
+model TaskEvent {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  byUserId   String
+  note       String?
+  at         DateTime @default(now())
+}
+
+model IAPRecord {
+  id                     String         @id @default(cuid())
+  paCaseId               String
+  paCase                 PACase         @relation(fields: [paCaseId], references: [id], onDelete: Cascade)
+  status                 String         // "INICIADO", "EN_DESARROLLO", "FINALIZADO"
+  perFirstReflection     String?
+  motivations            String?
+  expectations           String?
+  backgroundNotesDriveId String?
+  jointEvaluation        String?
+  perFinalReflection     String?
+  driveDocId             String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  domainMaps             IAPDomainMap[]
+  goals                  IAPGoal[]
+}
+
+model IAPDomainMap {
+  id               String    @id @default(cuid())
+  iapRecordId      String
+  iapRecord        IAPRecord @relation(fields: [iapRecordId], references: [id], onDelete: Cascade)
+  recoveryDomainId String
+  needs            String?
+  strengths        String?
+  importance       String?   // "ALTO", "MEDIO", "BAJO"
+}
+
+model IAPGoal {
+  id               String    @id @default(cuid())
+  iapRecordId      String
+  iapRecord        IAPRecord @relation(fields: [iapRecordId], references: [id], onDelete: Cascade)
+  recoveryDomainId String
+  objective        String
+  resources        String?
+  activities       String?
+  deadline         DateTime?
+  result           String?   // "LOGRADO", "MEDIANAMENTE_LOGRADO", "NO_LOGRADO"
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model SessionLog {
+  id                    String    @id @default(cuid())
+  paCaseId              String
+  paCase                PACase    @relation(fields: [paCaseId], references: [id])
+  perId                 String
+  regionId              String
+  sessionNumber         Int
+  date                  DateTime
+  modality              String    // "PRESENCIAL", "TELEFONICA", "VIDEOLLAMADA", "MENSAJERIA", "OTRA"
+  durationMinutes       Int?
+  recoveryDomainId      String?
+  iapGoalId             String?
+  summary               String
+  agreements            String?
+  difficulties          String?
+  nextAction            String?
+  perEmotion            String?   // "BIEN", "NEUTRO", "TRISTE", "ENOJADO"
+  perReflection         String?
+  attendance            String    // "REALIZADA", "NO_ASISTE_PA", "NO_ASISTE_PER", "REAGENDADA", "CANCELADA"
+  stage                 String    @default("VINCULACION")
+  status                String    @default("BORRADOR") // "BORRADOR", "ENVIADA", "VALIDADA", "DEVUELTA"
+  coordinatorFeedbackId String?
+  offlineDraftId        String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Supervision {
+  id                     String   @id @default(cuid())
+  coordinatorId          String
+  perId                  String
+  regionId               String
+  date                   DateTime
+  calendarEventId        String?
+  modality               String   // "PRESENCIAL", "MEET", "TELEFONICA", "OTRA"
+  status                 String   // "AGENDADA", "REALIZADA", "NO_REALIZADA", "REAGENDADA"
+  durationMinutes        Int      @default(60)
+  casesReviewedSerialized String   // JSON string of PA case codes
+  agreements             String?
+  observations           String?
+  driveActaId            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Feedback {
+  id                 String   @id @default(cuid())
+  coordinatorId      String
+  perId              String
+  entityType         String
+  entityId           String
+  text               String
+  requiresCorrection Boolean  @default(false)
+  status             String   @default("ENVIADA") // "ENVIADA", "VISTA", "RESUELTA"
+  taskId             String?
+  task               Task?    @relation(fields: [taskId], references: [id])
+  createdAt          DateTime @default(now())
+}
+
+model Alert {
+  id               String    @id @default(cuid())
+  type             String
+  severity         String    // "INFO", "MEDIA", "ALTA", "CRITICA"
+  regionId         String
+  perId            String?
+  paCaseId         String?
+  taskId           String?
+  status           String    @default("ABIERTA") // "ABIERTA", "EN_REVISION", "RESUELTA", "CERRADA"
+  resolvedByUserId String?
+  resolutionNote   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model TrainingRecord {
+  id              String     @id @default(cuid())
+  perId           String
+  perProfile      PERProfile @relation(fields: [perId], references: [id])
+  activityName    String
+  type            String     // "INDUCCION", "FORMACION", "MENTORIA_360", "EVALUACION"
+  date            DateTime
+  status          String     // "PENDIENTE", "REALIZADA", "EVALUADA"
+  evidenceDriveId String?
+  score           Float?
+}
+
+model DriveFileRef {
+  id               String   @id @default(cuid())
+  driveFileId      String
+  driveFolderId    String?
+  name             String
+  mimeType         String
+  entityType       String
+  entityId         String
+  uploadedByUserId String
+  version          String?
+  createdAt        DateTime @default(now())
+}
+
+model CalendarEventRef {
+  id              String   @id @default(cuid())
+  calendarEventId String
+  type            String
+  regionId        String?
+  perId           String?
+  paCaseId        String?
+  outcome         String?  // "REALIZADA", "NO_REALIZADA", "REAGENDADA"
+  createdAt       DateTime @default(now())
+}
+
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String
+  keys       String    // JSON string for keys (p256dh, auth)
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  role          String
+  action        String
+  entityType    String
+  entityId      String
+  previousValue String?
+  newValue      String?
+  reason        String?
+  ip            String?
+  timestamp     DateTime @default(now())
+}
+
+model Setting {
+  key   String  @id
+  value String
+  scope String? // e.g. regionId
+}
+
+model CaseStageHistory {
+  id         String    @id @default(cuid())
+  paCaseId   String
+  paCase     PACase    @relation(fields: [paCaseId], references: [id], onDelete: Cascade)
+  stage      String    // "VINCULACION", "CONEXION", "FINALIZACION"
+  enteredAt  DateTime  @default(now())
+  exitedAt   DateTime?
+}
+
+model DocumentRecord {
+  id                 String     @id @default(cuid())
+  caseId             String
+  paCase             PACase     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  instrumentId       String
+  instrument         Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentVersion  String
+  fileId             String
+  revisionId         String
+  fileName           String
+  fileUrl            String?
+  uploadedByUserId   String
+  uploadedByUser     User       @relation(fields: [uploadedByUserId], references: [id], onDelete: Cascade)
+  stage              String     // "VINCULACION", "CONEXION", "FINALIZACION"
+  status             String     // "ENVIADA", "VALIDADA", "DEVUELTA"
+  isFinalVigente     Boolean    @default(false)
+  driveFolderId      String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model ReportSnapshot {
+  id          String   @id @default(cuid())
+  periodKey   String
+  regionId    String?
+  cutOffDate  DateTime
+  kpisJson    String
+  createdAt   DateTime @default(now())
+}
+
+model NetworkDevice {
+  id             String              @id @default(cuid())
+  regionId       String
+  name           String
+  type           String              // "Salud", "Empleo", "Vivienda", "Educación", "Otro"
+  contactPerson  String?
+  status         String              @default("ACTIVO")
+  createdAt      DateTime            @default(now())
+  activations    NetworkActivation[]
+}
+
+model NetworkActivation {
+  id              String        @id @default(cuid())
+  networkDeviceId String
+  networkDevice   NetworkDevice @relation(fields: [networkDeviceId], references: [id], onDelete: Cascade)
+  caseId          String?
+  paCase          PACase?       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date            DateTime      @default(now())
+  description     String?
+  driveDocId      String?
+  createdAt       DateTime      @default(now())
+}
+
+model Phase5Record {
+  id                String   @id @default(cuid())
+  type              String   // "FOCUS_GROUP", "REUNION_EQUIPO"
+  regionId          String
+  date              DateTime
+  participantsCount Int
+  driveUrl          String
+  notes             String?
+  createdAt         DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
