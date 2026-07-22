@@ -1,10 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaD1 } from "@prisma/adapter-d1";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 const createPrismaClient = () => {
-  // Prisma 7 adapter instantiates better-sqlite3 internally using the config object
+  const d1Binding = (globalThis as any).DB || (process.env as any)?.DB;
+  if (d1Binding) {
+    const adapter = new PrismaD1(d1Binding);
+    return new PrismaClient({ adapter });
+  }
+
   const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
   return new PrismaClient({ adapter });
 };
