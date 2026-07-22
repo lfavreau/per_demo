@@ -835,7 +835,7 @@ async function main() {
   const coordUsers = await prisma.user.findMany({ where: { role: "COORDINATOR" } });
 
   for (const per of perProfiles) {
-    const coord = coordUsers.find((c) => c.regionId === per.regionId);
+    const coord = coordUsers.find((c: any) => c.regionId === per.regionId);
     if (coord) {
       // Seed a recent supervision for this week
       const today = new Date();
