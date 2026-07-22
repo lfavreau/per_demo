@@ -1,17 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaD1 } from "@prisma/adapter-d1";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
-const createPrismaClient = () => {
-  const d1Binding = (globalThis as any).DB || (process.env as any)?.DB;
-  if (d1Binding) {
-    const adapter = new PrismaD1(d1Binding);
-    return new PrismaClient({ adapter });
+export const getDb = (): PrismaClient => {
+  try {
+    const { getCloudflareContext } = require("@opennextjs/cloudflare");
+    const ctx = getCloudflareContext();
+    if (ctx?.env?.DB) {
+      const adapter = new PrismaD1(ctx.env.DB);
+      return new PrismaClient({ adapter });
+    }
+  } catch (e) {
+    // Ignore if not running within Cloudflare context
   }
 
   try {
-    // Dynamic require so better-sqlite3 is not bundled into Cloudflare Workers
     const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
     const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
     return new PrismaClient({ adapter });
@@ -20,8 +22,13 @@ const createPrismaClient = () => {
   }
 };
 
-export const prisma = globalForPrisma.prisma || createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getDb() as any;
+    const value = client[prop];
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
