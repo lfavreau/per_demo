@@ -18,6 +18,7 @@ interface AppShellProps {
     email: string;
     role: "ADMIN" | "COORDINATOR" | "PER";
     regionId: string | null;
+    isDemo?: boolean;
   };
 }
 
@@ -362,15 +363,26 @@ export default function AppShell({ children, user }: AppShellProps) {
                 )}
               </div>
 
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold">{user.name}</p>
-                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-tight">
-                  {user.role === "ADMIN" 
-                    ? "Admin Nacional" 
-                    : user.role === "COORDINATOR" 
-                      ? `Coordinador - ${user.regionId}` 
-                      : "Acompañante PER"}
-                </p>
+              <div className="flex items-center gap-2">
+                {user.isDemo ? (
+                  <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs">
+                    <span>🧪</span> Modo Demo
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-300 flex items-center gap-1 shadow-xs">
+                    <span>🔒</span> Modo Real
+                  </span>
+                )}
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-bold text-slate-900">{user.name}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-tight">
+                    {user.role === "ADMIN" 
+                      ? "Admin Nacional" 
+                      : user.role === "COORDINATOR" 
+                        ? `Coordinador - ${user.regionId}` 
+                        : "Acompañante PER"}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={handleLogout}

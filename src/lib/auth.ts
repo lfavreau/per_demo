@@ -7,12 +7,13 @@ export interface SessionUser {
   email: string;
   role: "ADMIN" | "COORDINATOR" | "PER";
   regionId: string | null;
+  isDemo: boolean;
 }
 
 const COOKIE_NAME = "per_session";
 
-// Login: Validate email against database, set cookie
-export async function login(email: string): Promise<SessionUser | null> {
+// Login: Validate email against database, set cookie with isDemo flag
+export async function login(email: string, isDemo = false): Promise<SessionUser | null> {
   const targetEmail = email.includes("@") ? email : `${email}@per2026.cl`;
   const user = await prisma.user.findUnique({
     where: { email: targetEmail, active: true },
@@ -28,13 +29,14 @@ export async function login(email: string): Promise<SessionUser | null> {
     email: user.email,
     role: user.role as "ADMIN" | "COORDINATOR" | "PER",
     regionId: user.regionId,
+    isDemo: isDemo,
   };
 
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, JSON.stringify(sessionUser), {
     httpOnly: true,
-    secure: false, // Permitir login por HTTP en IP local (ej. http://192.168.1.5:3000)
-    sameSite: "lax", // Permitir que la cookie se envíe al abrir links externos (ej. notificaciones)
+    secure: false, // Permitir login por HTTP en IP local
+    sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: "/",
   });
@@ -76,6 +78,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       email: dbUser.email,
       role: dbUser.role as "ADMIN" | "COORDINATOR" | "PER",
       regionId: dbUser.regionId,
+      isDemo: Boolean(sessionUser.isDemo),
     };
   } catch (error) {
     console.error("Error reading session:", error);

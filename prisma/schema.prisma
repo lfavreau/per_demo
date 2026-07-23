@@ -62,6 +62,7 @@ model PACandidate {
   ageRange                       String?
   educationLevel                 String?
   employmentStatus               String?
+  isDemo                         Boolean   @default(false)
   createdAt                      DateTime  @default(now())
   updatedAt                      DateTime  @updatedAt
   cases                          PACase[]  @relation("CandidateOrigin")
@@ -103,6 +104,7 @@ model PACase {
   driveFolderFinalizacionId   String?
   driveFolderValidadosId      String?
   notes                       String?
+  isDemo                      Boolean             @default(false)
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
   statusHistory               CaseStatusHistory[]
@@ -187,6 +189,7 @@ model Task {
   driveFileId      String?
   formResponseRef  String?
   calendarEventId  String?
+  isDemo           Boolean     @default(false)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   events           TaskEvent[]
@@ -269,6 +272,7 @@ model SessionLog {
   status                String    @default("BORRADOR") // "BORRADOR", "ENVIADA", "VALIDADA", "DEVUELTA"
   coordinatorFeedbackId String?
   offlineDraftId        String?
+  isDemo                Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -287,6 +291,7 @@ model Supervision {
   agreements             String?
   observations           String?
   driveActaId            String?
+  isDemo                 Boolean  @default(false)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
@@ -316,6 +321,7 @@ model Alert {
   status           String    @default("ABIERTA") // "ABIERTA", "EN_REVISION", "RESUELTA", "CERRADA"
   resolvedByUserId String?
   resolutionNote   String?
+  isDemo           Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
@@ -378,6 +384,7 @@ model AuditLog {
   newValue      String?
   reason        String?
   ip            String?
+  isDemo        Boolean  @default(false)
   timestamp     DateTime @default(now())
 }
 
@@ -413,6 +420,7 @@ model DocumentRecord {
   status             String     // "ENVIADA", "VALIDADA", "DEVUELTA"
   isFinalVigente     Boolean    @default(false)
   driveFolderId      String?
+  isDemo             Boolean    @default(false)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }
@@ -446,6 +454,7 @@ model NetworkActivation {
   date            DateTime      @default(now())
   description     String?
   driveDocId      String?
+  isDemo          Boolean       @default(false)
   createdAt       DateTime      @default(now())
 }
 
@@ -457,6 +466,7 @@ model Phase5Record {
   participantsCount Int
   driveUrl          String
   notes             String?
+  isDemo            Boolean  @default(false)
   createdAt         DateTime @default(now())
 }
 

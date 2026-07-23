@@ -417,6 +417,7 @@ async function main() {
           educationLevel: eduLevels[c % eduLevels.length],
           employmentStatus: jobStatuses[c % jobStatuses.length],
           notes: `Postulación derivada para el pilotaje de la región de ${reg.name}.`,
+          isDemo: true,
         },
       });
       dbCandidates.push(candidate);
@@ -483,6 +484,7 @@ async function main() {
           driveFolderValidadosId: `gfolder_case_${codeStr.toLowerCase()}_validados`,
           driveFolderId: `drive_folder_case_${codeStr.toLowerCase()}`,
           notes: "Acompañamiento en desarrollo conforme a los ámbitos prioritarios.",
+          isDemo: true,
         },
       });
 
@@ -615,6 +617,7 @@ async function main() {
             attendance: "REALIZADA",
             stage: sessionStage,
             status: s === sessionsCount && k === 1 ? "ENVIADA" : "VALIDADA",
+            isDemo: true,
           },
         });
       }
@@ -672,6 +675,7 @@ async function main() {
             regionId: reg.name,
             assignedToUserId: perProfile.userId,
             assignedByUserId: admin.id,
+            isDemo: true,
           },
         });
 
@@ -723,6 +727,7 @@ async function main() {
               status: taskStatus,
               isFinalVigente: taskStatus === "VALIDADA",
               driveFolderId: paCase.driveFolderValidadosId,
+              isDemo: true,
             },
           });
         }
@@ -737,6 +742,7 @@ async function main() {
             type: "CASO_SIN_SESION",
             severity: "CRITICA",
             status: "ABIERTA",
+            isDemo: true,
           },
         });
       } else if (k === 2) {
@@ -747,6 +753,7 @@ async function main() {
             type: "TAREA_ATRASADA",
             severity: "CRITICA",
             status: "ABIERTA",
+            isDemo: true,
           },
         });
       }
@@ -791,6 +798,7 @@ async function main() {
           caseId: cases[0].id,
           description: "Derivación para evaluación psiquiátrica complementaria",
           driveDocId: "drive_ref_cosam_act",
+          isDemo: true,
         },
       });
 
@@ -801,6 +809,7 @@ async function main() {
             caseId: cases[1].id,
             description: "Vinculación a programa de intermediación laboral",
             driveDocId: "drive_ref_omil_act",
+            isDemo: true,
           },
         });
       }
@@ -814,6 +823,7 @@ async function main() {
         participantsCount: 8,
         driveUrl: "https://drive.google.com/open?id=focus_group_transcription_1",
         notes: "Evaluación final de pilotaje PER con la participación de 8 usuarios del programa.",
+        isDemo: true,
       },
     });
 
@@ -825,6 +835,7 @@ async function main() {
         participantsCount: 4,
         driveUrl: "https://drive.google.com/open?id=reunion_equipo_acta_1",
         notes: "Reunión de balance del equipo y planificación de egresos del período.",
+        isDemo: true,
       },
     });
   }
@@ -857,6 +868,7 @@ async function main() {
           agreements: "Seguir fortaleciendo la vinculación comunitaria del caso 1.",
           observations: "PER demuestra buen manejo de los límites terapéuticos y apego al encuadre.",
           driveActaId: "drive_acta_supervision_mock",
+          isDemo: true,
         },
       });
     }
