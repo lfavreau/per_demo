@@ -6,6 +6,19 @@ import UserManagementClient from "./UserManagementClient";
 
 export const dynamic = "force-dynamic";
 
+const DEMO_PER_EMAILS = new Set([
+  "per.carla@per2026.cl",
+  "per.diego@per2026.cl",
+  "per.juan@per2026.cl",
+  "per.valpo@per2026.cl",
+  "per.sonia@per2026.cl",
+  "per.lucas@per2026.cl",
+  "per.mario@per2026.cl",
+  "per.camila@per2026.cl",
+  "per.pedro@per2026.cl",
+  "per.elena@per2026.cl",
+]);
+
 export default async function AdminUsuariosPage({
   searchParams,
 }: {
@@ -31,12 +44,15 @@ export default async function AdminUsuariosPage({
     ],
   });
 
-  // Filter in memory to prevent unknown argument errors on stale Prisma client instances
+  // Filter in memory: In Real Mode (!isDemo), exclude sample demo PER accounts
   const users = allUsers.filter((u: any) => {
     if (isDemo) {
-      return Boolean(u.isDemo);
+      return Boolean(u.isDemo) || DEMO_PER_EMAILS.has(u.email);
     } else {
-      return !u.isDemo || u.role === "ADMIN" || u.role === "COORDINATOR";
+      if (u.role === "PER" && (DEMO_PER_EMAILS.has(u.email) || Boolean(u.isDemo))) {
+        return false;
+      }
+      return true;
     }
   });
 
