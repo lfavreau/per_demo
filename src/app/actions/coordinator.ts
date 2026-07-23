@@ -34,11 +34,17 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo);
+    const newCase = await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo);
     revalidatePath("/coordinacion");
+    revalidatePath("/coordinacion/casos");
+    revalidatePath("/coordinacion/candidatas");
+    revalidatePath("/per");
     revalidatePath("/admin");
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(newCase.code)}&highlightCaseId=${newCase.id}`);
   } catch (err: any) {
+    if (isNextRedirect(err)) throw err;
     console.error("Error creating case:", err);
+    redirect(`/coordinacion/candidatas?error=${encodeURIComponent(err.message || "Error al crear caso")}`);
   }
 }
 
@@ -314,6 +320,9 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
       actaFileId
     );
     revalidatePath("/coordinacion");
+    revalidatePath("/coordinacion/casos");
+    revalidatePath("/coordinacion/candidatas");
+    revalidatePath("/per");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${paCase.code}`);
   } catch (err: any) {
