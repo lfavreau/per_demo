@@ -17,11 +17,14 @@ export default async function CoordinatorSesionesPage() {
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // Fetch pending session logs with case relation
   const pendingSessions = await prisma.sessionLog.findMany({
     where: {
       regionId: user.regionId,
       status: "ENVIADA",
+      isDemo,
     },
     include: {
       paCase: {

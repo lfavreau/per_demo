@@ -14,9 +14,11 @@ export default async function CoordinatorCandidatasPage() {
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // 1. Fetch Candidates (Fase 2 preselection funnel)
   const candidates = await prisma.pACandidate.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
     orderBy: { createdAt: "desc" },
   });
 

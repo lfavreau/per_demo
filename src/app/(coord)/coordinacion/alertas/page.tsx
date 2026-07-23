@@ -15,11 +15,14 @@ export default async function CoordinatorAlertasPage() {
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // Fetch pending tasks needing coordinator approval
   const pendingTasks = await prisma.task.findMany({
     where: {
       regionId: user.regionId,
       status: { in: ["ENVIADA", "EN_REVISION"] },
+      isDemo,
     },
     include: {
       paCase: true,
@@ -33,6 +36,7 @@ export default async function CoordinatorAlertasPage() {
     where: {
       regionId: user.regionId,
       status: "ABIERTA",
+      isDemo,
     },
     orderBy: { createdAt: "desc" },
   });

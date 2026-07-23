@@ -37,10 +37,13 @@ export default async function PERDashboardPage({
     );
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // 2. Fetch Active Cases for this PER
   const activeCases = await prisma.pACase.findMany({
     where: {
       perId: profile.id,
+      isDemo,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
     select: {
@@ -55,6 +58,7 @@ export default async function PERDashboardPage({
   const tasks = await prisma.task.findMany({
     where: {
       assignedToUserId: user.id,
+      isDemo,
     },
     include: {
       paCase: {
@@ -93,6 +97,7 @@ export default async function PERDashboardPage({
   const sessionHistory = await prisma.sessionLog.findMany({
     where: {
       perId: user.id,
+      isDemo,
     },
     include: {
       paCase: true,
@@ -107,6 +112,7 @@ export default async function PERDashboardPage({
   const supervisions = await prisma.supervision.findMany({
     where: {
       perId: profile.id,
+      isDemo,
     },
     orderBy: {
       date: "desc",

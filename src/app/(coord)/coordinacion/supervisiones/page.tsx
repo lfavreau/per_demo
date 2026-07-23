@@ -34,9 +34,11 @@ export default async function CoordinatorSupervisionesPage({
     orderBy: { user: { name: "asc" } },
   });
 
+  const isDemo = Boolean(user.isDemo);
+
   // Fetch recent regional supervisions from the region
   const recentSupervisions = await prisma.supervision.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
     orderBy: { date: "desc" },
     take: 8,
   });

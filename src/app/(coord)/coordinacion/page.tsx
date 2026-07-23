@@ -14,9 +14,11 @@ export default async function CoordinatorPage() {
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // 1. Fetch Candidates (Fase 2 preselection funnel)
   const candidates = await prisma.pACandidate.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
   });
 
   // Funnel stage definitions
@@ -36,15 +38,15 @@ export default async function CoordinatorPage() {
   }));
 
   // 2. Fetch regional task statistics for indicators
-  const totalRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId } });
-  const completedRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, status: "VALIDADA" } });
-  const overdueRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, status: "ATRASADA" } });
-  const revisionRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, status: { in: ["ENVIADA", "EN_REVISION"] } } });
-  const pendingRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, status: "PENDIENTE" } });
+  const totalRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo } });
+  const completedRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo, status: "VALIDADA" } });
+  const overdueRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo, status: "ATRASADA" } });
+  const revisionRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo, status: { in: ["ENVIADA", "EN_REVISION"] } } });
+  const pendingRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo, status: "PENDIENTE" } });
 
   // 3. Fetch active cases in the region
   const regionalCases = await prisma.pACase.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
   });
 
   return (

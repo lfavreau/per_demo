@@ -14,8 +14,11 @@ export default async function AdminAuditoriaPage() {
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // Fetch audit logs
   const logs = await prisma.auditLog.findMany({
+    where: { isDemo },
     orderBy: { timestamp: "desc" },
     take: 100, // Fetch up to 100 logs for better CSV exports
   });

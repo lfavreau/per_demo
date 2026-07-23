@@ -52,11 +52,14 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
   if (frozenSnapshot) {
     data = JSON.parse(frozenSnapshot.kpisJson);
   } else {
-    // 1. Query database records based on scope and date filters
+    const isDemo = Boolean(user.isDemo);
+
+    // 1. Query database records based on scope, isDemo, and date filters
     const allCases = await prisma.pACase.findMany({
       where: {
         regionId: selectedRegion ? selectedRegion : undefined,
         createdAt: dateFilter,
+        isDemo,
       },
       include: {
         per: {
@@ -75,10 +78,11 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
         sessionLogs: {
           where: {
             date: dateFilter,
+            isDemo,
           },
         },
         tasks: {
-          where: { createdAt: dateFilter },
+          where: { createdAt: dateFilter, isDemo },
           include: {
             instrument: true,
           },
@@ -90,6 +94,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       where: {
         regionId: selectedRegion ? selectedRegion : undefined,
         date: dateFilter,
+        isDemo,
       },
     });
 
@@ -97,6 +102,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       where: {
         paCase: selectedRegion ? { regionId: selectedRegion } : undefined,
         date: dateFilter,
+        isDemo,
       },
       include: {
         networkDevice: true,

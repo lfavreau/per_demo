@@ -27,9 +27,14 @@ export default async function AdminDashboardPage({
     redirect("/login");
   }
 
-  // 1. Fetch case statistics for KPIs (filtered by region if selected)
+  const isDemo = Boolean(user.isDemo);
+
+  // 1. Fetch case statistics for KPIs (filtered by region if selected and isDemo)
+  const caseWhere: any = { isDemo };
+  if (selectedRegion) caseWhere.regionId = selectedRegion;
+
   const allCases = await prisma.pACase.findMany({
-    where: selectedRegion ? { regionId: selectedRegion } : undefined,
+    where: caseWhere,
     include: {
       tasks: true,
       per: {
@@ -42,22 +47,15 @@ export default async function AdminDashboardPage({
 
   const totalCasesCount = allCases.length;
 
-  // 1.2. Query task statistics for indicators (filtered by region if selected)
-  const totalTasksCount = await prisma.task.count({
-    where: selectedRegion ? { regionId: selectedRegion } : undefined,
-  });
-  const completedTasksCount = await prisma.task.count({
-    where: selectedRegion ? { regionId: selectedRegion, status: "VALIDADA" } : { status: "VALIDADA" },
-  });
-  const overdueTasksCount = await prisma.task.count({
-    where: selectedRegion ? { regionId: selectedRegion, status: "ATRASADA" } : { status: "ATRASADA" },
-  });
-  const revisionTasksCount = await prisma.task.count({
-    where: selectedRegion ? { regionId: selectedRegion, status: { in: ["ENVIADA", "EN_REVISION"] } } : { status: { in: ["ENVIADA", "EN_REVISION"] } },
-  });
-  const pendingTasksCount = await prisma.task.count({
-    where: selectedRegion ? { regionId: selectedRegion, status: "PENDIENTE" } : { status: "PENDIENTE" },
-  });
+  // 1.2. Query task statistics for indicators (filtered by region if selected and isDemo)
+  const taskWhere: any = { isDemo };
+  if (selectedRegion) taskWhere.regionId = selectedRegion;
+
+  const totalTasksCount = await prisma.task.count({ where: taskWhere });
+  const completedTasksCount = await prisma.task.count({ where: { ...taskWhere, status: "VALIDADA" } });
+  const overdueTasksCount = await prisma.task.count({ where: { ...taskWhere, status: "ATRASADA" } });
+  const revisionTasksCount = await prisma.task.count({ where: { ...taskWhere, status: { in: ["ENVIADA", "EN_REVISION"] } } });
+  const pendingTasksCount = await prisma.task.count({ where: { ...taskWhere, status: "PENDIENTE" } });
 
   // KPI 1.1: Continuity cases with >= 3 months of adherence
   const continuityCases = allCases.filter((c) => c.type === "CONTINUIDAD");
@@ -95,9 +93,12 @@ export default async function AdminDashboardPage({
     : 0;
 
   // KPI 2.2: Monitoreo del IAP (verificar evaluaciones del plan para al menos el 80% de participantes)
+  const iapWhere: any = { paCase: { isDemo } };
+  if (selectedRegion) iapWhere.paCase.regionId = selectedRegion;
+
   const iapsWithEvaluations = await prisma.iAPRecord.count({
     where: {
-      paCase: selectedRegion ? { regionId: selectedRegion } : undefined,
+      ...iapWhere,
       goals: {
         some: {
           result: { not: null }
@@ -136,15 +137,12 @@ export default async function AdminDashboardPage({
   };
 
   // 1.3. Additional operational stats (filtered by region if selected)
-  const totalSessionsCount = await prisma.sessionLog.count({
-    where: selectedRegion ? { regionId: selectedRegion } : undefined,
-  });
-  const presencialSessionsCount = await prisma.sessionLog.count({
-    where: selectedRegion ? { regionId: selectedRegion, modality: "PRESENCIAL" } : { modality: "PRESENCIAL" },
-  });
-  const onlineSessionsCount = await prisma.sessionLog.count({
-    where: selectedRegion ? { regionId: selectedRegion, modality: "ONLINE" } : { modality: "ONLINE" },
-  });
+  const sessionWhere: any = { isDemo };
+  if (selectedRegion) sessionWhere.regionId = selectedRegion;
+
+  const totalSessionsCount = await prisma.sessionLog.count({ where: sessionWhere });
+  const presencialSessionsCount = await prisma.sessionLog.count({ where: { ...sessionWhere, modality: "PRESENCIAL" } });
+  const onlineSessionsCount = await prisma.sessionLog.count({ where: { ...sessionWhere, modality: "ONLINE" } });
   const totalInstrumentsCount = await prisma.instrument.count();
 
   // 2. Fetch Regional summary
@@ -159,13 +157,13 @@ export default async function AdminDashboardPage({
   const regionalData = await Promise.all(
     regions.map(async (reg) => {
       const activeCount = await prisma.pACase.count({
-        where: { regionId: reg.name, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
+        where: { regionId: reg.name, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
       });
       const alertCount = await prisma.alert.count({
-        where: { regionId: reg.name, status: "ABIERTA" },
+        where: { regionId: reg.name, isDemo, status: "ABIERTA" },
       });
       const candidatesCount = await prisma.pACandidate.count({
-        where: { regionId: reg.name },
+        where: { regionId: reg.name, isDemo },
       });
       return {
         ...reg,
@@ -178,7 +176,7 @@ export default async function AdminDashboardPage({
 
   // 3. Fetch active critical alerts
   const activeAlerts = await prisma.alert.findMany({
-    where: { status: "ABIERTA" },
+    where: { status: "ABIERTA", isDemo },
     orderBy: { createdAt: "desc" },
     take: 5,
   });

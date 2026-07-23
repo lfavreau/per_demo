@@ -22,9 +22,11 @@ export default async function CoordinatorCasosPage({
     redirect("/login");
   }
 
+  const isDemo = Boolean(user.isDemo);
+
   // 1. Fetch Cases and PERs in region
   const regionalCases = await prisma.pACase.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
     orderBy: { code: "asc" },
   });
 
