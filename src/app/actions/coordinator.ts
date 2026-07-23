@@ -623,3 +623,34 @@ export async function updatePerStatusAction(formData: FormData): Promise<void> {
   revalidatePath("/coordinacion/candidatas");
   revalidatePath("/admin");
 }
+
+export async function createCandidateAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    throw new Error("No autorizado");
+  }
+
+  const sourceCenter = (formData.get("sourceCenter") as string) || "Derivación Directa";
+  const status = (formData.get("status") as string) || "SELECCIONADA";
+  const notes = (formData.get("notes") as string) || "";
+  const gender = (formData.get("gender") as string) || null;
+  const ageRange = (formData.get("ageRange") as string) || null;
+
+  const regionId = user.regionId || (formData.get("regionId") as string) || "MET";
+
+  await prisma.pACandidate.create({
+    data: {
+      regionId,
+      sourceCenter,
+      status,
+      notes,
+      gender,
+      ageRange,
+      isDemo: Boolean(user.isDemo),
+    },
+  });
+
+  revalidatePath("/coordinacion/candidatas");
+  revalidatePath("/coordinacion");
+}
+
