@@ -56,11 +56,11 @@ Esta aplicación es una **herramienta digital de apoyo** al programa PER (Pares 
 
 Solo necesitas **una de estas tres cosas**:
 
-| Dispositivo | ¿Sirve? | ¿Qué navegador uso? |
-|---|---|---|
-| 📱 **Celular Android** | ✅ Sí | Google Chrome |
-| 📱 **iPhone** | ✅ Sí | Safari |
-| 💻 **Computador** | ✅ Sí | Google Chrome, Firefox o Edge |
+| Dispositivo　　　　　　| ¿Sirve? | ¿Qué navegador uso?           |
+| ------------------------| ---------| -------------------------------|
+| 📱 **Celular Android** | ✅ Sí    | Google Chrome                 |
+| 📱 **iPhone**　　　　　| ✅ Sí    | Safari                        |
+| 💻 **Computador**　　　| ✅ Sí    | Google Chrome, Firefox o Edge |
 
 **No necesitas descargar nada de una tienda de aplicaciones.** La app funciona directamente desde el navegador de internet.
 
@@ -158,14 +158,14 @@ Esta es la sección más importante si eres un Par Especialista en Recuperación
 
 Cuando entras a la app, ves tu **panel de trabajo** dividido en varias tarjetas (cuadros blancos con bordes suaves). Cada tarjeta tiene una función específica:
 
-| Tarjeta | ¿Para qué sirve? |
-|---|---|
-| **Registro de Bitácora** | Para anotar cada encuentro con una persona acompañada |
+| Tarjeta                         | ¿Para qué sirve?                                        |
+| ---------------------------------| ---------------------------------------------------------|
+| **Registro de Bitácora**        | Para anotar cada encuentro con una persona acompañada   |
 | **Mis Acompañamientos Activos** | Lista de las personas que estás acompañando actualmente |
-| **Historial de Bitácoras** | Tus últimas 5 bitácoras enviadas y su estado |
-| **Agenda de Tareas** | Documentos y formularios que debes entregar |
-| **Notificaciones** | Mensajes de tu coordinador |
-| **Mis Supervisiones** | Registro de las supervisiones técnicas que has tenido |
+| **Historial de Bitácoras**      | Tus últimas 5 bitácoras enviadas y su estado            |
+| **Agenda de Tareas**            | Documentos y formularios que debes entregar             |
+| **Notificaciones**              | Mensajes de tu coordinador                              |
+| **Mis Supervisiones**           | Registro de las supervisiones técnicas que has tenido   |
 
 ### Si ves un aviso rojo que dice "Estado: No Habilitado para Terreno"
 
@@ -450,7 +450,7 @@ En el formulario de la derecha puedes registrar una nueva supervisión:
 
 ### 7.5 Redes e integración social
 
-**Ubicación en el menú**: 🌐 Redes
+**Ubicación en el menú**: 🌐 Redes0
 
 Esta sección maneja tres cosas distintas:
 
@@ -508,34 +508,34 @@ El botón **"📥 Exportar a CSV"** permite descargar toda la bitácora en un ar
 
 Si eres nuevo en el programa, aquí tienes un glosario de los términos más importantes:
 
-| Término | ¿Qué significa? |
-|---|---|
-| **PER** | Par Especialista en Recuperación. Persona con experiencia propia de recuperación que acompaña a otra persona en su proceso de integración social. |
-| **PA** | Persona Acompañada. La persona que recibe el acompañamiento del PER. |
-| **Dupla** | La pareja formada por un PER y una PA. |
-| **IAP** | Itinerario de Acompañamiento Personalizado. El plan de trabajo individual que se diseña para cada persona acompañada. |
-| **Bitácora** | El registro escrito de cada sesión de acompañamiento. |
-| **Supervisión** | Reunión periódica entre el coordinador y el PER para revisar casos y dar orientación técnica. |
-| **SENDA** | Servicio Nacional para la Prevención y Rehabilitación del Consumo de Drogas y Alcohol. Organismo público que financia el programa. |
-| **Remesa** | Pago parcial que SENDA libera al cumplirse ciertos indicadores del convenio. |
-| **Código de caso** | Identificador único de cada persona acompañada (ej: `PA-MET-001`). Se usa por privacidad en lugar del nombre. |
+| Término            | ¿Qué significa?                                                                                                                                   |
+| --------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------|
+| **PER**            | Par Especialista en Recuperación. Persona con experiencia propia de recuperación que acompaña a otra persona en su proceso de integración social. |
+| **PA**             | Persona Acompañada. La persona que recibe el acompañamiento del PER.                                                                              |
+| **Dupla**          | La pareja formada por un PER y una PA.                                                                                                            |
+| **IAP**            | Itinerario de Acompañamiento Personalizado. El plan de trabajo individual que se diseña para cada persona acompañada.                             |
+| **Bitácora**       | El registro escrito de cada sesión de acompañamiento.                                                                                             |
+| **Supervisión**    | Reunión periódica entre el coordinador y el PER para revisar casos y dar orientación técnica.                                                     |
+| **SENDA**          | Servicio Nacional para la Prevención y Rehabilitación del Consumo de Drogas y Alcohol. Organismo público que financia el programa.                |
+| **Remesa**         | Pago parcial que SENDA libera al cumplirse ciertos indicadores del convenio.                                                                      |
+| **Código de caso** | Identificador único de cada persona acompañada (ej: `PA-MET-001`). Se usa por privacidad en lugar del nombre.                                     |
 
 ### Las 5 fases del programa
 
-| Fase | Nombre | ¿De qué se trata? |
-|---|---|---|
-| **Fase 1** | Preparación y Habilitación | Se capacita a los PER, se firma el Código de Ética, se prepara todo para empezar. |
-| **Fase 2** | Admisibilidad e Ingreso | Se reciben las derivaciones de personas, se evalúa si son admisibles y se seleccionan para el programa. |
-| **Fase 3** | Conformación de Duplas | Se empareja a cada PA con un PER y se formaliza el primer encuentro. |
-| **Fase 4** | Acompañamiento | El corazón del programa. El PER y la PA se reúnen periódicamente, trabajan el IAP y avanzan en los objetivos. Tiene 3 etapas: *Vinculación*, *Conexión* y *Finalización*. |
-| **Fase 5** | Evaluación y Sistematización | Se evalúan los resultados, se hacen encuestas de satisfacción, se sistematizan los aprendizajes y se cierran los casos. |
+| Fase       | Nombre                       | ¿De qué se trata?                                                                                                                                                         |
+| ------------| ------------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Fase 1** | Preparación y Habilitación   | Se capacita a los PER, se firma el Código de Ética, se prepara todo para empezar.                                                                                         |
+| **Fase 2** | Admisibilidad e Ingreso      | Se reciben las derivaciones de personas, se evalúa si son admisibles y se seleccionan para el programa.                                                                   |
+| **Fase 3** | Conformación de Duplas       | Se empareja a cada PA con un PER y se formaliza el primer encuentro.                                                                                                      |
+| **Fase 4** | Acompañamiento               | El corazón del programa. El PER y la PA se reúnen periódicamente, trabajan el IAP y avanzan en los objetivos. Tiene 3 etapas: *Vinculación*, *Conexión* y *Finalización*. |
+| **Fase 5** | Evaluación y Sistematización | Se evalúan los resultados, se hacen encuestas de satisfacción, se sistematizan los aprendizajes y se cierran los casos.                                                   |
 
 ### Las 3 etapas del acompañamiento (dentro de la Fase 4)
 
-| Etapa | ¿Qué pasa aquí? |
-|---|---|
-| **Vinculación** | Los primeros encuentros. El PER y la PA se están conociendo, construyendo confianza. Se diseña el IAP. |
-| **Conexión** | El trabajo activo. Sesiones periódicas, seguimiento de objetivos del IAP, activación de redes de apoyo cuando se necesitan. |
+| Etapa            | ¿Qué pasa aquí?                                                                                                                          |
+| ------------------| ------------------------------------------------------------------------------------------------------------------------------------------|
+| **Vinculación**  | Los primeros encuentros. El PER y la PA se están conociendo, construyendo confianza. Se diseña el IAP.                                   |
+| **Conexión**     | El trabajo activo. Sesiones periódicas, seguimiento de objetivos del IAP, activación de redes de apoyo cuando se necesitan.              |
 | **Finalización** | El cierre. Se evalúan los logros, se completa la evaluación final (Ex-Post), se hace la encuesta de satisfacción y se prepara el egreso. |
 
 ---

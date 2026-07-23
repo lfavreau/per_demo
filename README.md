@@ -5,9 +5,10 @@ Este proyecto está construido en [Next.js](https://nextjs.org) con TypeScript, 
 ## 📖 Guías del Proyecto
 
 Para entender a fondo el software y el programa PER, consulta los siguientes manuales de referencia:
-*   [**Estructura.md**](file:///c:/Users/admn/Desktop/apps/per/alpha/Estructura.md): Detalla la arquitectura de archivos del proyecto, la base de datos relacional y las especificaciones por vista y rol.
-*   [**Guia.md**](file:///c:/Users/admn/Desktop/apps/per/alpha/Guia.md): Una guía de uso no técnica redactada para los acompañantes PER en terreno y coordinadores regionales con menor familiaridad digital.
-*   [**Resumen.md**](file:///c:/Users/admn/Desktop/apps/per/alpha/public/Resumen.md): Explica la fundamentación técnica y metodológica por fases del programa PER y su integración con Google Drive/Forms.
+*   [**Manual.md**](Manual.md): 📘 **Manual completo** del programa PER y la plataforma. Incluye metodología SENDA, código de ética, 9 ámbitos de recuperación, IAP, técnicas de mapeo, guía de la app por rol, KPIs del convenio, glosario y FAQ.
+*   [**Guia.md**](Guia.md): Guía de uso no técnica para PER en terreno y coordinadores con menor familiaridad digital.
+*   [**Estructura.md**](Estructura.md): Arquitectura de archivos, base de datos relacional y especificaciones por vista y rol.
+*   [**Resumen.md**](public/Resumen.md): Fundamentación técnica y metodológica por fases del programa PER y su integración con Google Workspace.
 
 ---
 
