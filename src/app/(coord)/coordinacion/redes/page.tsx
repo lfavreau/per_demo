@@ -19,41 +19,59 @@ export default async function CoordinatorRedesPage() {
   }
   const isDemo = Boolean(user.isDemo);
 
-  // 1. Fetch regional network devices
-  const allDevices = await prisma.networkDevice.findMany({
-    where: { regionId: user.regionId },
-    orderBy: { name: "asc" },
-  });
-  const networkDevices = allDevices.filter((d) => Boolean(d.isDemo) === isDemo);
+  let networkDevices: any[] = [];
+  let regionalCases: any[] = [];
+  let activations: any[] = [];
+  let phase5Records: any[] = [];
 
-  // 2. Fetch regional active cases for selection
-  const allCases = await prisma.pACase.findMany({
-    where: {
-      regionId: user.regionId,
-      status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
-    },
-    orderBy: { code: "asc" },
-  });
-  const regionalCases = allCases.filter((c) => Boolean(c.isDemo) === isDemo);
+  try {
+    const allDevices = await prisma.networkDevice.findMany({
+      where: { regionId: user.regionId },
+      orderBy: { name: "asc" },
+    });
+    networkDevices = allDevices.filter((d) => Boolean(d.isDemo) === isDemo);
+  } catch (e) {
+    console.error("Error fetching networkDevices:", e);
+  }
 
-  // 3. Fetch regional activations
-  const allActivations = await prisma.networkActivation.findMany({
-    include: {
-      paCase: true,
-      networkDevice: true,
-    },
-    orderBy: { date: "desc" },
-  });
-  const activations = allActivations.filter(
-    (a) => a.networkDevice && a.networkDevice.regionId === user.regionId && Boolean(a.isDemo) === isDemo
-  );
+  try {
+    const allCases = await prisma.pACase.findMany({
+      where: {
+        regionId: user.regionId,
+        status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
+      },
+      orderBy: { code: "asc" },
+    });
+    regionalCases = allCases.filter((c) => Boolean(c.isDemo) === isDemo);
+  } catch (e) {
+    console.error("Error fetching regionalCases:", e);
+  }
 
-  // 4. Fetch Phase 5 records (Focus Groups & Team meetings)
-  const allPhase5Records = await prisma.phase5Record.findMany({
-    where: { regionId: user.regionId },
-    orderBy: { date: "desc" },
-  });
-  const phase5Records = allPhase5Records.filter((p) => Boolean(p.isDemo) === isDemo);
+  try {
+    const allActivations = await prisma.networkActivation.findMany({
+      include: {
+        paCase: true,
+        networkDevice: true,
+      },
+      orderBy: { date: "desc" },
+    });
+    activations = allActivations.filter(
+      (a) => a.networkDevice && a.networkDevice.regionId === user.regionId && Boolean(a.isDemo) === isDemo
+    );
+  } catch (e) {
+    console.error("Error fetching activations:", e);
+  }
+
+  try {
+    const allPhase5Records = await prisma.phase5Record.findMany({
+      where: { regionId: user.regionId },
+      orderBy: { date: "desc" },
+    });
+    phase5Records = allPhase5Records.filter((p) => Boolean(p.isDemo) === isDemo);
+  } catch (e) {
+    console.error("Error fetching phase5Records:", e);
+  }
+
 
 
   return (
