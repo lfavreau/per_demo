@@ -36,7 +36,20 @@ export default async function CoordinatorCandidatasPage() {
       },
     },
   });
-  const perProfiles = allPerProfiles.filter((p) => Boolean(p.user?.isDemo) === isDemo);
+  const perProfiles = allPerProfiles.filter((p: any) => Boolean(p.user?.isDemo) === isDemo);
+
+  // 3. Fetch Existing Cases/Matches created in region
+  const allCases = await prisma.pACase.findMany({
+    where: { regionId: user.regionId },
+    include: {
+      per: {
+        include: { user: true },
+      },
+      candidate: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const matches = allCases.filter((c) => Boolean(c.isDemo) === isDemo);
 
   return (
     <AppShell user={user}>
@@ -225,6 +238,73 @@ export default async function CoordinatorCandidatasPage() {
             </form>
           </div>
 
+        </div>
+
+        {/* Historial de Duplas y Matches Registrados */}
+        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
+          <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
+            <span>🤝</span> Historial de Duplas y Matches Registrados ({matches.length})
+          </h4>
+          <div className="overflow-x-auto text-xs">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground font-semibold">
+                  <th className="pb-2">Código Caso</th>
+                  <th className="pb-2">Origen / Postulante</th>
+                  <th className="pb-2">Acompañante PER</th>
+                  <th className="pb-2">Estado Match</th>
+                  <th className="pb-2">Estado Caso</th>
+                  <th className="pb-2">Fecha Match</th>
+                  <th className="pb-2">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matches.map((m) => (
+                  <tr key={m.id} className="border-b border-border/50 hover:bg-secondary/10">
+                    <td className="py-3 font-bold text-blue-700">{m.code}</td>
+                    <td className="py-3 font-semibold text-slate-800">
+                      {m.candidate?.sourceCenter || m.genderSelfId || "Ingreso Directo"}
+                    </td>
+                    <td className="py-3 text-slate-700 font-medium">
+                      {m.per?.user?.name || "PER Asignado"}
+                    </td>
+                    <td className="py-3">
+                      <span className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
+                        m.matchStatus === "FORMALIZADO" 
+                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          : m.matchStatus === "VALIDADO"
+                            ? "bg-blue-50 text-blue-800 border border-blue-200"
+                            : "bg-amber-50 text-amber-800 border border-amber-200"
+                      }`}>
+                        {m.matchStatus || "PROPUESTO"}
+                      </span>
+                    </td>
+                    <td className="py-3 text-slate-600 font-medium">
+                      {m.status}
+                    </td>
+                    <td className="py-3 text-slate-500">
+                      {new Date(m.createdAt).toLocaleDateString("es-CL")}
+                    </td>
+                    <td className="py-3">
+                      <a
+                        href={`/coordinacion/casos?caseCode=${m.code}`}
+                        className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg text-[10px] inline-block shadow-sm transition"
+                      >
+                        👁️ Ver e Iniciar
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+                {matches.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-4 text-center text-slate-400">
+                      No se han conformado duplas ni matches aún en esta región.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>

@@ -41,73 +41,98 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
   const dateFilter = cutOffDate ? { lte: cutOffDate } : undefined;
 
   // Check if a frozen snapshot exists for this combination
-  const frozenSnapshot = await prisma.reportSnapshot.findFirst({
-    where: {
-      periodKey: selectedPeriod,
-      regionId: selectedRegion || null,
-      isDemo,
-    },
-  });
+  let frozenSnapshot = null;
+  try {
+    frozenSnapshot = await prisma.reportSnapshot.findFirst({
+      where: {
+        periodKey: selectedPeriod,
+        regionId: selectedRegion || null,
+      },
+    });
+  } catch (e) {
+    console.error("Error fetching reportSnapshot:", e);
+  }
 
   let data: any = null;
 
-  if (frozenSnapshot) {
-    data = JSON.parse(frozenSnapshot.kpisJson);
-  } else {
-    // 1. Query database records based on scope, isDemo, and date filters
-    const allCases = await prisma.pACase.findMany({
-      where: {
-        regionId: selectedRegion ? selectedRegion : undefined,
-        createdAt: dateFilter,
-        isDemo,
-      },
-      include: {
-        per: {
-          include: {
-            user: true,
-          },
-        },
-        candidate: true,
-        iapRecords: {
-          where: { createdAt: dateFilter },
-          include: {
-            domainMaps: true,
-            goals: { where: { createdAt: dateFilter } },
-          },
-        },
-        sessionLogs: {
-          where: {
-            date: dateFilter,
-            isDemo,
-          },
-        },
-        tasks: {
-          where: { createdAt: dateFilter, isDemo },
-          include: {
-            instrument: true,
-          },
-        },
-      },
-    });
+  if (frozenSnapshot && frozenSnapshot.kpisJson) {
+    try {
+      data = JSON.parse(frozenSnapshot.kpisJson);
+    } catch (e) {
+      data = null;
+    }
+  }
 
-    const supervisions = await prisma.supervision.findMany({
-      where: {
-        regionId: selectedRegion ? selectedRegion : undefined,
-        date: dateFilter,
-        isDemo,
-      },
-    });
+  if (!data) {
+    let allCases: any[] = [];
+    let supervisions: any[] = [];
+    let activations: any[] = [];
 
-    const activations = await prisma.networkActivation.findMany({
-      where: {
-        paCase: selectedRegion ? { regionId: selectedRegion } : undefined,
-        date: dateFilter,
-        isDemo,
-      },
-      include: {
-        networkDevice: true,
-      },
-    });
+    try {
+      const rawCases = await prisma.pACase.findMany({
+        where: {
+          regionId: selectedRegion ? selectedRegion : undefined,
+          createdAt: dateFilter,
+        },
+        include: {
+          per: {
+            include: {
+              user: true,
+            },
+          },
+          candidate: true,
+          iapRecords: {
+            where: { createdAt: dateFilter },
+            include: {
+              domainMaps: true,
+              goals: { where: { createdAt: dateFilter } },
+            },
+          },
+          sessionLogs: {
+            where: {
+              date: dateFilter,
+            },
+          },
+          tasks: {
+            where: { createdAt: dateFilter },
+            include: {
+              instrument: true,
+            },
+          },
+        },
+      });
+      allCases = rawCases.filter((c) => Boolean(c.isDemo) === isDemo);
+    } catch (e) {
+      console.error("Error fetching allCases in reportes:", e);
+    }
+
+    try {
+      const rawSupervisions = await prisma.supervision.findMany({
+        where: {
+          regionId: selectedRegion ? selectedRegion : undefined,
+          date: dateFilter,
+        },
+      });
+      supervisions = rawSupervisions.filter((s) => Boolean(s.isDemo) === isDemo);
+    } catch (e) {
+      console.error("Error fetching supervisions in reportes:", e);
+    }
+
+    try {
+      const rawActivations = await prisma.networkActivation.findMany({
+        where: {
+          date: dateFilter,
+        },
+        include: {
+          networkDevice: true,
+        },
+      });
+      activations = rawActivations.filter(
+        (a) => Boolean(a.isDemo) === isDemo && (!selectedRegion || a.networkDevice?.regionId === selectedRegion)
+      );
+    } catch (e) {
+      console.error("Error fetching activations in reportes:", e);
+    }
 
     const totalCasesCount = allCases.length;
 
@@ -187,12 +212,12 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       let exPostCount = 0;
 
       allCases.forEach((c) => {
-        c.iapRecords.forEach((iap) => {
-          const dMap = iap.domainMaps.find((m) => m.recoveryDomainId === dom);
+        c.iapRecords.forEach((iap: any) => {
+          const dMap = iap.domainMaps.find((m: any) => m.recoveryDomainId === dom);
           if (dMap && (dMap.importance === "ALTO" || dMap.importance === "MEDIO")) {
             exAnteCount++;
           }
-          const goalsInDom = iap.goals.filter((g) => g.recoveryDomainId === dom && g.result && g.result !== "NO_LOGRADO");
+          const goalsInDom = iap.goals.filter((g: any) => g.recoveryDomainId === dom && g.result && g.result !== "NO_LOGRADO");
           exPostCount += goalsInDom.length;
         });
       });
@@ -221,7 +246,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     let conSesCount = 0;
     let finSesCount = 0;
     allCases.forEach((c) => {
-      c.sessionLogs.forEach((s) => {
+      c.sessionLogs.forEach((s: any) => {
         if (s.attendance === "REALIZADA" && s.status === "VALIDADA") {
           if (s.stage === "VINCULACION") vinSesCount++;
           else if (s.stage === "CONEXION") conSesCount++;
@@ -272,7 +297,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     // Intermediate evaluations: count tasks validated that belong to the instrument "Evaluación Intermedia"
     let intermediateEvaluationsCount = 0;
     allCases.forEach((c) => {
-      c.tasks.forEach((t) => {
+      c.tasks.forEach((t: any) => {
         if (t.instrument?.name === "Evaluación Intermedia" && t.status === "VALIDADA") {
           intermediateEvaluationsCount++;
         }
@@ -313,7 +338,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       const lvl = c.intensityLevel || "BASICO";
       const exAnte = c.exAnteTaskId ? "SI" : "NO";
       const satisfaction = c.satisfactionTaskId ? "SI" : "NO";
-      const sessionCount = c.sessionLogs.filter((s) => s.status === "VALIDADA" && s.attendance === "REALIZADA").length;
+      const sessionCount = c.sessionLogs.filter((s: any) => s.status === "VALIDADA" && s.attendance === "REALIZADA").length;
       const startDateStr = c.startDate ? new Date(c.startDate).toLocaleDateString("es-CL") : "-";
       const lastSessionStr = c.lastSessionDate ? new Date(c.lastSessionDate).toLocaleDateString("es-CL") : "-";
       

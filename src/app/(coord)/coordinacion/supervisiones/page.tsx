@@ -20,8 +20,10 @@ export default async function CoordinatorSupervisionesPage({
     redirect("/login");
   }
 
-  // Fetch regional PER profiles with active cases
-  const perProfiles = await prisma.pERProfile.findMany({
+  const isDemo = Boolean(user.isDemo);
+
+  // Fetch regional PER profiles with active cases (filtered by isDemo)
+  const allPerProfiles = await prisma.pERProfile.findMany({
     where: { regionId: user.regionId },
     include: {
       user: true,
@@ -34,7 +36,7 @@ export default async function CoordinatorSupervisionesPage({
     orderBy: { user: { name: "asc" } },
   });
 
-  const isDemo = Boolean(user.isDemo);
+  const perProfiles = allPerProfiles.filter((p) => Boolean(p.user?.isDemo) === isDemo);
 
   // Fetch recent regional supervisions from the region
   const recentSupervisions = await prisma.supervision.findMany({

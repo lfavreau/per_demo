@@ -41,7 +41,7 @@ export default async function CoordinatorCasosPage({
     orderBy: { code: "asc" },
   });
 
-  const regionalPers = await prisma.pERProfile.findMany({
+  const allRegionalPers = await prisma.pERProfile.findMany({
     where: { regionId: user.regionId, certificationStatus: "HABILITADO" },
     include: {
       user: true,
@@ -53,6 +53,7 @@ export default async function CoordinatorCasosPage({
       },
     },
   });
+  const regionalPers = allRegionalPers.filter((p) => Boolean(p.user?.isDemo) === isDemo);
 
   // 2. Generate Timeline if a case is selected
   let timelineEvents: Array<{
