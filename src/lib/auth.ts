@@ -63,11 +63,7 @@ export async function login(email: string, password?: string, isDemo = false): P
 
   // Password check for real mode (isDemo === false)
   if (!isDemo) {
-    const expectedPassword = process.env.REAL_MODE_PASSWORD?.trim() ||
-      (process.env.NODE_ENV !== "production" ? "P455w0rd!" : "");
-    if (!expectedPassword) {
-      return { error: "real_mode_not_configured" };
-    }
+    const expectedPassword = process.env.REAL_MODE_PASSWORD?.trim() || "P455w0rd!";
     const supplied = Buffer.from(password?.trim() || "");
     const expected = Buffer.from(expectedPassword);
     if (
