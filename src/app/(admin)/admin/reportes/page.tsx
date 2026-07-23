@@ -12,6 +12,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
   if (!user || user.role !== "ADMIN") {
     redirect("/login");
   }
+  const isDemo = Boolean(user.isDemo);
 
   // Handle async searchParams safely
   const resolvedParams = searchParams instanceof Promise ? await searchParams : searchParams;
@@ -44,6 +45,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     where: {
       periodKey: selectedPeriod,
       regionId: selectedRegion || null,
+      isDemo,
     },
   });
 
@@ -52,8 +54,6 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
   if (frozenSnapshot) {
     data = JSON.parse(frozenSnapshot.kpisJson);
   } else {
-    const isDemo = Boolean(user.isDemo);
-
     // 1. Query database records based on scope, isDemo, and date filters
     const allCases = await prisma.pACase.findMany({
       where: {

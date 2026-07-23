@@ -432,6 +432,7 @@ model ReportSnapshot {
   regionId    String?
   cutOffDate  DateTime
   kpisJson    String
+  isDemo      Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
 
@@ -442,6 +443,7 @@ model NetworkDevice {
   type           String              // "Salud", "Empleo", "Vivienda", "Educación", "Otro"
   contactPerson  String?
   status         String              @default("ACTIVO")
+  isDemo         Boolean             @default(false)
   createdAt      DateTime            @default(now())
   activations    NetworkActivation[]
 }
@@ -479,6 +481,6 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   link      String?
+  isDemo    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
-

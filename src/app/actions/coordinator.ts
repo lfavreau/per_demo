@@ -13,6 +13,7 @@ import { resolveAlert, checkAllAlertRules } from "@/server/services/alerts.servi
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
+import { extractGoogleDriveFileId } from "@/lib/google-resource";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -33,11 +34,55 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id);
+    await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
   } catch (err: any) {
     console.error("Error creating case:", err);
+  }
+}
+
+export async function validateMatchAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    throw new Error("No autorizado");
+  }
+
+  const caseId = String(formData.get("caseId") || "");
+  const caseCode = String(formData.get("caseCode") || "");
+  try {
+    await validateMatch(caseId, user.id, user.isDemo);
+    revalidatePath("/coordinacion/casos");
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}`);
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    const message = error instanceof Error ? error.message : "No se pudo validar la dupla";
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&error=${encodeURIComponent(message)}`);
+  }
+}
+
+export async function formalizeMatchAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    throw new Error("No autorizado");
+  }
+
+  const caseId = String(formData.get("caseId") || "");
+  const caseCode = String(formData.get("caseCode") || "");
+  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
+
+  try {
+    const actaFileId = user.isDemo
+      ? actaInput || `demo_acta_${caseCode}`
+      : extractGoogleDriveFileId(actaInput);
+    await formalizeMatch(caseId, actaFileId, user.id, user.isDemo);
+    revalidatePath("/coordinacion/casos");
+    revalidatePath("/per");
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&workspace=created`);
+  } catch (error) {
+    if (isNextRedirect(error)) throw error;
+    const message = error instanceof Error ? error.message : "No se pudo formalizar la dupla";
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -51,7 +96,7 @@ export async function validateSessionAction(sessionId: string): Promise<void> {
   }
 
   try {
-    await validateSession(sessionId, user.id);
+    await validateSession(sessionId, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
   } catch (err: any) {
@@ -76,7 +121,7 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await returnSession(sessionId, feedback, user.id);
+    await returnSession(sessionId, feedback, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
   } catch (err: any) {
@@ -98,6 +143,7 @@ export async function validateTaskAction(taskId: string): Promise<void> {
       taskId,
       toStatus: "VALIDADA",
       actorId: user.id,
+      isDemo: user.isDemo,
     });
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
@@ -128,6 +174,7 @@ export async function returnTaskAction(formData: FormData): Promise<void> {
       toStatus: "DEVUELTA",
       note: feedback,
       actorId: user.id,
+      isDemo: user.isDemo,
     });
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
@@ -153,7 +200,7 @@ export async function resolveAlertAction(formData: FormData): Promise<void> {
   }
 
   try {
-    await resolveAlert(alertId, note, user.id);
+    await resolveAlert(alertId, note, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
   } catch (err: any) {
@@ -171,7 +218,7 @@ export async function triggerAlertRulesAction(formData: FormData): Promise<void>
   }
 
   try {
-    await checkAllAlertRules();
+    await checkAllAlertRules(user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
   } catch (err: any) {
@@ -210,7 +257,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseCode = paCase?.code || "";
 
   try {
-    await transitionCaseStatus(caseId, toStatus, finalReason, user.id);
+    await transitionCaseStatus(caseId, toStatus, finalReason, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${caseCode}`);
@@ -238,6 +285,7 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   const ageRange = formData.get("ageRange") as string;
   const educationLevel = formData.get("educationLevel") as string;
   const employmentStatus = formData.get("employmentStatus") as string;
+  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
 
   if (!perId || !matchRationale || !gender || !ageRange || !educationLevel || !employmentStatus) {
     throw new Error("Faltan campos obligatorios para el ingreso directo");
@@ -249,6 +297,9 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   }
 
   try {
+    const actaFileId = user.isDemo
+      ? actaInput || "demo_acta_continuidad"
+      : extractGoogleDriveFileId(actaInput);
     const { createDirectContinuityCase } = await import("@/server/services/cases.service");
     const paCase = await createDirectContinuityCase(
       perId,
@@ -258,7 +309,9 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
       ageRange,
       educationLevel,
       employmentStatus,
-      user.id
+      user.id,
+      user.isDemo,
+      actaFileId
     );
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
@@ -292,6 +345,7 @@ export async function freezeSnapshotAction(formData: FormData): Promise<void> {
     where: {
       periodKey,
       regionId: regFilter,
+      isDemo: user.isDemo,
     },
   });
 
@@ -301,6 +355,7 @@ export async function freezeSnapshotAction(formData: FormData): Promise<void> {
       regionId: regFilter,
       cutOffDate: new Date(cutOffDateStr),
       kpisJson,
+      isDemo: user.isDemo,
     },
   });
 
@@ -322,6 +377,7 @@ export async function freezeSnapshotAction(formData: FormData): Promise<void> {
         title: "Reporte Oficial Congelado",
         message: `Se ha congelado el reporte oficial para el período ${periodKey} (${regionId}).`,
         link: `/admin/reportes`,
+        isDemo: user.isDemo,
       })
     )
   );
@@ -347,7 +403,7 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
     throw new Error("Todos los campos son obligatorios");
   }
 
-  const { scheduleSupervisionEvent } = await import("@/server/google/workspace");
+  const { rollbackSupervisionEvent, scheduleSupervisionEvent } = await import("@/server/google/workspace");
   const per = await prisma.pERProfile.findUnique({
     where: { id: perId },
     include: { user: true },
@@ -355,40 +411,65 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
   if (!per) throw new Error("PER no encontrado");
 
   const date = new Date(dateStr);
-  const calendarResult = await scheduleSupervisionEvent(per.user.name, user.name || "Coordinador", date);
+  const durationMinutes = parseInt(durationMinutesStr, 10);
+  if (Number.isNaN(date.getTime()) || !Number.isInteger(durationMinutes)) {
+    throw new Error("Fecha o duración inválida");
+  }
+  const calendarResult = await scheduleSupervisionEvent(
+    per.user.name,
+    user.name || "Coordinador",
+    date,
+    durationMinutes,
+    user.isDemo
+  );
 
   const regionId = user.regionId || per.regionId;
 
-  const supervision = await prisma.supervision.create({
-    data: {
-      coordinatorId: user.id,
-      perId,
-      regionId,
-      date,
-      durationMinutes: parseInt(durationMinutesStr, 10),
-      observations: topic,
-      modality: "MEET",
-      status: "REALIZADA",
-      casesReviewedSerialized: "[]",
-    },
-  });
+  let supervision;
+  try {
+    supervision = await prisma.$transaction(async (tx) => {
+      const created = await tx.supervision.create({
+        data: {
+          coordinatorId: user.id,
+          perId,
+          regionId,
+          date,
+          durationMinutes,
+          observations: topic,
+          modality: "MEET",
+          status: "AGENDADA",
+          calendarEventId: calendarResult.eventId,
+          casesReviewedSerialized: "[]",
+          isDemo: user.isDemo,
+        },
+      });
 
-  await prisma.auditLog.create({
-    data: {
-      userId: user.id,
-      role: "COORDINATOR",
-      action: "LOG_SUPERVISION",
-      entityType: "Supervision",
-      entityId: perId,
-      newValue: JSON.stringify({ perId, dateStr, durationMinutesStr, topic, calendarResult }),
-    },
-  });
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          role: "COORDINATOR",
+          action: "SCHEDULE_SUPERVISION",
+          entityType: "Supervision",
+          entityId: created.id,
+          newValue: JSON.stringify({ perId, dateStr, durationMinutes, topic, calendarResult }),
+          isDemo: user.isDemo,
+        },
+      });
+      return created;
+    });
+  } catch (error) {
+    await rollbackSupervisionEvent(calendarResult, user.isDemo).catch((rollbackError) => {
+      console.error("No se pudo revertir el evento de Calendar:", rollbackError);
+    });
+    throw error;
+  }
 
   await createNotificationWithPush({
     userId: per.userId,
     title: "Nueva Reunión de Supervisión",
     message: `Tu coordinador técnico regional agendó una reunión de supervisión: "${topic}" para el ${date.toLocaleDateString("es-CL")}.`,
     link: `/per?highlightSupervisionId=${supervision.id}`,
+    isDemo: user.isDemo,
   });
 
   revalidatePath("/coordinacion/supervisiones");
@@ -422,6 +503,7 @@ export async function registerNetworkDeviceAction(formData: FormData): Promise<v
       type,
       contactPerson,
       regionId,
+      isDemo: user.isDemo,
     },
   });
 
@@ -447,6 +529,17 @@ export async function logNetworkActivationAction(formData: FormData): Promise<vo
     throw new Error("El dispositivo, fecha y descripción son obligatorios");
   }
 
+  const device = await prisma.networkDevice.findUnique({ where: { id: networkDeviceId } });
+  if (!device || device.isDemo !== user.isDemo) {
+    throw new Error("El dispositivo no pertenece al modo de trabajo actual");
+  }
+  if (caseId) {
+    const paCase = await prisma.pACase.findUnique({ where: { id: caseId } });
+    if (!paCase || paCase.isDemo !== user.isDemo || paCase.regionId !== device.regionId) {
+      throw new Error("El caso no pertenece al modo o región del dispositivo");
+    }
+  }
+
   await prisma.networkActivation.create({
     data: {
       caseId: caseId || null,
@@ -454,6 +547,7 @@ export async function logNetworkActivationAction(formData: FormData): Promise<vo
       date: new Date(dateStr),
       description,
       driveDocId,
+      isDemo: user.isDemo,
     },
   });
 
@@ -493,6 +587,7 @@ export async function registerPhase5RecordAction(formData: FormData): Promise<vo
       participantsCount: parseInt(participantsCountStr, 10),
       driveUrl,
       notes,
+      isDemo: user.isDemo,
     },
   });
 

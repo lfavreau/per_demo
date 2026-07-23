@@ -1,6 +1,117 @@
+import "server-only";
+
 import { prisma } from "@/lib/db";
 
-const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+const GOOGLE_APPS_SCRIPT_URL = process.env.GOOGLE_APPS_SCRIPT_URL?.trim();
+const GOOGLE_APPS_SCRIPT_SECRET = process.env.GOOGLE_APPS_SCRIPT_SECRET?.trim();
+const REQUEST_TIMEOUT_MS = 20_000;
+
+type WorkspaceMode = "demo" | "real";
+
+function modeFromDemo(isDemo: boolean): WorkspaceMode {
+  return isDemo ? "demo" : "real";
+}
+
+function createRequestId(prefix: string) {
+  return `${prefix}_${crypto.randomUUID()}`;
+}
+
+function assertRealConfiguration() {
+  if (!GOOGLE_APPS_SCRIPT_URL || !GOOGLE_APPS_SCRIPT_SECRET) {
+    throw new Error(
+      "Integración Google Workspace no configurada. Define GOOGLE_APPS_SCRIPT_URL y GOOGLE_APPS_SCRIPT_SECRET en Vercel."
+    );
+  }
+
+  let url: URL;
+  try {
+    url = new URL(GOOGLE_APPS_SCRIPT_URL);
+  } catch {
+    throw new Error("GOOGLE_APPS_SCRIPT_URL no contiene una URL válida.");
+  }
+
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "script.google.com" ||
+    !url.pathname.endsWith("/exec")
+  ) {
+    throw new Error("GOOGLE_APPS_SCRIPT_URL debe ser una URL HTTPS de producción terminada en /exec.");
+  }
+
+  if (GOOGLE_APPS_SCRIPT_SECRET.length < 32) {
+    throw new Error("GOOGLE_APPS_SCRIPT_SECRET debe tener al menos 32 caracteres.");
+  }
+}
+
+async function callGoogleAppsScript<T>(
+  action: string,
+  payload: Record<string, unknown>,
+  requestId = createRequestId(action)
+): Promise<T> {
+  assertRealConfiguration();
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(GOOGLE_APPS_SCRIPT_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        apiSecret: GOOGLE_APPS_SCRIPT_SECRET,
+        timestamp: new Date().toISOString(),
+        requestId,
+        ...payload,
+      }),
+      cache: "no-store",
+      redirect: "follow",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Apps Script respondió HTTP ${response.status}.`);
+    }
+
+    const body = (await response.json()) as {
+      success?: boolean;
+      data?: T;
+      error?: string;
+    };
+
+    if (!body.success || body.data === undefined) {
+      throw new Error(body.error || `Apps Script rechazó la acción ${action}.`);
+    }
+
+    return body.data;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Google Workspace no respondió dentro de ${REQUEST_TIMEOUT_MS / 1000} segundos.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function assertGoogleId(value: string, label: string) {
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(value) || value.toLowerCase().includes("mock")) {
+    throw new Error(`Google devolvió un ${label} inválido.`);
+  }
+}
+
+function assertGoogleUrl(value: string, allowedHosts: string[], label: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`Google devolvió una URL inválida para ${label}.`);
+  }
+
+  if (url.protocol !== "https:" || !allowedHosts.includes(url.hostname)) {
+    throw new Error(`Google devolvió una URL no permitida para ${label}.`);
+  }
+}
 
 async function ensureSystemUser() {
   await prisma.user.upsert({
@@ -16,38 +127,6 @@ async function ensureSystemUser() {
   });
 }
 
-// Helper to communicate with Google Apps Script Web App
-async function callGoogleAppsScript(action: string, payload: any) {
-  if (!scriptUrl) return null;
-  try {
-    const res = await fetch(scriptUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ action, ...payload }),
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP error ${res.status}`);
-    }
-    const json = await res.json();
-    if (json.success) {
-      return json.data;
-    } else {
-      console.warn(`[Google Apps Script Warning during ${action}]: ${json.error}`);
-      return null;
-    }
-  } catch (err) {
-    console.error(`[Google Apps Script Error during ${action}]:`, err);
-    return null;
-  }
-}
-
-export interface GoogleFolderResult {
-  folderId: string;
-  folderUrl: string;
-}
-
 export interface CaseFoldersResult {
   regionFolderId: string;
   perFolderId: string;
@@ -57,326 +136,346 @@ export interface CaseFoldersResult {
   finalizacionFolderId: string;
   validadosFolderId: string;
   folderUrl: string;
+  createdCaseFolder: boolean;
+  requestId: string;
 }
 
 export interface GoogleDocResult {
   docId: string;
   docUrl: string;
+  createdDocument: boolean;
+  requestId: string;
 }
 
 export interface GoogleCalendarResult {
   eventId: string;
   eventUrl: string;
+  createdEvent: boolean;
+  requestId: string;
 }
 
-/**
- * Creates a Google Drive Folder structure for a new case.
- * Connects to Google Apps Script if URL is configured; otherwise simulates locally.
- */
+export interface VerifiedDriveFile {
+  fileId: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+}
+
+export interface ValidatedCopyResult {
+  newFileId: string;
+  newRevisionId: string;
+  fileName: string;
+  fileUrl: string;
+  createdCopy: boolean;
+  requestId: string;
+}
+
 export async function createCaseFolder(
   caseCode: string,
   regionId: string,
-  perId: string
+  perId: string,
+  isDemo: boolean
 ): Promise<CaseFoldersResult> {
-  await ensureSystemUser();
+  const mode = modeFromDemo(isDemo);
+  const requestId = createRequestId("case");
 
-  // Try real integration via Google Apps Script
-  if (scriptUrl) {
-    const realResult = await callGoogleAppsScript("createCaseFolderHierarchy", { caseCode, regionId, perId });
-    if (realResult) {
-      await prisma.auditLog.create({
-        data: {
-          userId: "SYSTEM",
-          role: "ADMIN",
-          action: "GOOGLE_DRIVE_CREATE_FOLDER_HIERARCHY",
-          entityType: "PACase",
-          entityId: caseCode,
-          newValue: JSON.stringify(realResult),
-          reason: `Provisión automática REAL de carpetas en Shared Drive para región ${regionId} y PER ${perId}`,
-        },
-      });
-      return realResult;
-    }
+  if (mode === "demo") {
+    const base = `demo_${caseCode.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
+    return {
+      regionFolderId: `${base}_region`,
+      perFolderId: `${base}_per`,
+      caseFolderId: `${base}_case`,
+      vinculacionFolderId: `${base}_vinculacion`,
+      conexionFolderId: `${base}_conexion`,
+      finalizacionFolderId: `${base}_finalizacion`,
+      validadosFolderId: `${base}_validados`,
+      folderUrl: `https://drive.google.com/drive/folders/mock_${base}`,
+      createdCaseFolder: false,
+      requestId,
+    };
   }
 
-  // Fallback to local simulation (mock)
-  const regionClean = regionId.toLowerCase().replace(/ /g, "_");
-  const regionFolderId = `gfolder_region_${regionClean}`;
-  const perFolderId = `gfolder_per_${perId}`;
-  
-  const mockFolderId = `gfolder_case_${caseCode.toLowerCase().replace(/-/g, "_")}`;
-  const mockFolderUrl = `https://drive.google.com/drive/folders/mock_${mockFolderId}`;
+  const result = await callGoogleAppsScript<CaseFoldersResult>(
+    "createCaseFolderHierarchy",
+    { caseCode, regionId, perId },
+    requestId
+  );
 
-  const vinculacionFolderId = `${mockFolderId}_vinc`;
-  const conexionFolderId = `${mockFolderId}_conex`;
-  const finalizacionFolderId = `${mockFolderId}_final`;
-  const validadosFolderId = `${mockFolderId}_validados`;
+  for (const [label, id] of Object.entries({
+    regionFolderId: result.regionFolderId,
+    perFolderId: result.perFolderId,
+    caseFolderId: result.caseFolderId,
+    vinculacionFolderId: result.vinculacionFolderId,
+    conexionFolderId: result.conexionFolderId,
+    finalizacionFolderId: result.finalizacionFolderId,
+    validadosFolderId: result.validadosFolderId,
+  })) {
+    assertGoogleId(id, label);
+  }
+  assertGoogleUrl(result.folderUrl, ["drive.google.com"], "carpeta del caso");
 
+  await ensureSystemUser();
   await prisma.auditLog.create({
     data: {
       userId: "SYSTEM",
       role: "ADMIN",
-      action: "GOOGLE_DRIVE_CREATE_FOLDER_HIERARCHY",
+      action: "GOOGLE_DRIVE_PROVISION_CASE",
       entityType: "PACase",
       entityId: caseCode,
-      newValue: JSON.stringify({
-        regionFolderId,
-        perFolderId,
-        caseFolderId: mockFolderId,
-        vinculacionFolderId,
-        conexionFolderId,
-        finalizacionFolderId,
-        validadosFolderId,
-        folderUrl: mockFolderUrl,
-      }),
-      reason: `Provisión simulada de jerarquía de carpetas en Shared Drive para región ${regionId} y PER ${perId}`,
+      newValue: JSON.stringify(result),
+      reason: result.createdCaseFolder
+        ? "Jerarquía real creada en Google Drive"
+        : "Jerarquía real existente reutilizada de forma idempotente",
+      isDemo: false,
     },
   });
 
-  return {
-    regionFolderId,
-    perFolderId,
-    caseFolderId: mockFolderId,
-    vinculacionFolderId,
-    conexionFolderId,
-    finalizacionFolderId,
-    validadosFolderId,
-    folderUrl: mockFolderUrl,
-  };
+  return { ...result, requestId };
 }
 
-/**
- * Copies an IAP Document from the official template into the case folder.
- */
-export async function createIapDocument(caseCode: string, folderId: string): Promise<GoogleDocResult> {
-  await ensureSystemUser();
+export async function commitCaseFolder(folders: CaseFoldersResult, caseCode: string, isDemo: boolean) {
+  if (isDemo) return;
+  await callGoogleAppsScript(
+    "commitCaseFolderHierarchy",
+    {
+      caseCode,
+      caseFolderId: folders.caseFolderId,
+      provisioningRequestId: folders.requestId,
+    },
+    createRequestId("commit_case")
+  );
+}
 
-  if (scriptUrl) {
-    const realResult = await callGoogleAppsScript("createIAPDoc", { caseCode, folderId });
-    if (realResult) {
-      await prisma.auditLog.create({
-        data: {
-          userId: "SYSTEM",
-          role: "ADMIN",
-          action: "GOOGLE_DOCS_CREATE_IAP",
-          entityType: "IAPRecord",
-          entityId: caseCode,
-          newValue: JSON.stringify(realResult),
-        },
-      });
-      return realResult;
-    }
+export async function rollbackCaseFolder(folders: CaseFoldersResult, caseCode: string, isDemo: boolean) {
+  if (isDemo || !folders.createdCaseFolder) return;
+  await callGoogleAppsScript(
+    "rollbackCaseFolderHierarchy",
+    {
+      caseCode,
+      caseFolderId: folders.caseFolderId,
+      provisioningRequestId: folders.requestId,
+    },
+    createRequestId("rollback_case")
+  );
+}
+
+export async function createIapDocument(
+  caseCode: string,
+  folderId: string,
+  isDemo: boolean
+): Promise<GoogleDocResult> {
+  const requestId = createRequestId("iap");
+  if (isDemo) {
+    const base = caseCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    return {
+      docId: `demo_iap_${base}`,
+      docUrl: `https://docs.google.com/document/d/mock_demo_iap_${base}/edit`,
+      createdDocument: false,
+      requestId,
+    };
   }
 
-  const mockDocId = `gdoc_iap_${caseCode.toLowerCase().replace(/-/g, "_")}`;
-  const mockDocUrl = `https://docs.google.com/document/d/mock_${mockDocId}/edit`;
+  const result = await callGoogleAppsScript<GoogleDocResult>(
+    "createIAPDoc",
+    { caseCode, folderId },
+    requestId
+  );
+  assertGoogleId(result.docId, "ID del IAP");
+  assertGoogleUrl(result.docUrl, ["docs.google.com", "drive.google.com"], "IAP");
 
-  await prisma.auditLog.create({
-    data: {
-      userId: "SYSTEM",
-      role: "ADMIN",
-      action: "GOOGLE_DOCS_CREATE_IAP",
-      entityType: "IAPRecord",
-      entityId: caseCode,
-      newValue: JSON.stringify({ docId: mockDocId, docUrl: mockDocUrl, parentFolderId: folderId }),
-    },
-  });
-
-  return {
-    docId: mockDocId,
-    docUrl: mockDocUrl,
-  };
+  return { ...result, requestId };
 }
 
-/**
- * Creates a Calendar Event for supervisions.
- */
+export async function commitIapDocument(result: GoogleDocResult, isDemo: boolean) {
+  if (isDemo || !result.createdDocument) return;
+  await callGoogleAppsScript("commitIAPDoc", {
+    fileId: result.docId,
+    documentRequestId: result.requestId,
+  });
+}
+
+export async function rollbackIapDocument(result: GoogleDocResult, isDemo: boolean) {
+  if (isDemo || !result.createdDocument) return;
+  await callGoogleAppsScript("rollbackIAPDoc", {
+    fileId: result.docId,
+    documentRequestId: result.requestId,
+  });
+}
+
 export async function scheduleSupervisionEvent(
   perName: string,
   coordName: string,
-  date: Date
+  date: Date,
+  durationMinutes: number,
+  isDemo: boolean
 ): Promise<GoogleCalendarResult> {
-  await ensureSystemUser();
+  const requestId = createRequestId("supervision");
 
-  if (scriptUrl) {
-    const realResult = await callGoogleAppsScript("scheduleSupervision", {
+  if (isDemo) {
+    return {
+      eventId: `demo_event_${requestId}`,
+      eventUrl: `https://calendar.google.com/calendar/event?eid=mock_${requestId}`,
+      createdEvent: false,
+      requestId,
+    };
+  }
+
+  const result = await callGoogleAppsScript<GoogleCalendarResult>(
+    "scheduleSupervision",
+    {
       perName,
       coordName,
       dateStr: date.toISOString(),
-    });
-    if (realResult) {
-      await prisma.auditLog.create({
-        data: {
-          userId: "SYSTEM",
-          role: "ADMIN",
-          action: "GOOGLE_CALENDAR_ADD_EVENT",
-          entityType: "Supervision",
-          entityId: realResult.eventId,
-          newValue: JSON.stringify({
-            summary: `Supervisión Dupla: ${perName} - Coord: ${coordName}`,
-            start: date,
-            url: realResult.eventUrl,
-          }),
-        },
-      });
-      return realResult;
-    }
-  }
-
-  const mockEventId = `gcal_event_${Math.random().toString(36).substring(7)}`;
-  const mockEventUrl = `https://calendar.google.com/calendar/event?eid=mock_${mockEventId}`;
-
-  await prisma.auditLog.create({
-    data: {
-      userId: "SYSTEM",
-      role: "ADMIN",
-      action: "GOOGLE_CALENDAR_ADD_EVENT",
-      entityType: "Supervision",
-      entityId: mockEventId,
-      newValue: JSON.stringify({
-        summary: `Supervisión Dupla: ${perName} - Coord: ${coordName}`,
-        start: date,
-        url: mockEventUrl,
-      }),
+      durationMinutes,
     },
-  });
-
-  return {
-    eventId: mockEventId,
-    eventUrl: mockEventUrl,
-  };
+    requestId
+  );
+  assertGoogleId(result.eventId, "ID del evento");
+  assertGoogleUrl(result.eventUrl, ["calendar.google.com"], "evento de supervisión");
+  return { ...result, requestId };
 }
 
-/**
- * Syncs operational data to the Google Sheets mirror ("Formato Acompañamientos 2026").
- */
-export async function syncMirrorSheet(): Promise<{ success: boolean; rowsSynced: number }> {
-  const cases = await prisma.pACase.findMany({
-    include: {
-      per: {
-        include: {
-          user: true,
-        },
-      },
+export async function rollbackSupervisionEvent(result: GoogleCalendarResult, isDemo: boolean) {
+  if (isDemo || !result.createdEvent) return;
+  await callGoogleAppsScript(
+    "rollbackSupervision",
+    {
+      eventId: result.eventId,
+      schedulingRequestId: result.requestId,
     },
+    createRequestId("rollback_supervision")
+  );
+}
+
+export async function syncMirrorSheet(
+  isDemo: boolean
+): Promise<{ success: boolean; rowsSynced: number }> {
+  const cases = await prisma.pACase.findMany({
+    where: { isDemo },
+    include: { per: { include: { user: true } } },
   });
 
-  const formattedCases = cases.map((c) => ({
-    code: c.code,
-    regionId: c.regionId,
-    perName: c.per.user.name,
-    status: c.status,
-    type: c.type,
-    lastSessionDate: c.lastSessionDate ? c.lastSessionDate.toISOString() : null,
-    createdAt: c.createdAt.toISOString(),
+  if (isDemo) {
+    return { success: true, rowsSynced: cases.length };
+  }
+
+  const formattedCases = cases.map((item) => ({
+    code: item.code,
+    regionId: item.regionId,
+    perName: item.per.user.name,
+    status: item.status,
+    type: item.type,
+    lastSessionDate: item.lastSessionDate?.toISOString() || null,
+    createdAt: item.createdAt.toISOString(),
   }));
 
-  const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-  const adminId = admin ? admin.id : "SYSTEM";
+  const result = await callGoogleAppsScript<{ success: boolean; rowsSynced: number }>(
+    "syncMirrorSheet",
+    { cases: formattedCases }
+  );
 
-  if (scriptUrl) {
-    const realResult = await callGoogleAppsScript("syncMirrorSheet", { cases: formattedCases });
-    if (realResult && realResult.success) {
-      await prisma.auditLog.create({
-        data: {
-          userId: adminId,
-          role: "ADMIN",
-          action: "GOOGLE_SHEETS_MIRROR_SYNC",
-          entityType: "SYSTEM",
-          entityId: "DATABASE",
-          newValue: `Sincronización REAL de ${cases.length} casos hacia Google Sheets por Apps Script`,
-        },
-      });
-      return { success: true, rowsSynced: cases.length };
-    }
+  if (!result.success || result.rowsSynced !== cases.length) {
+    throw new Error("Google Sheets no confirmó todas las filas enviadas.");
   }
 
-  await prisma.auditLog.create({
-    data: {
-      userId: adminId,
-      role: "ADMIN",
-      action: "GOOGLE_SHEETS_MIRROR_SYNC",
-      entityType: "SYSTEM",
-      entityId: "DATABASE",
-      newValue: `Sincronización simulada (mock) de ${cases.length} casos hacia Google Sheets`,
-    },
-  });
-
-  return {
-    success: true,
-    rowsSynced: cases.length,
-  };
+  return result;
 }
 
-/**
- * Copies a finalized document to the /Validados folder under the case.
- */
+export async function verifyDriveFile(
+  fileId: string,
+  expectedCaseFolderId: string,
+  isDemo: boolean
+): Promise<VerifiedDriveFile> {
+  if (isDemo) {
+    return {
+      fileId,
+      fileName: "Documento demostración",
+      fileUrl: `https://drive.google.com/open?id=mock_${fileId}`,
+      mimeType: "application/vnd.google-apps.document",
+    };
+  }
+
+  const result = await callGoogleAppsScript<VerifiedDriveFile>("verifyDriveFile", {
+    fileId,
+    expectedCaseFolderId,
+  });
+  assertGoogleId(result.fileId, "ID del archivo");
+  assertGoogleUrl(result.fileUrl, ["drive.google.com", "docs.google.com"], "archivo entregado");
+  return result;
+}
+
+export async function copyActaPrimerEncuentro(
+  fileId: string,
+  destinationFolderId: string,
+  caseCode: string,
+  isDemo: boolean
+): Promise<ValidatedCopyResult> {
+  const requestId = createRequestId("acta_copy");
+  if (isDemo) {
+    return {
+      newFileId: `demo_acta_${caseCode}`,
+      newRevisionId: "demo",
+      fileName: `${caseCode}_Acta_Primer_Encuentro`,
+      fileUrl: `https://drive.google.com/open?id=mock_demo_acta_${caseCode}`,
+      createdCopy: false,
+      requestId,
+    };
+  }
+
+  const result = await callGoogleAppsScript<ValidatedCopyResult>(
+    "copyActaPrimerEncuentro",
+    { fileId, destinationFolderId, caseCode },
+    requestId
+  );
+  assertGoogleId(result.newFileId, "ID del Acta");
+  assertGoogleUrl(result.fileUrl, ["drive.google.com", "docs.google.com"], "Acta");
+  return { ...result, requestId };
+}
+
 export async function copyToValidadosFolder(
   fileId: string,
   destFolderId: string,
   caseCode: string,
   instrumentName: string,
   version: string,
-  actorId: string
-): Promise<{ newFileId: string; newRevisionId: string; fileName: string; fileUrl: string }> {
-  if (scriptUrl) {
-    const realResult = await callGoogleAppsScript("copyToValidados", {
-      fileId,
-      destFolderId,
-      caseCode,
-      instrumentName,
-      version,
-    });
-    if (realResult) {
-      await prisma.auditLog.create({
-        data: {
-          userId: actorId,
-          role: "COORDINATOR",
-          action: "GOOGLE_DRIVE_COPY_TO_VALIDADOS",
-          entityType: "DocumentRecord",
-          entityId: realResult.newFileId,
-          newValue: JSON.stringify({
-            originalFileId: fileId,
-            destinationFolderId: destFolderId,
-            fileName: realResult.fileName,
-            revisionId: realResult.newRevisionId,
-          }),
-          reason: `Copia REAL de versión aprobada de ${instrumentName} para el caso ${caseCode}`,
-        },
-      });
-      return realResult;
-    }
+  isDemo: boolean
+): Promise<ValidatedCopyResult> {
+  const requestId = createRequestId("validated_copy");
+  if (isDemo) {
+    const fileName = `${instrumentName}_${caseCode}_v${version}_DEMO`;
+    return {
+      newFileId: `demo_validated_${fileId}`,
+      newRevisionId: `demo_revision_${version}`,
+      fileName,
+      fileUrl: `https://drive.google.com/open?id=mock_demo_validated_${fileId}`,
+      createdCopy: false,
+      requestId,
+    };
   }
 
-  const dateStr = new Date().toISOString().split("T")[0];
-  const cleanInstrument = instrumentName.replace(/[^a-zA-Z0-9]/g, "_");
-  const fileName = `${cleanInstrument}_${caseCode}_v${version}_${dateStr}.pdf`;
-  
-  const newFileId = `gfile_val_${fileId.replace("drive_file_", "").replace("mock_", "")}`;
-  const newRevisionId = `rev_${Math.random().toString(36).substring(7)}`;
-  const fileUrl = `https://drive.google.com/open?id=mock_${newFileId}`;
+  const result = await callGoogleAppsScript<ValidatedCopyResult>(
+    "copyToValidados",
+    { fileId, destFolderId, caseCode, instrumentName, version },
+    requestId
+  );
 
-  await prisma.auditLog.create({
-    data: {
-      userId: actorId,
-      role: "COORDINATOR",
-      action: "GOOGLE_DRIVE_COPY_TO_VALIDADOS",
-      entityType: "DocumentRecord",
-      entityId: newFileId,
-      newValue: JSON.stringify({
-        originalFileId: fileId,
-        destinationFolderId: destFolderId,
-        fileName,
-        revisionId: newRevisionId,
-      }),
-      reason: `Copia simulada de versión aprobada de ${instrumentName} para el caso ${caseCode}`,
-    },
+  assertGoogleId(result.newFileId, "ID del documento validado");
+  assertGoogleUrl(result.fileUrl, ["drive.google.com", "docs.google.com"], "documento validado");
+  return { ...result, requestId };
+}
+
+export async function commitValidatedCopy(result: ValidatedCopyResult, isDemo: boolean) {
+  if (isDemo || !result.createdCopy) return;
+  await callGoogleAppsScript("commitValidatedCopy", {
+    fileId: result.newFileId,
+    copyRequestId: result.requestId,
   });
+}
 
-  return {
-    newFileId,
-    newRevisionId,
-    fileName,
-    fileUrl,
-  };
+export async function rollbackValidatedCopy(result: ValidatedCopyResult, isDemo: boolean) {
+  if (isDemo || !result.createdCopy) return;
+  await callGoogleAppsScript("rollbackValidatedCopy", {
+    fileId: result.newFileId,
+    copyRequestId: result.requestId,
+  });
 }

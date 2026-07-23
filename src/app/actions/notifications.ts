@@ -21,7 +21,7 @@ export async function getUserNotificationsAction(): Promise<UserNotification[]> 
 
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, isDemo: user.isDemo },
       orderBy: { createdAt: "desc" },
       take: 20, // Keep it light, last 20 notifications is plenty
     });
@@ -40,7 +40,7 @@ export async function markNotificationAsReadAction(id: string): Promise<void> {
 
   try {
     await prisma.notification.update({
-      where: { id, userId: user.id },
+      where: { id, userId: user.id, isDemo: user.isDemo },
       data: { read: true },
     });
     revalidatePath("/", "layout");
@@ -58,7 +58,7 @@ export async function markAllNotificationsAsReadAction(): Promise<void> {
 
   try {
     await prisma.notification.updateMany({
-      where: { userId: user.id, read: false },
+      where: { userId: user.id, read: false, isDemo: user.isDemo },
       data: { read: true },
     });
     revalidatePath("/", "layout");

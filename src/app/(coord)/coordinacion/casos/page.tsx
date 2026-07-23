@@ -3,19 +3,30 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import { mapCaseStatusToLabel, mapEmotionToLabel } from "@/lib/nomenclatures";
-import { transitionCaseStatusAction, createDirectContinuityCaseAction } from "@/app/actions/coordinator";
+import {
+  createDirectContinuityCaseAction,
+  formalizeMatchAction,
+  transitionCaseStatusAction,
+  validateMatchAction,
+} from "@/app/actions/coordinator";
 
 export const dynamic = "force-dynamic";
 
 export default async function CoordinatorCasosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ caseCode?: string; highlightCaseId?: string; error?: string }>;
+  searchParams: Promise<{
+    caseCode?: string;
+    highlightCaseId?: string;
+    error?: string;
+    workspace?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   const params = await searchParams;
   const highlightCaseId = params.highlightCaseId;
   const errorMsg = params.error;
+  const workspaceCreated = params.workspace === "created";
 
   // Enforce Coordinator role access
   if (!user || user.role !== "COORDINATOR" || !user.regionId) {
@@ -37,6 +48,7 @@ export default async function CoordinatorCasosPage({
       cases: {
         where: {
           status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
+          isDemo,
         },
       },
     },
@@ -55,11 +67,12 @@ export default async function CoordinatorCasosPage({
 
   if (params.caseCode) {
     const selectedCase = await prisma.pACase.findFirst({
-      where: { code: params.caseCode, regionId: user.regionId },
+      where: { code: params.caseCode, regionId: user.regionId, isDemo },
       include: {
         statusHistory: true,
         contactAttempts: true,
         sessionLogs: true,
+        iapRecords: true,
         tasks: {
           include: {
             events: true,
@@ -210,6 +223,15 @@ export default async function CoordinatorCasosPage({
                   </div>
                 </div>
               )}
+
+              {workspaceCreated && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-2xl">
+                  <p className="font-bold">Google Workspace aprovisionado correctamente</p>
+                  <p className="mt-1 text-[11px]">
+                    La carpeta del caso, sus subcarpetas y el IAP quedaron creados y vinculados al registro.
+                  </p>
+                </div>
+              )}
               
               <div className={`p-6 bg-card border rounded-2xl shadow-sm space-y-4 transition duration-300 ${
                 selectedCaseDetails.id === highlightCaseId 
@@ -239,8 +261,101 @@ export default async function CoordinatorCasosPage({
                       {mapCaseStatusToLabel(selectedCaseDetails.status)}
                     </span>
                   </div>
+
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Google Workspace</span>
+                    <span className="font-semibold text-slate-800">
+                      {isDemo ? "Simulado — no escribe en Google" : "Real — escritura estricta"}
+                    </span>
+                    {!isDemo && selectedCaseDetails.driveFolderId && (
+                      <a
+                        href={selectedCaseDetails.driveFolderId}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 block text-blue-700 hover:underline font-bold"
+                      >
+                        Abrir carpeta del caso ↗
+                      </a>
+                    )}
+                    {!isDemo && selectedCaseDetails.iapRecords[0]?.driveDocId && (
+                      <a
+                        href={`https://docs.google.com/document/d/${selectedCaseDetails.iapRecords[0].driveDocId}/edit`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block text-blue-700 hover:underline font-bold"
+                      >
+                        Abrir IAP generado ↗
+                      </a>
+                    )}
+                    {!isDemo && selectedCaseDetails.actaPrimerEncuentroDriveId && (
+                      <a
+                        href={`https://drive.google.com/open?id=${selectedCaseDetails.actaPrimerEncuentroDriveId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block text-blue-700 hover:underline font-bold"
+                      >
+                        Abrir Acta de Primer Encuentro ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {selectedCaseDetails.matchStatus !== "FORMALIZADO" && (
+                <div className="p-6 bg-white border border-blue-200 rounded-2xl shadow-sm space-y-4">
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
+                      Formalización y Google Drive
+                    </h4>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Estado de la propuesta: {selectedCaseDetails.matchStatus}
+                    </p>
+                  </div>
+
+                  {selectedCaseDetails.matchStatus === "PROPUESTO" && (
+                    <form action={validateMatchAction}>
+                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
+                      <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
+                      <button
+                        type="submit"
+                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs"
+                      >
+                        Validar propuesta de dupla
+                      </button>
+                    </form>
+                  )}
+
+                  {selectedCaseDetails.matchStatus === "VALIDADO" && (
+                    <form action={formalizeMatchAction} className="space-y-3">
+                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
+                      <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
+                      <div className="space-y-1">
+                        <label className="font-semibold text-xs text-slate-700">
+                          Acta de Primer Encuentro en Google Drive
+                        </label>
+                        <input
+                          type="url"
+                          name="actaPrimerEncuentro"
+                          required={!isDemo}
+                          placeholder="https://drive.google.com/file/d/..."
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs"
+                      >
+                        {isDemo
+                          ? "Formalizar en modo demostración"
+                          : "Crear carpeta e IAP reales"}
+                      </button>
+                      <p className="text-[9px] text-slate-500 leading-relaxed">
+                        La operación es idempotente: un reintento reutiliza la misma carpeta y no crea duplicados.
+                      </p>
+                    </form>
+                  )}
+                </div>
+              )}
 
               {/* Status Transition Actions */}
               {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) && (
@@ -430,6 +545,20 @@ export default async function CoordinatorCasosPage({
                     <option value="Informal">Independiente / Informal</option>
                     <option value="Formal">Trabajador Formal contratado</option>
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Acta de Primer Encuentro:</label>
+                  <input
+                    type="url"
+                    name="actaPrimerEncuentro"
+                    required={!isDemo}
+                    placeholder="https://drive.google.com/file/d/..."
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  />
+                  <p className="text-[9px] text-slate-400">
+                    Se copiará con nombre normalizado dentro de 01_Vinculacion.
+                  </p>
                 </div>
 
                 <button 

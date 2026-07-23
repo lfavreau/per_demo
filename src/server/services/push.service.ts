@@ -76,6 +76,7 @@ interface CreateNotificationData {
   title: string;
   message: string;
   link?: string;
+  isDemo: boolean;
 }
 
 /**
@@ -99,6 +100,7 @@ export async function createNotificationWithPush(
       title: data.title,
       message: data.message,
       link: data.link || null,
+      isDemo: data.isDemo,
     },
   });
 

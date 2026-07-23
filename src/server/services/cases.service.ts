@@ -1,6 +1,17 @@
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
-import { createCaseFolder } from "../google/workspace";
+import {
+  commitCaseFolder,
+  commitIapDocument,
+  commitValidatedCopy,
+  copyActaPrimerEncuentro,
+  createCaseFolder,
+  createIapDocument,
+  rollbackCaseFolder,
+  rollbackIapDocument,
+  rollbackValidatedCopy,
+  type GoogleDocResult,
+  type ValidatedCopyResult,
+} from "../google/workspace";
 import { createNotificationWithPush } from "@/server/services/push.service";
 
 // Helper to abbreviate Chilean regions
@@ -15,12 +26,12 @@ function getRegionAbbreviation(region: string): string {
 }
 
 // Helper to generate the next PA code
-async function generatePaCode(regionId: string): Promise<string> {
+async function generatePaCode(regionId: string, isDemo: boolean): Promise<string> {
   const abbr = getRegionAbbreviation(regionId);
   
   // Get count of cases in this region to generate sequential suffix
   const count = await prisma.pACase.count({
-    where: { regionId },
+    where: { regionId, isDemo },
   });
   
   const sequential = String(count + 1).padStart(3, "0");
@@ -32,7 +43,8 @@ export async function createCaseFromCandidate(
   perId: string,
   matchRationale: string,
   type: "NUEVO" | "CONTINUIDAD",
-  actorId: string
+  actorId: string,
+  isDemo: boolean
 ) {
   return await prisma.$transaction(async (tx) => {
     // 1. Get candidate details
@@ -40,6 +52,13 @@ export async function createCaseFromCandidate(
       where: { id: candidateId },
     });
     if (!candidate) throw new Error("Candidata no encontrada");
+    if (candidate.isDemo !== isDemo) {
+      throw new Error("La candidata no pertenece al modo de trabajo actual");
+    }
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    if (!actor || (actor.role !== "ADMIN" && actor.regionId !== candidate.regionId)) {
+      throw new Error("No autorizado para operar casos de esta región");
+    }
 
     // 2. Get PER Profile details
     const per = await tx.pERProfile.findUnique({
@@ -52,7 +71,7 @@ export async function createCaseFromCandidate(
     }
 
     // 3. Generate unique code
-    const code = await generatePaCode(candidate.regionId);
+    const code = await generatePaCode(candidate.regionId, isDemo);
 
     // 4. Create case
     const newCase = await tx.pACase.create({
@@ -72,6 +91,7 @@ export async function createCaseFromCandidate(
         educationLevel: candidate.educationLevel,
         employmentStatus: candidate.employmentStatus,
         stageEnteredAt: new Date(),
+        isDemo,
       },
     });
 
@@ -104,6 +124,7 @@ export async function createCaseFromCandidate(
         entityType: "PACase",
         entityId: newCase.id,
         newValue: JSON.stringify({ code, perId, type }),
+        isDemo,
       },
     });
 
@@ -112,16 +133,23 @@ export async function createCaseFromCandidate(
       title: "Propuesta de Acompañamiento",
       message: `Se te ha propuesto la asignación del caso ${code}. Justificación: ${matchRationale}`,
       link: `/per?highlightCaseId=${newCase.id}`,
+      isDemo,
     }, tx);
 
     return newCase;
   });
 }
 
-export async function validateMatch(caseId: string, actorId: string) {
+export async function validateMatch(caseId: string, actorId: string, isDemo: boolean) {
   return await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({ where: { id: caseId } });
     if (!paCase) throw new Error("Caso no encontrado");
+    if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    if (!actor || (actor.role !== "ADMIN" && actor.regionId !== paCase.regionId)) {
+      throw new Error("No autorizado para operar casos de esta región");
+    }
+    if (paCase.matchStatus === "FORMALIZADO") return paCase;
 
     const updated = await tx.pACase.update({
       where: { id: caseId },
@@ -137,6 +165,7 @@ export async function validateMatch(caseId: string, actorId: string) {
         entityId: caseId,
         previousValue: "PROPUESTO",
         newValue: "VALIDADO",
+        isDemo,
       },
     });
 
@@ -144,79 +173,145 @@ export async function validateMatch(caseId: string, actorId: string) {
   });
 }
 
-export async function formalizeMatch(caseId: string, actaPrimerEncuentroDriveId: string, actorId: string) {
-  const paCase = await prisma.pACase.findUnique({ 
+export async function formalizeMatch(
+  caseId: string,
+  actaPrimerEncuentroDriveId: string,
+  actorId: string,
+  isDemo: boolean
+) {
+  const paCase = await prisma.pACase.findUnique({
     where: { id: caseId },
     include: { per: true },
   });
   if (!paCase) throw new Error("Caso no encontrado");
+  if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+  const actor = await prisma.user.findUnique({ where: { id: actorId } });
+  if (!actor || (actor.role !== "ADMIN" && actor.regionId !== paCase.regionId)) {
+    throw new Error("No autorizado para operar casos de esta región");
+  }
+  if (paCase.matchStatus === "FORMALIZADO" && paCase.driveFolderCaseId) return paCase;
+  if (paCase.matchStatus !== "VALIDADO") {
+    throw new Error("La propuesta debe estar validada antes de formalizarla");
+  }
 
-  // 1. Create hierarchical folders in Drive (mocked) — done outside of Prisma transaction to avoid SQLite deadlocks
-  const folders = await createCaseFolder(paCase.code, paCase.regionId, paCase.perId);
+  const folders = await createCaseFolder(paCase.code, paCase.regionId, paCase.perId, isDemo);
 
-  return await prisma.$transaction(async (tx) => {
-    // 2. Update case record with folder IDs and formalize match
-    const updated = await tx.pACase.update({
-      where: { id: caseId },
-      data: {
-        matchStatus: "FORMALIZADO",
-        status: "VINCULACION",
-        stage: "VINCULACION",
-        actaPrimerEncuentroDriveId,
-        startDate: new Date(),
-        stageEnteredAt: new Date(),
-        driveFolderRegionId: folders.regionFolderId,
-        driveFolderPerId: folders.perFolderId,
-        driveFolderCaseId: folders.caseFolderId,
-        driveFolderVinculacionId: folders.vinculacionFolderId,
-        driveFolderConexionId: folders.conexionFolderId,
-        driveFolderFinalizacionId: folders.finalizacionFolderId,
-        driveFolderValidadosId: folders.validadosFolderId,
-        driveFolderId: folders.folderUrl,
-      },
+  let iap: GoogleDocResult | null = null;
+  let actaCopy: ValidatedCopyResult | null = null;
+  try {
+    const createdIap = await createIapDocument(paCase.code, folders.vinculacionFolderId, isDemo);
+    iap = createdIap;
+    const createdActa = await copyActaPrimerEncuentro(
+      actaPrimerEncuentroDriveId,
+      folders.vinculacionFolderId,
+      paCase.code,
+      isDemo
+    );
+    actaCopy = createdActa;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.pACase.update({
+        where: { id: caseId },
+        data: {
+          matchStatus: "FORMALIZADO",
+          status: "VINCULACION",
+          stage: "VINCULACION",
+          actaPrimerEncuentroDriveId: createdActa.newFileId,
+          startDate: new Date(),
+          stageEnteredAt: new Date(),
+          driveFolderRegionId: folders.regionFolderId,
+          driveFolderPerId: folders.perFolderId,
+          driveFolderCaseId: folders.caseFolderId,
+          driveFolderVinculacionId: folders.vinculacionFolderId,
+          driveFolderConexionId: folders.conexionFolderId,
+          driveFolderFinalizacionId: folders.finalizacionFolderId,
+          driveFolderValidadosId: folders.validadosFolderId,
+          driveFolderId: folders.folderUrl,
+        },
+      });
+
+      await tx.iAPRecord.create({
+        data: {
+          paCaseId: caseId,
+          status: "INICIADO",
+          driveDocId: createdIap.docId,
+        },
+      });
+
+      await tx.caseStageHistory.create({
+        data: {
+          paCaseId: caseId,
+          stage: "VINCULACION",
+          enteredAt: new Date(),
+        },
+      });
+
+      await tx.caseStatusHistory.create({
+        data: {
+          paCaseId: caseId,
+          fromStatus: paCase.status,
+          toStatus: "VINCULACION",
+          reason: "Dupla formalizada mediante Acta de Primer Encuentro y aprovisionamiento de Drive",
+          byUserId: actorId,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          role: "COORDINATOR",
+          action: "FORMALIZE_MATCH",
+          entityType: "PACase",
+          entityId: caseId,
+          previousValue: JSON.stringify({ matchStatus: paCase.matchStatus, status: paCase.status }),
+          newValue: JSON.stringify({
+            matchStatus: "FORMALIZADO",
+            status: "VINCULACION",
+            folders,
+            iap: createdIap,
+            acta: createdActa,
+          }),
+          isDemo,
+        },
+      });
+
+      await createNotificationWithPush({
+        userId: paCase.per.userId,
+        title: "Acompañamiento Formalizado",
+        message: `Se ha formalizado el caso ${paCase.code} y se habilitaron su carpeta e IAP en Google Drive.`,
+        link: `/per?highlightCaseId=${paCase.id}`,
+        isDemo,
+      }, tx);
+
+      return result;
     });
 
-    // 3. Initialize CaseStageHistory for VINCULACION
-    await tx.caseStageHistory.create({
-      data: {
-        paCaseId: caseId,
-        stage: "VINCULACION",
-        enteredAt: new Date(),
-      },
+    await commitCaseFolder(folders, paCase.code, isDemo).catch((error) => {
+      console.error("No se pudo marcar la carpeta como confirmada:", error);
     });
-
-    // 4. Record status history
-    await tx.caseStatusHistory.create({
-      data: {
-        paCaseId: caseId,
-        fromStatus: paCase.status,
-        toStatus: "VINCULACION",
-        reason: "Dupla formalizada mediante Acta de Primer Encuentro y aprovisionamiento de Drive",
-        byUserId: actorId,
-      },
+    await commitIapDocument(createdIap, isDemo).catch((error) => {
+      console.error("No se pudo marcar el IAP como confirmado:", error);
     });
-
-    await tx.auditLog.create({
-      data: {
-        userId: actorId,
-        role: "COORDINATOR",
-        action: "FORMALIZE_MATCH",
-        entityType: "PACase",
-        entityId: caseId,
-        previousValue: JSON.stringify({ matchStatus: paCase.matchStatus, status: paCase.status }),
-        newValue: JSON.stringify({ matchStatus: "FORMALIZADO", status: "VINCULACION", folders }),
-      },
+    await commitValidatedCopy(createdActa, isDemo).catch((error) => {
+      console.error("No se pudo marcar el Acta como confirmada:", error);
     });
-
-    await createNotificationWithPush({
-      userId: paCase.per.userId,
-      title: "Acompañamiento Formalizado",
-      message: `Se ha formalizado el caso ${paCase.code} y se habilitó su carpeta en Google Drive.`,
-      link: `/per?highlightCaseId=${paCase.id}`,
-    }, tx);
-
     return updated;
-  });
+  } catch (error) {
+    if (actaCopy) {
+      await rollbackValidatedCopy(actaCopy, isDemo).catch((rollbackError) => {
+        console.error("No se pudo revertir la copia del Acta:", rollbackError);
+      });
+    }
+    if (iap) {
+      await rollbackIapDocument(iap, isDemo).catch((rollbackError) => {
+        console.error("No se pudo revertir el IAP creado:", rollbackError);
+      });
+    }
+    await rollbackCaseFolder(folders, paCase.code, isDemo).catch((rollbackError) => {
+      console.error("No se pudo revertir la carpeta creada:", rollbackError);
+    });
+    throw error;
+  }
 }
 
 export async function updateIntensityLevel(caseId: string, intensityLevel: "BASICO" | "INTERMEDIO" | "INTENSIVO", actorId: string) {
@@ -245,13 +340,24 @@ export async function updateIntensityLevel(caseId: string, intensityLevel: "BASI
   });
 }
 
-export async function transitionCaseStatus(caseId: string, toStatus: string, reason: string, actorId: string) {
+export async function transitionCaseStatus(
+  caseId: string,
+  toStatus: string,
+  reason: string,
+  actorId: string,
+  isDemo: boolean
+) {
   return await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({
       where: { id: caseId },
       include: { tasks: true, per: true },
     });
     if (!paCase) throw new Error("Caso no encontrado");
+    if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    if (!actor || (actor.role !== "ADMIN" && actor.regionId !== paCase.regionId)) {
+      throw new Error("No autorizado para operar casos de esta región");
+    }
 
     // Egreso validations (satisfaction survey and ex-post evaluation tasks must be VALIDADA)
     if (toStatus === "EGRESO") {
@@ -281,7 +387,6 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
     else if (toStatus === "CONEXION") newStage = "CONEXION";
     else if (toStatus === "FINALIZACION") newStage = "FINALIZACION";
 
-    const closing = ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"].includes(toStatus);
     const startingOrChanging = ["VINCULACION", "CONEXION", "FINALIZACION"].includes(toStatus);
 
     if (paCase.status !== toStatus) {
@@ -330,7 +435,11 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
     // Forced Withdrawal: release PER active cupo and notify coordinator with candidates list
     if (["RETIRO_VOLUNTARIO", "DESERCION"].includes(toStatus)) {
       const candidates = await tx.pACandidate.findMany({
-        where: { regionId: paCase.regionId, status: { in: ["DERIVADA", "ADMISIBLE", "SELECCIONADA"] } },
+        where: {
+          regionId: paCase.regionId,
+          status: { in: ["DERIVADA", "ADMISIBLE", "SELECCIONADA"] },
+          isDemo,
+        },
         select: { sourceCenter: true },
       });
       const listStr = candidates.map((c) => c.sourceCenter).join(", ");
@@ -344,6 +453,7 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
           entityType: "PACase",
           entityId: caseId,
           newValue: newValueMsg,
+          isDemo,
         },
       });
     }
@@ -358,6 +468,7 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
         previousValue: paCase.status,
         newValue: toStatus,
         reason,
+        isDemo,
       },
     });
 
@@ -367,6 +478,7 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
       title: `Caso ${paCase.code}: ${toStatus}`,
       message: `El caso ${paCase.code} pasó a ${toStatus}. Motivo: ${reason}`,
       link: `/coordinacion/casos?caseCode=${paCase.code}&highlightCaseId=${paCase.id}`,
+      isDemo,
     }, tx);
 
     await createNotificationWithPush({
@@ -374,6 +486,7 @@ export async function transitionCaseStatus(caseId: string, toStatus: string, rea
       title: `Caso ${paCase.code}: ${toStatus}`,
       message: `Tu caso asignado ${paCase.code} pasó a estado ${toStatus}.`,
       link: `/per?highlightCaseId=${paCase.id}`,
+      isDemo,
     }, tx);
 
     return updated;
@@ -400,129 +513,194 @@ export async function createDirectContinuityCase(
   ageRange: string,
   educationLevel: string,
   employmentStatus: string,
-  actorId: string
+  actorId: string,
+  isDemo: boolean,
+  actaPrimerEncuentroDriveId: string
 ) {
-  // 1. Generate unique code outside of transaction to avoid SQLite deadlocks
-  const count = await prisma.pACase.count({ where: { regionId } });
+  const actor = await prisma.user.findUnique({ where: { id: actorId } });
+  if (!actor || (actor.role !== "ADMIN" && actor.regionId !== regionId)) {
+    throw new Error("No autorizado para operar casos de esta región");
+  }
+
+  const selectedPer = await prisma.pERProfile.findUnique({ where: { id: perId } });
+  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus !== "HABILITADO") {
+    throw new Error("El PER seleccionado no está habilitado en la región actual");
+  }
+
+  const count = await prisma.pACase.count({ where: { regionId, isDemo } });
   const abbr = getRegionAbbreviation(regionId);
   const sequential = String(count + 1).padStart(3, "0");
   const code = `PA-${abbr}-${sequential}`;
 
-  // 2. Create folders (mocked) outside of Prisma transaction to avoid SQLite deadlocks
-  const folders = await createCaseFolder(code, regionId, perId);
+  const folders = await createCaseFolder(code, regionId, perId, isDemo);
 
-  return await prisma.$transaction(async (tx) => {
-    // 3. Create candidate record skipping convo funnel
-    const candidate = await tx.pACandidate.create({
-      data: {
-        regionId,
-        sourceCenter: "Caso Continuidad Directo",
-        status: "SELECCIONADA",
-        gender,
-        ageRange,
-        educationLevel,
-        employmentStatus,
-        notes: "Creado automáticamente para acompañamiento de continuidad",
-      },
-    });
+  let iap: GoogleDocResult | null = null;
+  let actaCopy: ValidatedCopyResult | null = null;
+  try {
+    const createdIap = await createIapDocument(code, folders.vinculacionFolderId, isDemo);
+    iap = createdIap;
+    const createdActa = await copyActaPrimerEncuentro(
+      actaPrimerEncuentroDriveId,
+      folders.vinculacionFolderId,
+      code,
+      isDemo
+    );
+    actaCopy = createdActa;
 
-    // 4. Create case in VINCULACION status (continuity)
-    const paCase = await tx.pACase.create({
-      data: {
-        code,
-        type: "CONTINUIDAD",
-        regionId,
-        perId,
-        coordinatorId: actorId,
-        candidateId: candidate.id,
-        status: "VINCULACION",
-        matchStatus: "FORMALIZADO",
-        matchRationale,
-        genderSelfId: gender,
-        ageRange,
-        educationLevel,
-        employmentStatus,
-        stage: "VINCULACION",
-        startDate: new Date(),
-        stageEnteredAt: new Date(),
-        driveFolderRegionId: folders.regionFolderId,
-        driveFolderPerId: folders.perFolderId,
-        driveFolderCaseId: folders.caseFolderId,
-        driveFolderVinculacionId: folders.vinculacionFolderId,
-        driveFolderConexionId: folders.conexionFolderId,
-        driveFolderFinalizacionId: folders.finalizacionFolderId,
-        driveFolderValidadosId: folders.validadosFolderId,
-        driveFolderId: folders.folderUrl,
-      },
-    });
+    const createdCase = await prisma.$transaction(async (tx) => {
+      const candidate = await tx.pACandidate.create({
+        data: {
+          regionId,
+          sourceCenter: "Caso Continuidad Directo",
+          status: "SELECCIONADA",
+          gender,
+          ageRange,
+          educationLevel,
+          employmentStatus,
+          notes: "Creado automáticamente para acompañamiento de continuidad",
+          isDemo,
+        },
+      });
 
-    // 5. Initialize stage history
-    await tx.caseStageHistory.create({
-      data: {
-        paCaseId: paCase.id,
-        stage: "VINCULACION",
-        enteredAt: new Date(),
-      },
-    });
+      const paCase = await tx.pACase.create({
+        data: {
+          code,
+          type: "CONTINUIDAD",
+          regionId,
+          perId,
+          coordinatorId: actorId,
+          candidateId: candidate.id,
+          status: "VINCULACION",
+          matchStatus: "FORMALIZADO",
+          matchRationale,
+          actaPrimerEncuentroDriveId: createdActa.newFileId,
+          genderSelfId: gender,
+          ageRange,
+          educationLevel,
+          employmentStatus,
+          stage: "VINCULACION",
+          startDate: new Date(),
+          stageEnteredAt: new Date(),
+          driveFolderRegionId: folders.regionFolderId,
+          driveFolderPerId: folders.perFolderId,
+          driveFolderCaseId: folders.caseFolderId,
+          driveFolderVinculacionId: folders.vinculacionFolderId,
+          driveFolderConexionId: folders.conexionFolderId,
+          driveFolderFinalizacionId: folders.finalizacionFolderId,
+          driveFolderValidadosId: folders.validadosFolderId,
+          driveFolderId: folders.folderUrl,
+          isDemo,
+        },
+      });
 
-    // 6. Record case status history
-    await tx.caseStatusHistory.create({
-      data: {
-        paCaseId: paCase.id,
-        fromStatus: "REGISTRADA",
-        toStatus: "VINCULACION",
-        reason: "Ingreso directo de continuidad",
-        byUserId: actorId,
-      },
-    });
+      await tx.iAPRecord.create({
+        data: {
+          paCaseId: paCase.id,
+          status: "INICIADO",
+          driveDocId: createdIap.docId,
+        },
+      });
 
-    // 7. Audit Log
-    await tx.auditLog.create({
-      data: {
-        userId: actorId,
-        role: "COORDINATOR",
-        action: "CREATE_CONTINUITY_CASE",
-        entityType: "PACase",
-        entityId: paCase.id,
-        newValue: JSON.stringify({ code, perId, folders }),
-      },
-    });
+      await tx.caseStageHistory.create({
+        data: {
+          paCaseId: paCase.id,
+          stage: "VINCULACION",
+          enteredAt: new Date(),
+        },
+      });
 
-    // 8. Assign default tasks for new Case
-    const defaultInstruments = await tx.instrument.findMany({
-      where: { status: "VIGENTE" },
-    });
+      await tx.caseStatusHistory.create({
+        data: {
+          paCaseId: paCase.id,
+          fromStatus: "REGISTRADA",
+          toStatus: "VINCULACION",
+          reason: "Ingreso directo de continuidad",
+          byUserId: actorId,
+        },
+      });
 
-    const perProfile = await tx.pERProfile.findUnique({ where: { id: perId } });
-    if (!perProfile) throw new Error("PER no encontrado");
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          role: "COORDINATOR",
+          action: "CREATE_CONTINUITY_CASE",
+          entityType: "PACase",
+          entityId: paCase.id,
+          newValue: JSON.stringify({
+            code,
+            perId,
+            folders,
+            iap: createdIap,
+            acta: createdActa,
+          }),
+          isDemo,
+        },
+      });
 
-    for (const inst of defaultInstruments) {
-      if (
-        ["GOOGLE_DOC", "GOOGLE_FORM"].includes(inst.type) &&
-        inst.name !== "Inducción y Caracterización PER" &&
-        inst.name !== "Formulario de Preinscripción PA" &&
-        inst.name !== "Formulario de Retiro Voluntario"
-      ) {
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + (inst.defaultDueDays || 15));
-        
-        await tx.task.create({
-          data: {
-            paCaseId: paCase.id,
-            instrumentId: inst.id,
-            title: inst.name,
-            description: inst.description,
-            status: "PENDIENTE",
-            priority: inst.mandatory ? "CRITICA" : "MEDIA",
-            dueDate,
-            regionId,
-            assignedToUserId: perProfile.userId,
-            assignedByUserId: actorId,
-          },
-        });
+      const defaultInstruments = await tx.instrument.findMany({
+        where: { status: "VIGENTE" },
+      });
+      const perProfile = await tx.pERProfile.findUnique({ where: { id: perId } });
+      if (!perProfile) throw new Error("PER no encontrado");
+
+      for (const inst of defaultInstruments) {
+        if (
+          ["GOOGLE_DOC", "GOOGLE_FORM"].includes(inst.type) &&
+          inst.name !== "Inducción y Caracterización PER" &&
+          inst.name !== "Formulario de Preinscripción PA" &&
+          inst.name !== "Formulario de Retiro Voluntario"
+        ) {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + (inst.defaultDueDays || 15));
+          const isIap = inst.name.toLowerCase().includes("itinerario");
+
+          await tx.task.create({
+            data: {
+              paCaseId: paCase.id,
+              instrumentId: inst.id,
+              title: inst.name,
+              description: inst.description,
+              status: "PENDIENTE",
+              priority: inst.mandatory ? "CRITICA" : "MEDIA",
+              dueDate,
+              regionId,
+              assignedToUserId: perProfile.userId,
+              assignedByUserId: actorId,
+              googleUrl: isIap ? createdIap.docUrl : undefined,
+              driveFileId: isIap ? createdIap.docId : undefined,
+              isDemo,
+            },
+          });
+        }
       }
-    }
 
-    return paCase;
-  });
+      return paCase;
+    });
+
+    await commitCaseFolder(folders, code, isDemo).catch((error) => {
+      console.error("No se pudo marcar la carpeta como confirmada:", error);
+    });
+    await commitIapDocument(createdIap, isDemo).catch((error) => {
+      console.error("No se pudo marcar el IAP como confirmado:", error);
+    });
+    await commitValidatedCopy(createdActa, isDemo).catch((error) => {
+      console.error("No se pudo marcar el Acta como confirmada:", error);
+    });
+    return createdCase;
+  } catch (error) {
+    if (actaCopy) {
+      await rollbackValidatedCopy(actaCopy, isDemo).catch((rollbackError) => {
+        console.error("No se pudo revertir la copia del Acta:", rollbackError);
+      });
+    }
+    if (iap) {
+      await rollbackIapDocument(iap, isDemo).catch((rollbackError) => {
+        console.error("No se pudo revertir el IAP creado:", rollbackError);
+      });
+    }
+    await rollbackCaseFolder(folders, code, isDemo).catch((rollbackError) => {
+      console.error("No se pudo revertir la carpeta creada:", rollbackError);
+    });
+    throw error;
+  }
 }

@@ -1,5 +1,8 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export interface SessionUser {
   id: string;
@@ -11,6 +14,37 @@ export interface SessionUser {
 }
 
 const COOKIE_NAME = "per_session";
+const DEMO_EMAILS = new Set([
+  "admin@per2026.cl",
+  "coord.metro@per2026.cl",
+  "coord.valpo@per2026.cl",
+  "per.carla@per2026.cl",
+  "per.valpo@per2026.cl",
+]);
+
+function sessionSecret() {
+  const secret = process.env.AUTH_SESSION_SECRET?.trim();
+  if (secret && secret.length >= 32) return secret;
+  if (process.env.NODE_ENV !== "production") {
+    return "development-only-session-secret-change-me";
+  }
+  throw new Error("AUTH_SESSION_SECRET debe configurarse con al menos 32 caracteres");
+}
+
+function encodeSession(user: SessionUser) {
+  const payload = Buffer.from(JSON.stringify(user)).toString("base64url");
+  const signature = createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function decodeSession(value: string): SessionUser | null {
+  const [payload, signature] = value.split(".");
+  if (!payload || !signature) return null;
+  const expected = createHmac("sha256", sessionSecret()).update(payload).digest();
+  const received = Buffer.from(signature, "base64url");
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null;
+  return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionUser;
+}
 
 // Login: Validate email and password against database/config, set cookie with isDemo flag
 export async function login(email: string, password?: string, isDemo = false): Promise<SessionUser | { error: string } | null> {
@@ -23,9 +57,23 @@ export async function login(email: string, password?: string, isDemo = false): P
     return { error: "email_not_found" };
   }
 
+  if (isDemo && !DEMO_EMAILS.has(user.email)) {
+    return { error: "demo_not_allowed" };
+  }
+
   // Password check for real mode (isDemo === false)
   if (!isDemo) {
-    if (!password || password.trim() !== "P455w0rd!") {
+    const expectedPassword = process.env.REAL_MODE_PASSWORD?.trim() ||
+      (process.env.NODE_ENV !== "production" ? "P455w0rd!" : "");
+    if (!expectedPassword) {
+      return { error: "real_mode_not_configured" };
+    }
+    const supplied = Buffer.from(password?.trim() || "");
+    const expected = Buffer.from(expectedPassword);
+    if (
+      supplied.length !== expected.length ||
+      !timingSafeEqual(supplied, expected)
+    ) {
       return { error: "invalid_password" };
     }
   }
@@ -40,9 +88,9 @@ export async function login(email: string, password?: string, isDemo = false): P
   };
 
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, JSON.stringify(sessionUser), {
+  cookieStore.set(COOKIE_NAME, encodeSession(sessionUser), {
     httpOnly: true,
-    secure: false, // Permitir login por HTTP en IP local
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: "/",
@@ -67,7 +115,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       return null;
     }
 
-    const sessionUser = JSON.parse(sessionCookie.value) as SessionUser;
+    const sessionUser = decodeSession(sessionCookie.value);
+    if (!sessionUser) return null;
 
     // Verify user is still active in database
     const dbUser = await prisma.user.findUnique({

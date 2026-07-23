@@ -41,6 +41,10 @@ export default function LoginForm() {
       ? "Contraseña incorrecta."
       : error === "email_not_found"
       ? "El usuario no está registrado o se encuentra inactivo."
+      : error === "demo_not_allowed"
+      ? "Esta cuenta no está habilitada para el entorno demostrativo."
+      : error === "real_mode_not_configured"
+      ? "El modo real aún no tiene una contraseña configurada en Vercel."
       : null;
 
   const handleCopy = (text: string) => {

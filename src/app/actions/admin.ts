@@ -37,6 +37,7 @@ export async function createPERUserAction(formData: FormData) {
         role: "PER",
         regionId,
         active: true,
+        isDemo: Boolean(adminUser.isDemo),
       },
     });
 

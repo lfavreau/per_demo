@@ -1,4 +1,11 @@
 import { prisma } from "@/lib/db";
+import {
+  commitValidatedCopy,
+  copyToValidadosFolder,
+  rollbackValidatedCopy,
+  verifyDriveFile,
+  type ValidatedCopyResult,
+} from "@/server/google/workspace";
 
 export async function assignTask({
   title,
@@ -9,6 +16,7 @@ export async function assignTask({
   dueDate,
   priority = "MEDIA",
   actorId,
+  isDemo,
 }: {
   title: string;
   description?: string;
@@ -18,35 +26,29 @@ export async function assignTask({
   dueDate?: Date;
   priority?: "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
   actorId: string;
+  isDemo: boolean;
 }) {
-  return await prisma.$transaction(async (tx) => {
-    // 1. If instrument is specified, verify eligibility
+  return prisma.$transaction(async (tx) => {
     if (instrumentId) {
-      const instrument = await tx.instrument.findUnique({
-        where: { id: instrumentId },
-      });
-
-      if (instrument && instrument.criticalTask) {
-        // Find assigned user's PERProfile
-        const profile = await tx.pERProfile.findUnique({
-          where: { userId: assignedToUserId },
-        });
-
+      const instrument = await tx.instrument.findUnique({ where: { id: instrumentId } });
+      if (instrument?.criticalTask) {
+        const profile = await tx.pERProfile.findUnique({ where: { userId: assignedToUserId } });
         if (profile && profile.certificationStatus !== "HABILITADO") {
-          throw new Error(
-            "Regla Crítica: No se puede asignar una tarea crítica (ej. Acta de Primer Encuentro, IAP) a un PER que no esté habilitado."
-          );
+          throw new Error("No se puede asignar una tarea crítica a un PER no habilitado.");
         }
       }
     }
 
-    // 2. Fetch assigned user to determine region scope
-    const assignedUser = await tx.user.findUnique({
-      where: { id: assignedToUserId },
-    });
+    const assignedUser = await tx.user.findUnique({ where: { id: assignedToUserId } });
     if (!assignedUser) throw new Error("Usuario asignado no encontrado");
 
-    // 3. Create task
+    if (paCaseId) {
+      const paCase = await tx.pACase.findUnique({ where: { id: paCaseId } });
+      if (!paCase || paCase.isDemo !== isDemo) {
+        throw new Error("El caso no pertenece al modo de trabajo actual");
+      }
+    }
+
     const task = await tx.task.create({
       data: {
         title,
@@ -54,15 +56,15 @@ export async function assignTask({
         instrumentId,
         assignedToUserId,
         assignedByUserId: actorId,
-        regionId: assignedUser.regionId || "MET", // fallback
+        regionId: assignedUser.regionId || "MET",
         paCaseId,
         dueDate,
         status: "PENDIENTE",
         priority,
+        isDemo,
       },
     });
 
-    // 4. Record event
     await tx.taskEvent.create({
       data: {
         taskId: task.id,
@@ -73,7 +75,6 @@ export async function assignTask({
       },
     });
 
-    // 5. Write audit log
     await tx.auditLog.create({
       data: {
         userId: actorId,
@@ -82,6 +83,7 @@ export async function assignTask({
         entityType: "Task",
         entityId: task.id,
         newValue: JSON.stringify({ title, assignedToUserId, paCaseId }),
+        isDemo,
       },
     });
 
@@ -94,93 +96,206 @@ export async function updateTaskStatus({
   toStatus,
   note,
   actorId,
+  isDemo,
+  googleFileId,
 }: {
   taskId: string;
-  toStatus: "PENDIENTE" | "EN_CURSO" | "ENVIADA" | "EN_REVISION" | "VALIDADA" | "DEVUELTA" | "CANCELADA";
+  toStatus:
+    | "PENDIENTE"
+    | "EN_CURSO"
+    | "ENVIADA"
+    | "EN_REVISION"
+    | "VALIDADA"
+    | "DEVUELTA"
+    | "CANCELADA";
   note?: string;
   actorId: string;
+  isDemo: boolean;
+  googleFileId?: string;
 }) {
-  return await prisma.$transaction(async (tx) => {
-    const task = await tx.task.findUnique({
-      where: { id: taskId },
-      include: { instrument: true },
-    });
-    if (!task) throw new Error("Tarea no encontrada");
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: { instrument: true, paCase: true },
+  });
+  if (!task) throw new Error("Tarea no encontrada");
+  if (task.isDemo !== isDemo) throw new Error("La tarea no pertenece al modo de trabajo actual");
 
-    const previousStatus = task.status;
+  const actor = await prisma.user.findUnique({ where: { id: actorId } });
+  if (!actor) throw new Error("Usuario no encontrado");
+  if (actor.role === "PER" && task.assignedToUserId !== actorId) {
+    throw new Error("La tarea no está asignada al PER autenticado");
+  }
+  if (
+    actor.role === "COORDINATOR" &&
+    (!actor.regionId || actor.regionId !== task.regionId)
+  ) {
+    throw new Error("No autorizado para operar tareas de otra región");
+  }
 
-    // Handle special feedback when task is returned (DEVUELTA)
-    if (toStatus === "DEVUELTA") {
-      await tx.feedback.create({
-        data: {
-          coordinatorId: actorId,
-          perId: task.assignedToUserId,
-          entityType: "Task",
-          entityId: taskId,
-          text: note || "Devuelto para correcciones",
-          requiresCorrection: true,
-          status: "ENVIADA",
-          taskId: taskId,
-        },
-      });
+  let submittedFile = null;
+  if (toStatus === "ENVIADA") {
+    if (!googleFileId || !task.paCase?.driveFolderCaseId) {
+      if (!isDemo) throw new Error("La tarea debe incluir un archivo dentro de la carpeta del caso");
+    } else {
+      submittedFile = await verifyDriveFile(
+        googleFileId,
+        task.paCase.driveFolderCaseId,
+        isDemo
+      );
     }
+  }
 
-    // Auto-validate case requirements if task is validated
-    if (toStatus === "VALIDADA" && task.paCaseId && task.instrumentId) {
-      const inst = task.instrument;
-      if (inst) {
+  let validatedCopy: ValidatedCopyResult | null = null;
+  if (toStatus === "VALIDADA" && task.paCaseId && task.instrument) {
+    if (!task.driveFileId || !task.paCase?.driveFolderValidadosId) {
+      if (!isDemo) throw new Error("No se puede validar una tarea sin archivo verificado");
+    } else {
+      validatedCopy = await copyToValidadosFolder(
+        task.driveFileId,
+        task.paCase.driveFolderValidadosId,
+        task.paCase.code,
+        task.instrument.name,
+        task.instrument.version,
+        isDemo
+      );
+    }
+  }
+
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const current = await tx.task.findUnique({
+        where: { id: taskId },
+        include: { instrument: true },
+      });
+      if (!current || current.isDemo !== isDemo) {
+        throw new Error("La tarea cambió o dejó de estar disponible");
+      }
+
+      if (toStatus === "DEVUELTA") {
+        await tx.feedback.create({
+          data: {
+            coordinatorId: actorId,
+            perId: current.assignedToUserId,
+            entityType: "Task",
+            entityId: taskId,
+            text: note || "Devuelto para correcciones",
+            requiresCorrection: true,
+            status: "ENVIADA",
+            taskId,
+          },
+        });
+      }
+
+      if (toStatus === "VALIDADA" && current.paCaseId && current.instrumentId) {
+        const instrumentName = current.instrument?.name.toLowerCase() || "";
         const updateData: Record<string, string> = {};
-        if (inst.name.toLowerCase().includes("satisfacción")) {
-          updateData.satisfactionTaskId = task.id;
-        } else if (inst.name.toLowerCase().includes("ex-post")) {
-          updateData.exPostTaskId = task.id;
-        } else if (inst.name.toLowerCase().includes("ex-ante") || inst.name.toLowerCase().includes("itinerario")) {
-          updateData.exAnteTaskId = task.id;
+        if (instrumentName.includes("satisfacción")) updateData.satisfactionTaskId = current.id;
+        else if (instrumentName.includes("ex-post")) updateData.exPostTaskId = current.id;
+        else if (instrumentName.includes("ex-ante") || instrumentName.includes("itinerario")) {
+          updateData.exAnteTaskId = current.id;
         }
+        if (Object.keys(updateData).length) {
+          await tx.pACase.update({ where: { id: current.paCaseId }, data: updateData });
+        }
+      }
 
-        if (Object.keys(updateData).length > 0) {
-          await tx.pACase.update({
-            where: { id: task.paCaseId },
-            data: updateData,
+      if (validatedCopy && current.paCaseId && current.instrumentId && current.instrument) {
+        await tx.documentRecord.updateMany({
+          where: {
+            caseId: current.paCaseId,
+            instrumentId: current.instrumentId,
+            isFinalVigente: true,
+            isDemo,
+          },
+          data: { isFinalVigente: false },
+        });
+        const existingRecord = await tx.documentRecord.findFirst({
+          where: {
+            caseId: current.paCaseId,
+            instrumentId: current.instrumentId,
+            fileId: validatedCopy.newFileId,
+            isDemo,
+          },
+        });
+        if (!existingRecord) {
+          await tx.documentRecord.create({
+            data: {
+              caseId: current.paCaseId,
+              instrumentId: current.instrumentId,
+              instrumentVersion: current.instrument.version,
+              fileId: validatedCopy.newFileId,
+              revisionId: validatedCopy.newRevisionId,
+              fileName: validatedCopy.fileName,
+              fileUrl: validatedCopy.fileUrl,
+              uploadedByUserId: current.assignedToUserId,
+              stage: task.paCase?.stage || "VINCULACION",
+              status: "VALIDADA",
+              isFinalVigente: true,
+              driveFolderId: task.paCase?.driveFolderValidadosId,
+              isDemo,
+            },
           });
         }
       }
+
+      const result = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: toStatus,
+          googleUrl:
+            toStatus === "ENVIADA" && note
+              ? submittedFile?.fileUrl || note
+              : current.googleUrl,
+          driveFileId:
+            toStatus === "ENVIADA" && googleFileId
+              ? submittedFile?.fileId || googleFileId
+              : current.driveFileId,
+        },
+      });
+
+      await tx.taskEvent.create({
+        data: {
+          taskId,
+          fromStatus: current.status,
+          toStatus,
+          byUserId: actorId,
+          note,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          role: actor.role,
+          action: "UPDATE_TASK_STATUS",
+          entityType: "Task",
+          entityId: taskId,
+          previousValue: current.status,
+          newValue: JSON.stringify({
+            status: toStatus,
+            submittedFile,
+            validatedCopy,
+          }),
+          reason: note,
+          isDemo,
+        },
+      });
+
+      return result;
+    });
+
+    if (validatedCopy) {
+      await commitValidatedCopy(validatedCopy, isDemo).catch((error) => {
+        console.error("No se pudo marcar la copia validada como confirmada:", error);
+      });
     }
-
-    // Update status
-    const updated = await tx.task.update({
-      where: { id: taskId },
-      data: {
-        status: toStatus,
-        googleUrl: toStatus === "ENVIADA" && note ? note : task.googleUrl, // If PER submits with a link
-      },
-    });
-
-    // Record task event
-    await tx.taskEvent.create({
-      data: {
-        taskId,
-        fromStatus: previousStatus,
-        toStatus,
-        byUserId: actorId,
-        note,
-      },
-    });
-
-    // Write audit log
-    await tx.auditLog.create({
-      data: {
-        userId: actorId,
-        role: "USER",
-        action: "UPDATE_TASK_STATUS",
-        entityType: "Task",
-        entityId: taskId,
-        previousValue: previousStatus,
-        newValue: toStatus,
-        reason: note,
-      },
-    });
-
     return updated;
-  });
+  } catch (error) {
+    if (validatedCopy) {
+      await rollbackValidatedCopy(validatedCopy, isDemo).catch((rollbackError) => {
+        console.error("No se pudo revertir la copia validada:", rollbackError);
+      });
+    }
+    throw error;
+  }
 }

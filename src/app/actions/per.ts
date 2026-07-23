@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { logSession, CreateSessionLogInput } from "@/server/services/sessions.service";
 import { updateTaskStatus } from "@/server/services/tasks.service";
 import { getCurrentUser } from "@/lib/auth";
+import { extractGoogleDriveFileId } from "@/lib/google-resource";
 
 export async function logSessionAction(data: Omit<CreateSessionLogInput, "perId" | "sessionNumber" | "regionId" | "date"> & { date: string }) {
   const user = await getCurrentUser();
@@ -17,7 +18,7 @@ export async function logSessionAction(data: Omit<CreateSessionLogInput, "perId"
       durationMinutes: data.durationMinutes ? Number(data.durationMinutes) : undefined,
     };
 
-    await logSession(formattedData, user.id);
+    await logSession(formattedData, user.id, user.isDemo);
     revalidatePath("/per", "layout");
     revalidatePath("/coordinacion", "layout");
     revalidatePath("/admin", "layout");
@@ -36,11 +37,14 @@ export async function submitTaskAction(taskId: string, googleUrl: string) {
   }
 
   try {
+    const googleFileId = user.isDemo ? undefined : extractGoogleDriveFileId(googleUrl);
     await updateTaskStatus({
       taskId,
       toStatus: "ENVIADA",
       note: googleUrl,
       actorId: user.id,
+      isDemo: user.isDemo,
+      googleFileId,
     });
     revalidatePath("/per", "layout");
     revalidatePath("/coordinacion", "layout");
@@ -82,7 +86,7 @@ export async function syncOfflineSessionsAction(sessions: Array<any>) {
           offlineDraftId: s.id,
         };
 
-        await logSession(formattedData, user.id);
+        await logSession(formattedData, user.id, user.isDemo);
         syncedCount++;
       } catch (err: any) {
         errors.push({ id: s.id, error: err.message });

@@ -769,6 +769,7 @@ async function main() {
         name: `COSAM ${reg.name} Centro`,
         type: "Salud",
         contactPerson: "Dr. Roberto Silva",
+        isDemo: true,
       },
     });
 
@@ -778,6 +779,7 @@ async function main() {
         name: `OMIL Municipalidad de ${reg.name}`,
         type: "Empleo",
         contactPerson: "María Paz Contreras",
+        isDemo: true,
       },
     });
 
@@ -787,6 +789,7 @@ async function main() {
         name: `Centro de Educación de Adultos ${reg.name}`,
         type: "Educación",
         contactPerson: "Prof. Arturo Vidal",
+        isDemo: true,
       },
     });
 
