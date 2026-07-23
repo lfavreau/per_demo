@@ -169,6 +169,7 @@ export default function AppShell({ children, user }: AppShellProps) {
   const menuItems = {
     ADMIN: [
       { name: "Resumen", path: "/admin", icon: "📊" },
+      { name: "Gestión de Usuarios", path: "/admin/usuarios", icon: "👥" },
       { name: "Instrumentos", path: "/admin/instrumentos", icon: "📋" },
       { name: "Reportes SENDA", path: "/admin/reportes", icon: "📥" },
       { name: "Auditoría", path: "/admin/auditoria", icon: "🛡️" },
