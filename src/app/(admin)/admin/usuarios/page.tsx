@@ -18,8 +18,13 @@ export default async function AdminUsuariosPage({
     redirect("/login");
   }
 
-  // Fetch all registered users in system with PER profiles
+  const isDemo = Boolean(user.isDemo);
+
+  // Fetch registered users in system with PER profiles (filtered by isDemo mode)
   const users = await prisma.user.findMany({
+    where: isDemo
+      ? { isDemo: true }
+      : { OR: [{ isDemo: false }, { role: { in: ["ADMIN", "COORDINATOR"] } }] },
     include: {
       profile: true,
     },

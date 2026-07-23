@@ -16,6 +16,7 @@ model User {
   role               String           @default("PER") // "ADMIN", "COORDINATOR", "PER"
   regionId           String?          // Optional scope
   active             Boolean          @default(true)
+  isDemo             Boolean          @default(false)
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   profile            PERProfile?
