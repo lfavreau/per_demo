@@ -56,10 +56,8 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Formulario de Login Real con Contraseña */}
+      {/* Formulario de Login */}
       <form action={loginAction} className="space-y-4">
-        <input type="hidden" name="isDemo" value="false" />
-
         <div>
           <label htmlFor="email" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
             Nombre de Usuario
@@ -96,8 +94,7 @@ export default function LoginForm() {
           type="submit"
           className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-150 shadow-md cursor-pointer text-sm flex justify-center items-center gap-2 mt-2"
         >
-          <span>🔒</span>
-          <span>Ingresar al Portal (Modo Real)</span>
+          Ingresar al Portal
         </button>
       </form>
 

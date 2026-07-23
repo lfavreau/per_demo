@@ -364,13 +364,9 @@ export default function AppShell({ children, user }: AppShellProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                {user.isDemo ? (
+                {user.isDemo && (
                   <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs">
                     <span>🧪</span> Modo Demo
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-300 flex items-center gap-1 shadow-xs">
-                    <span>🔒</span> Modo Real
                   </span>
                 )}
                 <div className="text-right hidden sm:block">
