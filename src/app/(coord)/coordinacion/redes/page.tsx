@@ -20,38 +20,41 @@ export default async function CoordinatorRedesPage() {
   const isDemo = Boolean(user.isDemo);
 
   // 1. Fetch regional network devices
-  const networkDevices = await prisma.networkDevice.findMany({
-    where: { regionId: user.regionId, isDemo },
+  const allDevices = await prisma.networkDevice.findMany({
+    where: { regionId: user.regionId },
     orderBy: { name: "asc" },
   });
+  const networkDevices = allDevices.filter((d) => Boolean(d.isDemo) === isDemo);
 
   // 2. Fetch regional active cases for selection
-  const regionalCases = await prisma.pACase.findMany({
+  const allCases = await prisma.pACase.findMany({
     where: {
       regionId: user.regionId,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
     orderBy: { code: "asc" },
   });
+  const regionalCases = allCases.filter((c) => Boolean(c.isDemo) === isDemo);
 
   // 3. Fetch regional activations
-  const activations = await prisma.networkActivation.findMany({
-    where: {
-      networkDevice: { regionId: user.regionId, isDemo },
-      isDemo,
-    },
+  const allActivations = await prisma.networkActivation.findMany({
     include: {
       paCase: true,
       networkDevice: true,
     },
     orderBy: { date: "desc" },
   });
+  const activations = allActivations.filter(
+    (a) => a.networkDevice && a.networkDevice.regionId === user.regionId && Boolean(a.isDemo) === isDemo
+  );
 
   // 4. Fetch Phase 5 records (Focus Groups & Team meetings)
-  const phase5Records = await prisma.phase5Record.findMany({
-    where: { regionId: user.regionId, isDemo },
+  const allPhase5Records = await prisma.phase5Record.findMany({
+    where: { regionId: user.regionId },
     orderBy: { date: "desc" },
   });
+  const phase5Records = allPhase5Records.filter((p) => Boolean(p.isDemo) === isDemo);
+
 
   return (
     <AppShell user={user}>
