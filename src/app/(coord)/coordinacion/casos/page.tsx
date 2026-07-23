@@ -65,9 +65,11 @@ export default async function CoordinatorCasosPage({
 
   let selectedCaseDetails = null;
 
-  if (params.caseCode) {
+  const targetCode = params.caseCode || (regionalCases.length > 0 ? regionalCases[0].code : null);
+
+  if (targetCode) {
     const selectedCase = await prisma.pACase.findFirst({
-      where: { code: params.caseCode, regionId: user.regionId, isDemo },
+      where: { code: targetCode, regionId: user.regionId, isDemo },
       include: {
         statusHistory: true,
         contactAttempts: true,
@@ -156,7 +158,7 @@ export default async function CoordinatorCasosPage({
           <form method="GET" className="flex items-center gap-2">
             <select
               name="caseCode"
-              defaultValue={params.caseCode || ""}
+              defaultValue={targetCode || ""}
               className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary font-semibold"
             >
               <option value="">-- Seleccionar Caso --</option>

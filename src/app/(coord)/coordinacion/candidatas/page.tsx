@@ -22,11 +22,10 @@ export default async function CoordinatorCandidatasPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // 2. Fetch PER profiles for matching form (only habilitado PERs)
-  const perProfiles = await prisma.pERProfile.findMany({
+  // 2. Fetch PER profiles for matching form (filtered by isDemo)
+  const allPerProfiles = await prisma.pERProfile.findMany({
     where: {
       regionId: user.regionId,
-      certificationStatus: "HABILITADO",
     },
     include: {
       user: true,
@@ -37,6 +36,7 @@ export default async function CoordinatorCandidatasPage() {
       },
     },
   });
+  const perProfiles = allPerProfiles.filter((p) => Boolean(p.user?.isDemo) === isDemo);
 
   return (
     <AppShell user={user}>
@@ -185,7 +185,7 @@ export default async function CoordinatorCandidatasPage() {
                   <option value="">-- Seleccionar --</option>
                   {perProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.user.name} ({p.cases.length} casos activos)
+                      {p.user?.name || "PER"} [{p.certificationStatus}] ({p.cases.length} casos activos)
                     </option>
                   ))}
                 </select>
