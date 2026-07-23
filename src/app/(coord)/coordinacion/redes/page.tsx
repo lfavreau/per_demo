@@ -17,10 +17,11 @@ export default async function CoordinatorRedesPage() {
   if (!user || user.role !== "COORDINATOR" || !user.regionId) {
     redirect("/login");
   }
+  const isDemo = Boolean(user.isDemo);
 
   // 1. Fetch regional network devices
   const networkDevices = await prisma.networkDevice.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
     orderBy: { name: "asc" },
   });
 
@@ -36,7 +37,8 @@ export default async function CoordinatorRedesPage() {
   // 3. Fetch regional activations
   const activations = await prisma.networkActivation.findMany({
     where: {
-      networkDevice: { regionId: user.regionId },
+      networkDevice: { regionId: user.regionId, isDemo },
+      isDemo,
     },
     include: {
       paCase: true,
@@ -47,7 +49,7 @@ export default async function CoordinatorRedesPage() {
 
   // 4. Fetch Phase 5 records (Focus Groups & Team meetings)
   const phase5Records = await prisma.phase5Record.findMany({
-    where: { regionId: user.regionId },
+    where: { regionId: user.regionId, isDemo },
     orderBy: { date: "desc" },
   });
 

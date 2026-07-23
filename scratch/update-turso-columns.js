@@ -1,8 +1,16 @@
 const { createClient } = require('@libsql/client');
 
+const { TURSO_DATABASE_URL, TURSO_AUTH_TOKEN } = process.env;
+
+if (!TURSO_DATABASE_URL || !TURSO_AUTH_TOKEN) {
+  throw new Error(
+    "Define TURSO_DATABASE_URL y TURSO_AUTH_TOKEN antes de ejecutar este script.",
+  );
+}
+
 const client = createClient({
-  url: "libsql://database-bronze-door-vercel-icfg-kr9ot02rwjilayv17wpe6fak.aws-us-east-1.turso.io",
-  authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODQ3MDQzNjksImlkIjoiMDE5Zjg4YWItODIwMS03OTI0LTk1YzItNTIyYzMxZDU5OTFjIiwia2lkIjoiT1FlQnhjZDNzeGlCNUlkRG1DSm9VY2xOSnlLalFCMHZQVkg3Qi1TcHhXRSIsInJpZCI6IjQ5YWM5ZjJhLTExM2YtNDRkMy1iYTAxLWFlZGJmZGQ2N2U0YiJ9.xOcZ7fF6tITMSXZg9aj06v2i86plXx4iyU2bZT_u7Wt9r0R2iGG5v4qvPhyLPGrV1MwLat9TIUURd-pXE4mIBw",
+  url: TURSO_DATABASE_URL,
+  authToken: TURSO_AUTH_TOKEN,
 });
 
 const tables = [

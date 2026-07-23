@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-export async function checkAllAlertRules() {
+export async function checkAllAlertRules(isDemo: boolean) {
   let createdCount = 0;
   const now = new Date();
 
@@ -22,6 +22,7 @@ export async function checkAllAlertRules() {
   const activeCases = await prisma.pACase.findMany({
     where: {
       status: { in: ["VINCULACION", "CONEXION", "FINALIZACION"] },
+      isDemo,
     },
   });
 
@@ -50,6 +51,7 @@ export async function checkAllAlertRules() {
             perId: paCase.perId,
             paCaseId: paCase.id,
             status: "ABIERTA",
+            isDemo,
           },
         });
         createdCount++;
@@ -62,6 +64,7 @@ export async function checkAllAlertRules() {
     where: {
       dueDate: { lt: now },
       status: { notIn: ["VALIDADA", "ENVIADA", "CANCELADA", "NO_APLICA"] },
+      isDemo,
     },
   });
 
@@ -103,6 +106,7 @@ export async function checkAllAlertRules() {
           paCaseId: task.paCaseId,
           taskId: task.id,
           status: "ABIERTA",
+          isDemo,
         },
       });
       createdCount++;
@@ -121,6 +125,7 @@ export async function checkAllAlertRules() {
           certificationStatus: { not: "HABILITADO" },
         },
       },
+      isDemo,
     },
     include: {
       assignedTo: {
@@ -150,6 +155,7 @@ export async function checkAllAlertRules() {
           paCaseId: task.paCaseId,
           taskId: task.id,
           status: "ABIERTA",
+          isDemo,
         },
       });
       createdCount++;
@@ -159,12 +165,13 @@ export async function checkAllAlertRules() {
   return createdCount;
 }
 
-export async function resolveAlert(alertId: string, note: string, actorId: string) {
+export async function resolveAlert(alertId: string, note: string, actorId: string, isDemo: boolean) {
   return await prisma.$transaction(async (tx) => {
     const alert = await tx.alert.findUnique({
       where: { id: alertId },
     });
     if (!alert) throw new Error("Alerta no encontrada");
+    if (alert.isDemo !== isDemo) throw new Error("La alerta no pertenece al modo de trabajo actual");
 
     const updated = await tx.alert.update({
       where: { id: alertId },
@@ -185,6 +192,7 @@ export async function resolveAlert(alertId: string, note: string, actorId: strin
         previousValue: alert.status,
         newValue: "RESUELTA",
         reason: note,
+        isDemo,
       },
     });
 

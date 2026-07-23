@@ -20,26 +20,36 @@ export interface CreateSessionLogInput {
   offlineDraftId?: string;
 }
 
-export async function logSession(input: CreateSessionLogInput, actorId: string) {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Get current count of sessions for this case to set the sequence number
-    const sessionCount = await tx.sessionLog.count({
-      where: { paCaseId: input.paCaseId },
-    });
-
-    const sessionNumber = sessionCount + 1;
-
-    // 2. Fetch the case details to get coordinator ID and region ID
-    const paCase = await tx.pACase.findUnique({
-      where: { id: input.paCaseId },
-    });
+export async function logSession(input: CreateSessionLogInput, actorId: string, isDemo: boolean) {
+  return prisma.$transaction(async (tx) => {
+    const paCase = await tx.pACase.findUnique({ where: { id: input.paCaseId } });
     if (!paCase) throw new Error("Caso no encontrado");
+    if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
 
-    // 3. Create the session log
+    const perProfile = await tx.pERProfile.findUnique({ where: { userId: actorId } });
+    if (!perProfile || paCase.perId !== perProfile.id) {
+      throw new Error("El caso no está asignado al PER autenticado");
+    }
+
+    if (input.offlineDraftId) {
+      const existing = await tx.sessionLog.findFirst({
+        where: {
+          offlineDraftId: input.offlineDraftId,
+          paCaseId: input.paCaseId,
+          perId: perProfile.id,
+          isDemo,
+        },
+      });
+      if (existing) return existing;
+    }
+
+    const sessionNumber =
+      (await tx.sessionLog.count({ where: { paCaseId: input.paCaseId } })) + 1;
+
     const session = await tx.sessionLog.create({
       data: {
         paCaseId: input.paCaseId,
-        perId: input.perId,
+        perId: perProfile.id,
         regionId: paCase.regionId,
         sessionNumber,
         date: input.date,
@@ -57,20 +67,10 @@ export async function logSession(input: CreateSessionLogInput, actorId: string) 
         stage: paCase.stage,
         status: input.status,
         offlineDraftId: input.offlineDraftId,
+        isDemo,
       },
     });
 
-    // 4. Update the case's lastSessionDate if the session was successfully attended
-    if (input.attendance === "REALIZADA") {
-      await tx.pACase.update({
-        where: { id: input.paCaseId },
-        data: {
-          lastSessionDate: input.date,
-        },
-      });
-    }
-
-    // 5. Audit Log
     await tx.auditLog.create({
       data: {
         userId: actorId,
@@ -79,33 +79,47 @@ export async function logSession(input: CreateSessionLogInput, actorId: string) 
         entityType: "SessionLog",
         entityId: session.id,
         newValue: JSON.stringify({ sessionNumber, status: input.status }),
+        isDemo,
       },
     });
 
     if (input.status === "ENVIADA") {
-      await createNotificationWithPush({
-        userId: paCase.coordinatorId,
-        title: "Nueva Bitácora por Validar",
-        message: `El acompañante PER envió la sesión #${sessionNumber} del caso ${paCase.code} para su validación.`,
-        link: `/coordinacion/sesiones?highlightSessionId=${session.id}`,
-      }, tx);
+      await createNotificationWithPush(
+        {
+          userId: paCase.coordinatorId,
+          title: "Nueva Bitácora por Validar",
+          message: `El acompañante PER envió la sesión #${sessionNumber} del caso ${paCase.code} para su validación.`,
+          link: `/coordinacion/sesiones?highlightSessionId=${session.id}`,
+          isDemo,
+        },
+        tx
+      );
     }
 
     return session;
   });
 }
 
-export async function validateSession(sessionId: string, actorId: string) {
-  return await prisma.$transaction(async (tx) => {
-    const session = await tx.sessionLog.findUnique({
-      where: { id: sessionId },
-    });
+export async function validateSession(sessionId: string, actorId: string, isDemo: boolean) {
+  return prisma.$transaction(async (tx) => {
+    const session = await tx.sessionLog.findUnique({ where: { id: sessionId } });
     if (!session) throw new Error("Registro de sesión no encontrado");
+    if (session.isDemo !== isDemo) throw new Error("La sesión no pertenece al modo de trabajo actual");
 
     const updated = await tx.sessionLog.update({
       where: { id: sessionId },
       data: { status: "VALIDADA" },
     });
+
+    if (session.attendance === "REALIZADA") {
+      const paCase = await tx.pACase.findUnique({ where: { id: session.paCaseId } });
+      if (!paCase?.lastSessionDate || session.date > paCase.lastSessionDate) {
+        await tx.pACase.update({
+          where: { id: session.paCaseId },
+          data: { lastSessionDate: session.date },
+        });
+      }
+    }
 
     await tx.auditLog.create({
       data: {
@@ -116,36 +130,40 @@ export async function validateSession(sessionId: string, actorId: string) {
         entityId: sessionId,
         previousValue: session.status,
         newValue: "VALIDADA",
+        isDemo,
       },
     });
 
-    const perProfile = await tx.pERProfile.findUnique({
-      where: { id: session.perId },
-    });
+    const perProfile = await tx.pERProfile.findUnique({ where: { id: session.perId } });
     if (perProfile) {
-      const paCase = await tx.pACase.findUnique({
-        where: { id: session.paCaseId },
-      });
-      await createNotificationWithPush({
-        userId: perProfile.userId,
-        title: "Bitácora Validada",
-        message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} ha sido aprobada.`,
-        link: `/per?highlightSessionId=${session.id}`,
-      }, tx);
+      const paCase = await tx.pACase.findUnique({ where: { id: session.paCaseId } });
+      await createNotificationWithPush(
+        {
+          userId: perProfile.userId,
+          title: "Bitácora Validada",
+          message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} ha sido aprobada.`,
+          link: `/per?highlightSessionId=${session.id}`,
+          isDemo,
+        },
+        tx
+      );
     }
 
     return updated;
   });
 }
 
-export async function returnSession(sessionId: string, feedbackText: string, actorId: string) {
-  return await prisma.$transaction(async (tx) => {
-    const session = await tx.sessionLog.findUnique({
-      where: { id: sessionId },
-    });
+export async function returnSession(
+  sessionId: string,
+  feedbackText: string,
+  actorId: string,
+  isDemo: boolean
+) {
+  return prisma.$transaction(async (tx) => {
+    const session = await tx.sessionLog.findUnique({ where: { id: sessionId } });
     if (!session) throw new Error("Registro de sesión no encontrado");
+    if (session.isDemo !== isDemo) throw new Error("La sesión no pertenece al modo de trabajo actual");
 
-    // Create feedback record
     const feedback = await tx.feedback.create({
       data: {
         coordinatorId: actorId,
@@ -158,13 +176,9 @@ export async function returnSession(sessionId: string, feedbackText: string, act
       },
     });
 
-    // Update status
     const updated = await tx.sessionLog.update({
       where: { id: sessionId },
-      data: {
-        status: "DEVUELTA",
-        coordinatorFeedbackId: feedback.id,
-      },
+      data: { status: "DEVUELTA", coordinatorFeedbackId: feedback.id },
     });
 
     await tx.auditLog.create({
@@ -177,22 +191,23 @@ export async function returnSession(sessionId: string, feedbackText: string, act
         previousValue: session.status,
         newValue: "DEVUELTA",
         reason: feedbackText,
+        isDemo,
       },
     });
 
-    const perProfile = await tx.pERProfile.findUnique({
-      where: { id: session.perId },
-    });
+    const perProfile = await tx.pERProfile.findUnique({ where: { id: session.perId } });
     if (perProfile) {
-      const paCase = await tx.pACase.findUnique({
-        where: { id: session.paCaseId },
-      });
-      await createNotificationWithPush({
-        userId: perProfile.userId,
-        title: "Bitácora Devuelta",
-        message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} fue devuelta con observaciones.`,
-        link: `/per?highlightSessionId=${session.id}`,
-      }, tx);
+      const paCase = await tx.pACase.findUnique({ where: { id: session.paCaseId } });
+      await createNotificationWithPush(
+        {
+          userId: perProfile.userId,
+          title: "Bitácora Devuelta",
+          message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} fue devuelta con observaciones.`,
+          link: `/per?highlightSessionId=${session.id}`,
+          isDemo,
+        },
+        tx
+      );
     }
 
     return updated;
@@ -200,7 +215,7 @@ export async function returnSession(sessionId: string, feedbackText: string, act
 }
 
 export async function getSessionsByCase(caseId: string) {
-  return await prisma.sessionLog.findMany({
+  return prisma.sessionLog.findMany({
     where: { paCaseId: caseId },
     orderBy: { sessionNumber: "asc" },
   });
