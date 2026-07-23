@@ -12,15 +12,22 @@ export interface SessionUser {
 
 const COOKIE_NAME = "per_session";
 
-// Login: Validate email against database, set cookie with isDemo flag
-export async function login(email: string, isDemo = false): Promise<SessionUser | null> {
+// Login: Validate email and password against database/config, set cookie with isDemo flag
+export async function login(email: string, password?: string, isDemo = false): Promise<SessionUser | { error: string } | null> {
   const targetEmail = email.includes("@") ? email : `${email}@per2026.cl`;
   const user = await prisma.user.findUnique({
     where: { email: targetEmail, active: true },
   });
 
   if (!user) {
-    return null;
+    return { error: "email_not_found" };
+  }
+
+  // Password check for real mode (isDemo === false)
+  if (!isDemo) {
+    if (!password || password.trim() !== "P455w0rd!") {
+      return { error: "invalid_password" };
+    }
   }
 
   const sessionUser: SessionUser = {

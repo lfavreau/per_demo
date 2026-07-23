@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 export async function loginAction(formData: FormData) {
   const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
   const isDemoStr = formData.get("isDemo") as string;
   const isDemo = isDemoStr === "true";
 
@@ -12,11 +13,18 @@ export async function loginAction(formData: FormData) {
     redirect("/login?error=missing_email");
   }
 
-  const user = await login(email.toLowerCase().trim(), isDemo);
-
-  if (!user) {
-    redirect("/login?error=email_not_found");
+  if (!isDemo && !password) {
+    redirect("/login?error=missing_password");
   }
+
+  const result = await login(email.toLowerCase().trim(), password, isDemo);
+
+  if (!result || "error" in result) {
+    const errCode = result && "error" in result ? result.error : "email_not_found";
+    redirect(`/login?error=${errCode}`);
+  }
+
+  const user = result;
 
   // Redirect based on role
   if (user.role === "ADMIN") {

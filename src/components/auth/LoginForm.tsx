@@ -8,10 +8,15 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const errorMsg =
     error === "missing_email"
       ? "Por favor, ingresa tu usuario o correo electrónico."
+      : error === "missing_password"
+      ? "Por favor, ingresa tu contraseña."
+      : error === "invalid_password"
+      ? "Contraseña incorrecta."
       : error === "email_not_found"
       ? "El usuario no está registrado o se encuentra inactivo."
       : null;
@@ -51,7 +56,7 @@ export default function LoginForm() {
         </div>
       )}
 
-      {/* Formulario de Login Real (Modo Real / Producción) */}
+      {/* Formulario de Login Real con Contraseña */}
       <form action={loginAction} className="space-y-4">
         <input type="hidden" name="isDemo" value="false" />
 
@@ -67,6 +72,22 @@ export default function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="ej. admin, coord.metro o per.carla"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-slate-900 placeholder-slate-400 transition outline-none text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            Contraseña
+          </label>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="••••••••"
             className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 text-slate-900 placeholder-slate-400 transition outline-none text-sm"
           />
         </div>
