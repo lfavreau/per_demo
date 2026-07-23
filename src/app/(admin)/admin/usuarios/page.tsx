@@ -20,11 +20,8 @@ export default async function AdminUsuariosPage({
 
   const isDemo = Boolean(user.isDemo);
 
-  // Fetch registered users in system with PER profiles (filtered by isDemo mode)
-  const users = await prisma.user.findMany({
-    where: isDemo
-      ? { isDemo: true }
-      : { OR: [{ isDemo: false }, { role: { in: ["ADMIN", "COORDINATOR"] } }] },
+  // Fetch all registered users in system with PER profiles
+  const allUsers = await prisma.user.findMany({
     include: {
       profile: true,
     },
@@ -32,6 +29,15 @@ export default async function AdminUsuariosPage({
       { role: "asc" },
       { name: "asc" },
     ],
+  });
+
+  // Filter in memory to prevent unknown argument errors on stale Prisma client instances
+  const users = allUsers.filter((u: any) => {
+    if (isDemo) {
+      return Boolean(u.isDemo);
+    } else {
+      return !u.isDemo || u.role === "ADMIN" || u.role === "COORDINATOR";
+    }
   });
 
   return (
