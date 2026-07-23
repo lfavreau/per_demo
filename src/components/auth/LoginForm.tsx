@@ -8,7 +8,7 @@ interface UserDirectoryItem {
   name: string;
   username: string;
   email: string;
-  role: "ADMIN" | "COORDINATOR" | "PER";
+  role: "ADMIN" | "COORDINATOR";
   roleLabel: string;
   region: string;
 }
@@ -22,17 +22,6 @@ const REGISTERED_USERS: UserDirectoryItem[] = [
   { name: "Coordinador Tarapacá", username: "coord.tarapaca", email: "coord.tarapaca@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Tarapacá" },
   { name: "Coordinador Biobío", username: "coord.biobio", email: "coord.biobio@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Biobío" },
   { name: "Coordinador Los Ríos", username: "coord.losrios", email: "coord.losrios@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Los Ríos" },
-  // PERs
-  { name: "Carla Muñoz", username: "per.carla", email: "per.carla@per2026.cl", role: "PER", roleLabel: "Acompañante PER (Habilitado)", region: "Metropolitana" },
-  { name: "Diego Rojas", username: "per.diego", email: "per.diego@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Metropolitana" },
-  { name: "Juan Pérez", username: "per.juan", email: "per.juan@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Metropolitana" },
-  { name: "Andrés Silva", username: "per.valpo", email: "per.valpo@per2026.cl", role: "PER", roleLabel: "Acompañante PER (No Habilitado)", region: "Valparaíso" },
-  { name: "Sonia Reyes", username: "per.sonia", email: "per.sonia@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Valparaíso" },
-  { name: "Lucas Díaz", username: "per.lucas", email: "per.lucas@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Tarapacá" },
-  { name: "Mario Soto", username: "per.mario", email: "per.mario@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Tarapacá" },
-  { name: "Camila Vera", username: "per.camila", email: "per.camila@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Biobío" },
-  { name: "Pedro Castillo", username: "per.pedro", email: "per.pedro@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Los Ríos" },
-  { name: "Elena Gómez", username: "per.elena", email: "per.elena@per2026.cl", role: "PER", roleLabel: "Acompañante PER", region: "Los Ríos" },
 ];
 
 export default function LoginForm() {
@@ -58,11 +47,6 @@ export default function LoginForm() {
     navigator.clipboard.writeText(text);
     setCopiedUser(text);
     setTimeout(() => setCopiedUser(null), 2000);
-  };
-
-  const handleSelectUser = (u: UserDirectoryItem) => {
-    setEmail(u.username);
-    setIsModalOpen(false);
   };
 
   return (
@@ -150,20 +134,8 @@ export default function LoginForm() {
         </button>
       </form>
 
-      {/* Botón para Abrir Modal de Directorio de Usuarios */}
-      <div className="mt-4 text-center">
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition text-xs flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
-        >
-          <span>📋</span>
-          <span>Ver Lista de Usuarios Registrados y Copiar</span>
-        </button>
-      </div>
-
       {/* Cuentas de Evaluación Operativa (Modo Demo) */}
-      <div className="mt-6 pt-6 border-t border-slate-200">
+      <div className="mt-8 pt-6 border-t border-slate-200">
         <div className="text-center mb-3">
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             🧪 Cuentas de Evaluación Operativa (Modo Demo)
@@ -284,7 +256,7 @@ export default function LoginForm() {
                   <span>👥</span> Usuarios Registrados en el Sistema
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Copia o selecciona cualquier usuario para ingresar al portal
+                  Copia el nombre de usuario de las cuentas institucionales
                 </p>
               </div>
               <button
@@ -328,20 +300,13 @@ export default function LoginForm() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="shrink-0">
                         <button
                           type="button"
                           onClick={() => handleCopy(u.username)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
                         >
                           📋 Copiar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectUser(u)}
-                          className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
-                        >
-                          Usar
                         </button>
                       </div>
                     </div>
@@ -372,20 +337,13 @@ export default function LoginForm() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="shrink-0">
                         <button
                           type="button"
                           onClick={() => handleCopy(u.username)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
                         >
                           📋 Copiar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectUser(u)}
-                          className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
-                        >
-                          Usar
                         </button>
                       </div>
                     </div>
@@ -393,55 +351,21 @@ export default function LoginForm() {
                 </div>
               </div>
 
-              {/* Sección PERs */}
-              <div>
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              {/* Sección PER Note */}
+              <div className="pt-2 border-t border-slate-100">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                   Acompañantes PER
                 </h4>
-                <div className="space-y-2">
-                  {REGISTERED_USERS.filter((u) => u.role === "PER").map((u) => (
-                    <div
-                      key={u.username}
-                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-slate-300 transition"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-900 truncate">{u.name}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-600/10 text-emerald-700 text-[9px] font-extrabold shrink-0">
-                            {u.region}
-                          </span>
-                        </div>
-                        <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">
-                          {u.username} <span className="text-slate-400">({u.email})</span>
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(u.username)}
-                          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1"
-                        >
-                          📋 Copiar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectUser(u)}
-                          className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer"
-                        >
-                          Usar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200 italic">
+                  ℹ️ Los Acompañantes PER son creados dinámicamente desde la plataforma por el Administrador Nacional y asignados a su respectiva Coordinación Regional.
+                </p>
               </div>
             </div>
 
             {/* Footer Modal */}
             <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
               <span className="text-[11px] text-slate-500 font-medium">
-                Total: <strong>{REGISTERED_USERS.length} cuentas registradas</strong>
+                Total: <strong>{REGISTERED_USERS.length} cuentas institucionales</strong>
               </span>
               <button
                 type="button"
