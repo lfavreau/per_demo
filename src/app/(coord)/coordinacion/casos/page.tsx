@@ -38,6 +38,10 @@ export default async function CoordinatorCasosPage({
   // 1. Fetch Cases and PERs in region
   const regionalCases = await prisma.pACase.findMany({
     where: { regionId: user.regionId, isDemo },
+    include: {
+      candidate: true,
+      per: { include: { user: true } },
+    },
     orderBy: { code: "asc" },
   });
 
@@ -165,7 +169,7 @@ export default async function CoordinatorCasosPage({
               <option value="">-- Seleccionar Caso --</option>
               {regionalCases.map((c) => (
                 <option key={c.id} value={c.code}>
-                  {c.code} ({mapCaseStatusToLabel(c.status)})
+                  {c.code} — {c.candidate?.sourceCenter || c.genderSelfId || "Ingreso Directo"} [PER: {c.per?.user?.name || "Sin PER"}] ({mapCaseStatusToLabel(c.status)})
                 </option>
               ))}
             </select>
@@ -333,16 +337,18 @@ export default async function CoordinatorCasosPage({
                       <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
                       <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
                       <div className="space-y-1">
-                        <label className="font-semibold text-xs text-slate-700">
+                        <label className="font-semibold text-xs text-slate-700 block">
                           Acta de Primer Encuentro en Google Drive
                         </label>
                         <input
-                          type="url"
+                          type="text"
                           name="actaPrimerEncuentro"
-                          required={!isDemo}
-                          placeholder="https://drive.google.com/file/d/..."
+                          placeholder="Opcional: Se creará automáticamente en Drive..."
                           className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
                         />
+                        <span className="text-[9px] text-slate-400 block mt-1">
+                          ✨ Si se deja en blanco, la plataforma creará automáticamente el documento oficial en Google Drive desde la plantilla.
+                        </span>
                       </div>
                       <button
                         type="submit"

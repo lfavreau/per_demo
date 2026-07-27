@@ -121,32 +121,10 @@ export default async function CoordinatorSupervisionesPage({
                             <h4 className="font-bold text-slate-800 text-sm">{per.user.name}</h4>
                             <p className="text-[10px] text-slate-500 mt-0.5">Generación: {per.generation}</p>
                           </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                                isCertified
-                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                  : per.certificationStatus === "PENDIENTE"
-                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                  : "bg-red-50 text-red-800 border border-red-200"
-                              }`}
-                            >
-                              {per.certificationStatus}
+                          <div className="shrink-0">
+                            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              ✓ Habilitado
                             </span>
-                            <form action={updatePerStatusAction}>
-                              <input type="hidden" name="perId" value={per.id} />
-                              <input type="hidden" name="status" value={isCertified ? "PENDIENTE" : "HABILITADO"} />
-                              <button
-                                type="submit"
-                                className={`px-2 py-0.5 rounded text-[8px] font-bold cursor-pointer transition border ${
-                                  isCertified
-                                    ? "bg-slate-100 hover:bg-rose-50 text-rose-700 border-slate-200 hover:border-rose-200"
-                                    : "bg-blue-600 hover:bg-blue-700 text-white border-blue-700"
-                                }`}
-                              >
-                                {isCertified ? "⚙️ Suspender" : "⚙️ Habilitar"}
-                              </button>
-                            </form>
                           </div>
                         </div>
 
@@ -154,7 +132,7 @@ export default async function CoordinatorSupervisionesPage({
                         <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-200/60 text-[10px]">
                           <div>
                             <span className="text-slate-400 block">Casos Activos:</span>
-                            <span className="font-bold text-slate-700">{per.cases.length} / 5 cupos</span>
+                            <span className="font-bold text-slate-700">{per.cases.length} acompañamiento(s)</span>
                           </div>
                           <div>
                             <span className="text-slate-400 block">Horas Supervisión:</span>

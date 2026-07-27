@@ -11,7 +11,7 @@ export async function createPERUserAction(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
   const username = (formData.get("username") as string)?.trim().toLowerCase();
   const regionId = formData.get("regionId") as string;
-  const certificationStatus = (formData.get("certificationStatus") as string) || "HABILITADO";
+  const certificationStatus = "HABILITADO";
 
   if (!name || !username || !regionId) {
     redirect("/admin/usuarios?error=missing_fields");

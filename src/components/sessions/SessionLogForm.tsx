@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { logSessionAction, syncOfflineSessionsAction } from "@/app/actions/per";
 
 interface SessionLogFormProps {
-  cases: Array<{ id: string; code: string }>;
+  cases: Array<{ id: string; code: string; label?: string }>;
   domains: string[];
 }
 
@@ -238,7 +238,7 @@ export default function SessionLogForm({ cases, domains }: SessionLogFormProps) 
                 <option value="">-- Seleccionar --</option>
                 {cases.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.code}
+                    {c.label || c.code}
                   </option>
                 ))}
               </select>

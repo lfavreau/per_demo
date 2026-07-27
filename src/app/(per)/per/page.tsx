@@ -46,13 +46,16 @@ export default async function PERDashboardPage({
       isDemo,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
-    select: {
-      id: true,
-      code: true,
-      status: true,
-      type: true,
+    include: {
+      candidate: true,
     },
   });
+
+  const formattedCasesForSelect = activeCases.map((c) => ({
+    id: c.id,
+    code: c.code,
+    label: `${c.code} — ${c.candidate?.sourceCenter || c.genderSelfId || "Persona Acompañada"} (${mapCaseStatusToLabel(c.status)})`,
+  }));
 
   // 3. Fetch Tasks assigned to this PER
   const tasks = await prisma.task.findMany({
@@ -156,8 +159,8 @@ export default async function PERDashboardPage({
           {/* Main Column: Session log registration & active cases summary */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Session log registration Form */}
-            <SessionLogForm cases={activeCases} domains={recoveryDomains} />
+            {/* Main Session Log Submission Form */}
+            <SessionLogForm cases={formattedCasesForSelect} domains={recoveryDomains} />
 
             {/* Active Cases Cohort Summary */}
             <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
@@ -175,8 +178,13 @@ export default async function PERDashboardPage({
                     }`}
                   >
                     <div>
-                      <span className="font-bold text-primary">{c.code}</span>
-                      <span className="text-[10px] text-slate-500 ml-2">Tipo: {c.type}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-blue-700">{c.code}</span>
+                        <span className="text-[10px] text-slate-400">({c.type})</span>
+                      </div>
+                      <span className="text-slate-800 font-bold text-xs block mt-0.5">
+                        👤 {c.candidate?.sourceCenter || c.genderSelfId || "Caso Acompañado"}
+                      </span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">
                       {mapCaseStatusToLabel(c.status)}

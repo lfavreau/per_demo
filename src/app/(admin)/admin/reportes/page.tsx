@@ -456,7 +456,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
             <a
               href={`data:text/csv;charset=utf-8,${encodeURIComponent(generalCsvContentVal)}`}
               download={`matriz_general_consolidado_${selectedRegion || "nacional"}.csv`}
-              className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition duration-150 shadow-md cursor-pointer text-xs text-center flex items-center justify-center gap-1.5"
+              className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 font-semibold transition shadow-2xs cursor-pointer text-xs text-center flex items-center justify-center gap-1.5"
             >
               📥 Exportar Matriz General
             </a>
@@ -475,13 +475,13 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
               <select
                 name="periodKey"
                 defaultValue={selectedPeriod}
-                className="w-full md:w-auto px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-primary"
+                className="w-full md:w-auto px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-slate-400"
               >
                 {periods.map(p => (
                   <option key={p.key} value={p.key}>{p.name}</option>
                 ))}
               </select>
-              <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl cursor-pointer">
+              <button type="submit" className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-300 text-xs font-semibold rounded-xl cursor-pointer transition shadow-2xs">
                 Filtrar
               </button>
             </form>
@@ -511,14 +511,14 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
           )}
         </div>
 
-        {/* Horizontal Navigation Sub-Tabs */}
+        {/* HORIZONTAL NAVIGATION SUB-TABS */}
         <div className="flex flex-wrap gap-1 border-b border-slate-200">
           <a
             href={selectedPeriod !== "ACTUAL" ? `/admin/reportes?periodKey=${selectedPeriod}` : "/admin/reportes"}
-            className={`px-4 py-2.5 text-xs font-bold border-b-2 transition ${
+            className={`px-4 py-2.5 text-xs font-semibold transition ${
               !selectedRegion
-                ? "border-blue-600 text-blue-700 font-extrabold"
-                : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                ? "border-b-2 border-slate-900 text-slate-900 font-extrabold"
+                : "text-slate-500 hover:text-slate-900"
             }`}
           >
             🌐 Todo el País (Nacional)
@@ -532,10 +532,10 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
               <a
                 key={reg.name}
                 href={linkHref}
-                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition ${
+                className={`px-4 py-2.5 text-xs font-semibold transition ${
                   isActive
-                    ? "border-blue-600 text-blue-700 font-extrabold"
-                    : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                    ? "border-b-2 border-slate-900 text-slate-900 font-extrabold"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 📍 {reg.name}
@@ -544,121 +544,76 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
           })}
         </div>
 
-        {/* SECTION A: DESAGREGACIÓN DEMOGRÁFICA */}
+        {/* SÍNTESIS EJECUTIVA DE DESEMPEÑO (MINI RESUMEN INICIAL SOBRIO) */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-          <h4 className="font-extrabold text-sm text-slate-900 border-b pb-2 flex items-center gap-1.5">
-            <span>📊</span> Desagregación Demográfica ({totalCasesCountVal} Personas Acompañadas)
-          </h4>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs text-slate-700">
-            {/* Gender breakdown */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Distinción de Género</span>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Femenino:</span>
-                  <span className="font-bold">{femaleCountVal} ({totalCasesCountVal > 0 ? Math.round((femaleCountVal / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Masculino:</span>
-                  <span className="font-bold">{maleCountVal} ({totalCasesCountVal > 0 ? Math.round((maleCountVal / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Otro / Sin registrar:</span>
-                  <span className="font-bold">{otherGenderCountVal} ({totalCasesCountVal > 0 ? Math.round((otherGenderCountVal / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-              </div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
+            <div>
+              <h3 className="font-extrabold text-sm text-slate-900 tracking-tight">Síntesis Ejecutiva de Desempeño</h3>
+              <p className="text-[11px] text-slate-500">Resumen consolidado del seguimiento operativo y cumplimiento de metas del convenio.</p>
+            </div>
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[10px]">
+              {selectedRegion ? `Región: ${selectedRegion}` : "Alcance Nacional"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Casos Registrados</span>
+              <span className="text-2xl font-bold text-slate-900 block">{totalCasesCountVal}</span>
+              <span className="text-[10px] text-slate-400 block">Personas en el pilotaje</span>
             </div>
 
-            {/* Age range breakdown */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Rango Etario</span>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span>18 - 29 años:</span>
-                  <span className="font-bold">{age18_29Val} ({totalCasesCountVal > 0 ? Math.round((age18_29Val / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>30 - 49 años:</span>
-                  <span className="font-bold">{age30_49Val} ({totalCasesCountVal > 0 ? Math.round((age30_49Val / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>50+ años:</span>
-                  <span className="font-bold">{age50PlusVal} ({totalCasesCountVal > 0 ? Math.round((age50PlusVal / totalCasesCountVal) * 100) : 0}%)</span>
-                </div>
-              </div>
+            <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Adherencia General</span>
+              <span className="text-2xl font-bold text-slate-900 block">{generalAdherencePercentVal}%</span>
+              <span className="text-[10px] text-slate-500 block">{adherentAllCountVal} de {totalCasesCountVal} casos con retención</span>
             </div>
 
-            {/* Education level */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Nivel de Estudios</span>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Básica Completa/Incomp:</span>
-                  <span className="font-bold">{eduBasicVal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Media Completa:</span>
-                  <span className="font-bold">{eduMediaVal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Técnica Superior:</span>
-                  <span className="font-bold">{eduTecnicaVal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Universitaria/Prof:</span>
-                  <span className="font-bold">{eduProfVal}</span>
-                </div>
+            <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Nuevos Acompañamientos</span>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-slate-900">{newCasesPercentVal}%</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${newCasesPercentVal >= 60 ? "bg-slate-200 text-slate-800" : "bg-slate-200 text-slate-800"}`}>
+                  {newCasesPercentVal >= 60 ? "Meta 60% OK" : "< 60%"}
+                </span>
               </div>
+              <span className="text-[10px] text-slate-500 block">{newCasesVal} casos de primer ingreso</span>
             </div>
 
-            {/* Employment status */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Situación Laboral</span>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span>Desocupado / Buscando:</span>
-                  <span className="font-bold text-rose-700">{jobDesocupadoVal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Informal / Indep:</span>
-                  <span className="font-bold text-amber-700">{jobInformalVal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Trabajo Formal:</span>
-                  <span className="font-bold text-emerald-700">{jobFormalVal}</span>
-                </div>
+            <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-1">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">Satisfacción al Cierre</span>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-slate-900">{satisfactionPercentVal}%</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${satisfactionPercentVal >= 80 ? "bg-slate-200 text-slate-800" : "bg-slate-200 text-slate-800"}`}>
+                  {satisfactionPercentVal >= 80 ? "Meta 80% OK" : "Pendiente"}
+                </span>
               </div>
+              <span className="text-[10px] text-slate-500 block">{closedWithSatisfactionVal} de {closedCountVal} egresos</span>
             </div>
           </div>
         </div>
 
-        {/* SECTION B: 8 INDICADORES CONTRACTUALES */}
+        {/* BLOQUE: SEGUIMIENTO OPERATIVO Y CALIDAD TÉCNICA */}
         <div className="space-y-6">
-          <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-400">
-            Reporte de Indicadores de Convenio (Bases Técnicas)
-          </h2>
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+              Seguimiento Operativo y Calidad Técnica
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Métricas dinámicas para el monitoreo de la intervención técnica, carga de trabajo, adherencia y gestión territorial.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
             
-            {/* 1. Capitales de recuperación */}
+            {/* Capitales de recuperación */}
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h4 className="font-bold text-slate-900 text-sm">1. Desarrollo de Capitales de Recuperación (IAP)</h4>
-                <a
-                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                    "ambito,priorizados_ex_ante,avances_ex_post\n" +
-                      domainStatsVal.map((d: any) => `${d.domain},${d.exAnteCount},${d.exPostCount}`).join("\n")
-                  )}`}
-                  download={`1_capitales_recuperacion_${selectedRegion || "nacional"}.csv`}
-                  className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                >
-                  📥 Exportar CSV
-                </a>
+              <div className="border-b border-slate-100 pb-2">
+                <h4 className="font-bold text-slate-900 text-sm">Desarrollo de Capitales de Recuperación (IAP)</h4>
               </div>
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 font-bold text-slate-500">
+                  <tr className="border-b border-slate-200 font-semibold text-slate-500">
                     <th className="py-2">Ámbito del Capital</th>
                     <th className="py-2 text-center">Priorizado Ex-Ante</th>
                     <th className="py-2 text-center">Avances Ex-Post</th>
@@ -666,313 +621,314 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                 </thead>
                 <tbody>
                   {domainStatsVal.map((d: any) => (
-                    <tr key={d.domain} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={d.domain} className="border-b border-slate-100 hover:bg-slate-50 transition">
                       <td className="py-2 font-medium text-slate-700">{d.domain}</td>
-                      <td className="py-2 text-center font-bold text-blue-700">{d.exAnteCount}</td>
-                      <td className="py-2 text-center font-bold text-emerald-700">{d.exPostCount}</td>
+                      <td className="py-2 text-center font-bold text-slate-900">{d.exAnteCount}</td>
+                      <td className="py-2 text-center font-bold text-slate-900">{d.exPostCount}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="text-[10px] text-slate-400 italic">
-                Meta: Evaluar capitales de manera ex-ante y ex-post para al menos el 80% de las personas acompañadas.
+                Evalúa la evolución cualitativa/cuantitativa en las 9 dimensiones del acompañamiento.
               </p>
             </div>
 
-            {/* 2. Cobertura continuidad y nuevos */}
-            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h4 className="font-bold text-slate-900 text-sm">2. Tasa de Nuevos Acompañamientos</h4>
-                  <a
-                    href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                      `tipo,cantidad,porcentaje\nNuevos,${newCasesVal},${newCasesPercentVal}%\nContinuidad,${continuityCasesVal},${100 - newCasesPercentVal}%`
-                    )}`}
-                    download={`2_nuevos_vs_continuidad_${selectedRegion || "nacional"}.csv`}
-                    className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                  >
-                    📥 Exportar CSV
-                  </a>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-center mt-2">
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-3xl font-extrabold text-emerald-600">{newCasesPercentVal}%</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Acompañamientos Nuevos</span>
-                    <span className="block text-[10px] text-slate-500 mt-1 font-semibold">({newCasesVal} de {totalCasesCountVal} casos)</span>
-                  </div>
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-3xl font-extrabold text-blue-600">{100 - newCasesPercentVal}%</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">De Continuidad</span>
-                    <span className="block text-[10px] text-slate-500 mt-1 font-semibold">({continuityCasesVal} de {totalCasesCountVal} casos)</span>
-                  </div>
-                </div>
-                <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 text-[11px] font-semibold leading-relaxed">
-                  📢 {newCasesPercentVal >= 60 ? "¡Cumple Meta del Convenio!" : "Bajo la meta recomendada"} (Meta del convenio: mínimo del 60% de acompañamientos nuevos en las regiones participantes).
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 italic">
-                Focaliza la priorización en base a las necesidades de integración social detectadas territorialmente.
-              </p>
-            </div>
-
-            {/* 3. Niveles de intensidad IAP */}
+            {/* Niveles de intensidad IAP */}
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h4 className="font-bold text-slate-900 text-sm">3. Clasificación por Niveles de Intensidad (IAP)</h4>
-                <a
-                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                    `intensidad,cantidad\nBasico,${levelBasicVal}\nIntermedio,${levelIntermediateVal}\nIntensivo,${levelIntenseVal}`
-                  )}`}
-                  download={`3_intensidad_iap_${selectedRegion || "nacional"}.csv`}
-                  className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                >
-                  📥 Exportar CSV
-                </a>
+              <div className="border-b border-slate-100 pb-2">
+                <h4 className="font-bold text-slate-900 text-sm">Clasificación por Niveles de Intensidad (IAP)</h4>
               </div>
               <div className="space-y-4">
                 <p className="text-slate-500">
-                  Distribución de acompañamientos según el nivel de necesidades detectadas y trayectorias del participante:
+                  Distribución de acompañamientos según el nivel de necesidades detectadas y perfil de complejidad:
                 </p>
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="font-semibold text-slate-700">Acompañamiento Básico (Rango Menor)</span>
-                      <span className="font-bold">{levelBasicVal} casos</span>
+                      <span className="font-bold text-slate-900">{levelBasicVal} casos</span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-sky-500 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelBasicVal/totalCasesCountVal)*100 : 0}%` }}></div>
+                      <div className="bg-slate-400 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelBasicVal/totalCasesCountVal)*100 : 0}%` }}></div>
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="font-semibold text-slate-700">Acompañamiento Intermedio (Rango Medio)</span>
-                      <span className="font-bold">{levelIntermediateVal} casos</span>
+                      <span className="font-bold text-slate-900">{levelIntermediateVal} casos</span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-blue-600 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntermediateVal/totalCasesCountVal)*100 : 0}%` }}></div>
+                      <div className="bg-slate-600 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntermediateVal/totalCasesCountVal)*100 : 0}%` }}></div>
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="font-semibold text-slate-700">Acompañamiento Intensivo (Rango Crítico)</span>
-                      <span className="font-bold">{levelIntenseVal} casos</span>
+                      <span className="font-bold text-slate-900">{levelIntenseVal} casos</span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-indigo-650 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntenseVal/totalCasesCountVal)*100 : 0}%` }}></div>
+                      <div className="bg-slate-900 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntenseVal/totalCasesCountVal)*100 : 0}%` }}></div>
                     </div>
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic mt-2">
-                Define la intensidad de la intervención y tiempos según el perfilamiento inicial realizado por los coordinadores y PER.
+                Guía la asignación balanceada de casos a cada Par Especialista (PER).
               </p>
             </div>
 
-            {/* 4. Número y frecuencia de sesiones */}
+            {/* Sesiones por Fase y Adherencia */}
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h4 className="font-bold text-slate-900 text-sm">4. Sesiones por Fase y Adherencia</h4>
-                  <a
-                    href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                      `fase,sesiones_validadas\nVinculacion,${vinSesCountVal}\nConexion,${conSesCountVal}\nFinalizacion,${finSesCountVal}\nContinuidad Adherente,${adherentContinuityCountVal}`
-                    )}`}
-                    download={`4_sesiones_adherencia_${selectedRegion || "nacional"}.csv`}
-                    className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                  >
-                    📥 Exportar CSV
-                  </a>
+                <div className="border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Sesiones por Fase y Retención (Adherencia)</h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center text-slate-700">
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-xl font-bold text-blue-700">{vinSesCountVal}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Fase Vinculación</span>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-xl font-bold text-slate-900">{vinSesCountVal}</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block">Vinculación</span>
                   </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-xl font-bold text-blue-700">{conSesCountVal}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Fase Conexión</span>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-xl font-bold text-slate-900">{conSesCountVal}</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block">Conexión</span>
                   </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-xl font-bold text-blue-700">{finSesCountVal}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Fase Finalización</span>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-xl font-bold text-slate-900">{finSesCountVal}</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block">Finalización</span>
                   </div>
                 </div>
-                <div className="p-3 bg-blue-55 border border-blue-200 rounded-xl space-y-2">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-900">
                     <span>Adherencia de Continuidad:</span>
-                    <span className="text-blue-700 text-sm">{adherencePercentVal}% ({adherentContinuityCountVal} de {continuityCountVal})</span>
+                    <span className="text-slate-900 text-sm">{adherencePercentVal}% ({adherentContinuityCountVal} de {continuityCountVal})</span>
                   </div>
-                  <div className="flex justify-between items-center text-xs font-bold text-slate-900 border-t border-blue-200 pt-1">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-900 border-t border-slate-200 pt-1">
                     <span>Adherencia General (Total Casos):</span>
-                    <span className="text-blue-700 text-sm">{generalAdherencePercentVal}% ({adherentAllCountVal} de {totalCasesCountVal})</span>
-                  </div>
-                  <p className="text-[9px] text-slate-500 mt-1 leading-normal">
-                    Meta del convenio: mantener un mínimo de 3 meses de adherencia activa para al menos el 80% de las personas acompañadas en las 5 regiones del pilotaje.
-                  </p>
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 italic">
-                Avanza en la definición de los tiempos óptimos de intervención teniendo en cuenta las sesiones mínimas de cada fase.
-              </p>
-            </div>
-
-            {/* 5. Distinción de duplas por género */}
-            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h4 className="font-bold text-slate-900 text-sm">5. Configuración de Duplas con Enfoque de Género</h4>
-                <a
-                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                    `tipo_dupla,cantidad\nFemenina_Femenino,${duplaFemFemVal}\nMasculina_Masculino,${duplaMascMascVal}\nMixta_PerFem,${duplaMixtaPerFemVal}\nMixta_PerMasc,${duplaMixtaPerMascVal}`
-                  )}`}
-                  download={`5_duplas_genero_${selectedRegion || "nacional"}.csv`}
-                  className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                >
-                  📥 Exportar CSV
-                </a>
-              </div>
-              <div className="space-y-4">
-                <p className="text-slate-500">
-                  Mapeo del emparejamiento entre el género del Par Especialista (PER) y la persona acompañada:
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-1">
-                    <span className="font-semibold text-slate-800">Dupla Femenina:</span>
-                    <span className="block text-lg font-bold text-emerald-800">{duplaFemFemVal} duplas</span>
-                    <span className="text-[9px] text-slate-500 block">PER Femenino + Participante Femenina</span>
-                  </div>
-                  <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl space-y-1">
-                    <span className="font-semibold text-slate-800">Dupla Masculina:</span>
-                    <span className="block text-lg font-bold text-blue-800">{duplaMascMascVal} duplas</span>
-                    <span className="text-[9px] text-slate-500 block">PER Masculino + Participante Masculino</span>
-                  </div>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="font-semibold text-slate-800">Mixta (PER Fem):</span>
-                    <span className="block text-lg font-bold text-slate-800">{duplaMixtaPerFemVal} duplas</span>
-                    <span className="text-[9px] text-slate-500 block">PER Femenino + Participante Masculino</span>
-                  </div>
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="font-semibold text-slate-800">Mixta (PER Masc):</span>
-                    <span className="block text-lg font-bold text-slate-800">{duplaMixtaPerMascVal} duplas</span>
-                    <span className="text-[9px] text-slate-500 block">PER Masculino + Participante Femenina</span>
+                    <span className="text-slate-900 text-sm">{generalAdherencePercentVal}% ({adherentAllCountVal} de {totalCasesCountVal})</span>
                   </div>
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic">
-                Evalúa y complementa consideraciones de género en los acompañamientos a través de metodologías cualitativas.
+                Permite vigilar el riesgo de deserción y medir el ritmo real de encuentros por fase.
               </p>
             </div>
 
-            {/* 6. Supervisiones y Evaluaciones Intermedias */}
+            {/* Monitoreo y Supervisión Técnica */}
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h4 className="font-bold text-slate-900 text-sm">6. Monitoreo y Supervisión Técnica</h4>
-                  <a
-                    href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                      `tipo_registro,cantidad\nSupervisiones_ET,${supervisionCountVal}\nEvaluaciones_Intermedias,${intermediateEvaluationsCountVal}`
-                    )}`}
-                    download={`6_supervisiones_${selectedRegion || "nacional"}.csv`}
-                    className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                  >
-                    📥 Exportar CSV
-                  </a>
+                <div className="border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Monitoreo y Supervisión Técnica (ET)</h4>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex justify-between items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <div>
-                      <span className="font-bold text-slate-800 block">Supervisiones Técnicas Realizadas</span>
-                      <span className="text-[10px] text-slate-500">Sesiones de seguimiento de casos lideradas por ET.</span>
+                      <span className="font-bold text-slate-900 block">Supervisiones Técnicas Realizadas</span>
+                      <span className="text-[10px] text-slate-500">Sesiones de seguimiento de la dupla lideradas por el Equipo Técnico.</span>
                     </div>
-                    <span className="text-2xl font-extrabold text-blue-700 px-3">{supervisionCountVal}</span>
+                    <span className="text-2xl font-bold text-slate-900 px-3">{supervisionCountVal}</span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex justify-between items-center p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <div>
-                      <span className="font-bold text-slate-800 block">Evaluaciones Intermedias Aplicadas</span>
-                      <span className="text-[10px] text-slate-500">Verificación de avances según actividad 5 del IAP.</span>
+                      <span className="font-bold text-slate-900 block">Evaluaciones Intermedias Aplicadas</span>
+                      <span className="text-[10px] text-slate-500">Verificación de avances a mitad de acompañamiento.</span>
                     </div>
-                    <span className="text-2xl font-extrabold text-blue-700 px-3">{intermediateEvaluationsCountVal}</span>
+                    <span className="text-2xl font-bold text-slate-900 px-3">{intermediateEvaluationsCountVal}</span>
                   </div>
                 </div>
-                <div className="p-3.5 bg-blue-50/50 rounded-xl border border-blue-200 text-blue-800 text-[11px] font-semibold">
-                  📈 Cobertura de Monitoreo del IAP: {totalCasesCountVal > 0 ? Math.round((intermediateEvaluationsCountVal / totalCasesCountVal) * 100) : 0}% de los acompañamientos registrados.
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 text-[11px] font-semibold">
+                  📈 Cobertura de Monitoreo: {totalCasesCountVal > 0 ? Math.round((intermediateEvaluationsCountVal / totalCasesCountVal) * 100) : 0}% de casos evaluados a mitad del proceso.
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic">
-                Estrategias de monitoreo del plan de acompañamiento enfocadas en la Meta de Cobertura del 80%.
+                Respalda el acompañamiento profesional y cuidado de los equipos PER en terreno.
               </p>
             </div>
 
-            {/* 7. Encuestas de Cierre */}
-            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2">
-                  <h4 className="font-bold text-slate-900 text-sm">7. Encuestas de Cierre y Satisfacción</h4>
-                  <a
-                    href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                      `egresos,encuestas_aplicadas,porcentaje_satisfaccion\n${closedCountVal},${closedWithSatisfactionVal},${satisfactionPercentVal}%`
-                    )}`}
-                    download={`7_cierre_satisfaccion_${selectedRegion || "nacional"}.csv`}
-                    className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                  >
-                    📥 Exportar CSV
-                  </a>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-center mt-2">
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-3xl font-extrabold text-blue-700">{closedCountVal}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Casos Cerrados/Egresados</span>
-                  </div>
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-3xl font-extrabold text-emerald-600">{satisfactionPercentVal}%</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Encuestas Completadas</span>
-                    <span className="block text-[10px] text-slate-500 mt-1 font-semibold">({closedWithSatisfactionVal} de {closedCountVal})</span>
-                  </div>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] font-semibold leading-relaxed">
-                  📢 Meta del Convenio: Evaluar satisfacción usuaria en al menos el 80% de las personas participantes egresadas mediante el instrumento específico.
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 italic">
-                Asegura el levantamiento del formulario de cierre de acompañamiento en los cierres técnicos de la dupla.
-              </p>
-            </div>
-
-            {/* 8. Gestión de redes (planes de trabajo) */}
-            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <h4 className="font-bold text-slate-900 text-sm">8. Gestión de Redes y Dispositivos Activados</h4>
-                <a
-                  href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                    `tipo_dispositivo,nombre,cantidad_activados\n` +
-                      networkDevicesVal.map((d: any) => `${d.type},${d.name},${d.activatedCount}`).join("\n")
-                  )}`}
-                  download={`8_gestion_redes_${selectedRegion || "nacional"}.csv`}
-                  className="py-1 px-2.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 font-semibold cursor-pointer text-[10px] text-slate-700"
-                >
-                  📥 Exportar CSV
-                </a>
+            {/* Gestión de redes */}
+            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 lg:col-span-2">
+              <div className="border-b border-slate-100 pb-2">
+                <h4 className="font-bold text-slate-900 text-sm">Gestión de Redes y Dispositivos Activados</h4>
               </div>
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 font-bold text-slate-500">
+                  <tr className="border-b border-slate-200 font-semibold text-slate-500">
                     <th className="py-2">Tipo de Dispositivo</th>
-                    <th className="py-2">Nombre Red Municipal/Salud</th>
+                    <th className="py-2">Nombre Red Municipal / Salud / Comunitaria</th>
                     <th className="py-2 text-center">Activados</th>
                   </tr>
                 </thead>
                 <tbody>
                   {networkDevicesVal.map((nd: any) => (
-                    <tr key={nd.type} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={nd.type} className="border-b border-slate-100 hover:bg-slate-50 transition">
                       <td className="py-2 font-medium text-slate-700">{nd.type}</td>
                       <td className="py-2 text-slate-500">{nd.name}</td>
-                      <td className="py-2 text-center font-bold text-blue-700">{nd.activatedCount}</td>
+                      <td className="py-2 text-center font-bold text-slate-900">{nd.activatedCount}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               <p className="text-[10px] text-slate-400 italic">
-                Fortalece la territorialización del programa identificando actores relevantes en distintos niveles de gestión del piloto PER.
+                Refleja la integración social efectiva conectando participantes con salud, empleo y vivienda.
               </p>
+            </div>
+
+          </div>
+        </div>
+
+        {/* BLOQUE: INDICADORES DE CONVENIO SENDA (AUDITORÍA Y RENDICIÓN) */}
+        <div className="space-y-6 pt-6 border-t border-slate-200">
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
+              Indicadores de Convenio SENDA (Auditoría y Rendición)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Indicadores contractuales de cumplimiento obligatorio para la rendición oficial de cuentas e informes formales.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+            
+            {/* Tasa de nuevos acompañamientos */}
+            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Tasa de Nuevos Acompañamientos</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center mt-2">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-3xl font-extrabold text-slate-900">{newCasesPercentVal}%</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block mt-1">Acompañamientos Nuevos</span>
+                    <span className="block text-[10px] text-slate-400 mt-1 font-medium">({newCasesVal} de {totalCasesCountVal} casos)</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-3xl font-extrabold text-slate-900">{100 - newCasesPercentVal}%</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block mt-1">De Continuidad</span>
+                    <span className="block text-[10px] text-slate-400 mt-1 font-medium">({continuityCasesVal} de {totalCasesCountVal} casos)</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 text-[11px] font-semibold">
+                  📢 {newCasesPercentVal >= 60 ? "Cumple Meta del Convenio" : "Bajo la meta fijada por SENDA"} (Meta de convenio: mínimo del 60% de acompañamientos nuevos en las regiones participantes).
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 italic">
+                Exigencia presupuestaria de rotación y atención a nuevos ingresos.
+              </p>
+            </div>
+
+            {/* Encuestas de Cierre y Satisfacción */}
+            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="border-b border-slate-100 pb-2">
+                  <h4 className="font-bold text-slate-900 text-sm">Encuestas de Cierre y Satisfacción Usuaria</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center mt-2">
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-3xl font-extrabold text-slate-900">{closedCountVal}</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block mt-1">Casos Cerrados/Egresados</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="block text-3xl font-extrabold text-slate-900">{satisfactionPercentVal}%</span>
+                    <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider block mt-1">Encuestas Completadas</span>
+                    <span className="block text-[10px] text-slate-400 mt-1 font-medium">({closedWithSatisfactionVal} de {closedCountVal})</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-700 text-[11px] font-semibold">
+                  📢 Meta del Convenio: Evaluar satisfacción usuaria en al menos el 80% de las personas participantes egresadas.
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 italic">
+                Evaluación cualitativa al egreso requerida por la contraparte institucional.
+              </p>
+            </div>
+
+            {/* Desagregación Demográfica */}
+            <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4 lg:col-span-2">
+              <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
+                Desagregación Demográfica y Caracterización de la Población ({totalCasesCountVal} Personas)
+              </h4>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-xs text-slate-700">
+                {/* Gender breakdown */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Distinción de Género</span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Femenino:</span>
+                      <span className="font-bold text-slate-900">{femaleCountVal} ({totalCasesCountVal > 0 ? Math.round((femaleCountVal / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Masculino:</span>
+                      <span className="font-bold text-slate-900">{maleCountVal} ({totalCasesCountVal > 0 ? Math.round((maleCountVal / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Otro / Sin registrar:</span>
+                      <span className="font-bold text-slate-900">{otherGenderCountVal} ({totalCasesCountVal > 0 ? Math.round((otherGenderCountVal / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Age range breakdown */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Rango Etario</span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>18 - 29 años:</span>
+                      <span className="font-bold text-slate-900">{age18_29Val} ({totalCasesCountVal > 0 ? Math.round((age18_29Val / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>30 - 49 años:</span>
+                      <span className="font-bold text-slate-900">{age30_49Val} ({totalCasesCountVal > 0 ? Math.round((age30_49Val / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>50+ años:</span>
+                      <span className="font-bold text-slate-900">{age50PlusVal} ({totalCasesCountVal > 0 ? Math.round((age50PlusVal / totalCasesCountVal) * 100) : 0}%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Education level */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Nivel de Estudios</span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Básica Completa/Incomp:</span>
+                      <span className="font-bold text-slate-900">{eduBasicVal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Media Completa:</span>
+                      <span className="font-bold text-slate-900">{eduMediaVal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Técnica Superior:</span>
+                      <span className="font-bold text-slate-900">{eduTecnicaVal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Universitaria/Prof:</span>
+                      <span className="font-bold text-slate-900">{eduProfVal}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Employment status */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] block">Situación Laboral</span>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span>Desocupado / Buscando:</span>
+                      <span className="font-bold text-slate-900">{jobDesocupadoVal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Informal / Indep:</span>
+                      <span className="font-bold text-slate-900">{jobInformalVal}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Trabajo Formal:</span>
+                      <span className="font-bold text-slate-900">{jobFormalVal}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>

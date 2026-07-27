@@ -125,8 +125,6 @@ export default function UserManagementClient({
                   <th className="py-3 px-4">Acompañante</th>
                   <th className="py-3 px-4">Usuario / Email</th>
                   <th className="py-3 px-4">Región / Coordinador</th>
-                  <th className="py-3 px-4">Certificación</th>
-                  <th className="py-3 px-4">Cupo Max</th>
                   <th className="py-3 px-4 text-center">Estado</th>
                   <th className="py-3 px-4 text-right">Acción</th>
                 </tr>
@@ -140,20 +138,6 @@ export default function UserManagementClient({
                       <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold text-[10px] border border-blue-100">
                         📍 {per.regionId}
                       </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {per.profile?.certificationStatus === "HABILITADO" ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">
-                          ✓ Habilitado
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">
-                          En Capacitación
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-700">
-                      5 casos (Cupo Max)
                     </td>
                     <td className="py-3 px-4 text-center">
                       {per.active ? (
@@ -300,38 +284,6 @@ export default function UserManagementClient({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="certificationStatus" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Estado Certificación
-                  </label>
-                  <select
-                    name="certificationStatus"
-                    id="certificationStatus"
-                    defaultValue="HABILITADO"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 outline-none text-slate-900 font-medium"
-                  >
-                    <option value="HABILITADO">✓ Habilitado</option>
-                    <option value="EN_CAPACITACION">En Capacitación</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="maxActiveCases" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Cupo Máximo Casos
-                  </label>
-                  <input
-                    type="number"
-                    name="maxActiveCases"
-                    id="maxActiveCases"
-                    defaultValue={5}
-                    min={1}
-                    max={15}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 outline-none font-bold text-slate-900"
-                  />
-                </div>
               </div>
 
               {/* Action Buttons */}

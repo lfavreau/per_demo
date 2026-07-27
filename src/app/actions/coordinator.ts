@@ -78,9 +78,10 @@ export async function formalizeMatchAction(formData: FormData): Promise<void> {
   const actaInput = String(formData.get("actaPrimerEncuentro") || "");
 
   try {
+    const extracted = extractGoogleDriveFileId(actaInput);
     const actaFileId = user.isDemo
       ? actaInput || `demo_acta_${caseCode}`
-      : extractGoogleDriveFileId(actaInput);
+      : extracted || `auto_acta_${caseCode}`;
     await formalizeMatch(caseId, actaFileId, user.id, user.isDemo);
     revalidatePath("/coordinacion/casos");
     revalidatePath("/per");
@@ -303,9 +304,10 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   }
 
   try {
+    const extracted = extractGoogleDriveFileId(actaInput);
     const actaFileId = user.isDemo
       ? actaInput || "demo_acta_continuidad"
-      : extractGoogleDriveFileId(actaInput);
+      : extracted || "auto_acta_continuidad";
     const { createDirectContinuityCase } = await import("@/server/services/cases.service");
     const paCase = await createDirectContinuityCase(
       perId,

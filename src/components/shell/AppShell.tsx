@@ -219,15 +219,16 @@ export default function AppShell({ children, user }: AppShellProps) {
 
             <nav className="flex-1 p-4 space-y-1">
               {currentMenu.map((item) => {
-                const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path));
+                const isRootPath = item.path === "/admin" || item.path === "/coordinacion" || item.path === "/per";
+                const isActive = isRootPath ? pathname === item.path : pathname.startsWith(item.path);
                 return (
                   <a
                     key={item.name}
                     href={item.path}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
                       isActive
-                        ? "bg-blue-50 text-blue-900 border-l-4 border-blue-600 shadow-sm"
-                        : "hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+                        ? "bg-slate-100 text-slate-900 border border-slate-300/80 font-bold shadow-xs"
+                        : "hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-transparent"
                     } text-left cursor-pointer`}
                   >
                     <span>{item.icon}</span>
@@ -483,7 +484,8 @@ export default function AppShell({ children, user }: AppShellProps) {
             {/* Navigation links */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
               {currentMenu.map((item) => {
-                const isActive = pathname === item.path || (item.path !== "/" && pathname.startsWith(item.path));
+                const isRootPath = item.path === "/admin" || item.path === "/coordinacion" || item.path === "/per";
+                const isActive = isRootPath ? pathname === item.path : pathname.startsWith(item.path);
                 return (
                   <a
                     key={item.name}
@@ -491,8 +493,8 @@ export default function AppShell({ children, user }: AppShellProps) {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${
                       isActive
-                        ? "bg-blue-50 text-blue-900 border-l-4 border-blue-600 shadow-sm"
-                        : "hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+                        ? "bg-slate-100 text-slate-900 border border-slate-300/80 font-bold shadow-xs"
+                        : "hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-transparent"
                     } text-left cursor-pointer`}
                   >
                     <span>{item.icon}</span>
