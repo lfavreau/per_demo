@@ -95,7 +95,13 @@ async function callGoogleAppsScript<T>(
 }
 
 function assertGoogleId(value: string, label: string) {
-  if (!/^[A-Za-z0-9_-]{10,}$/.test(value) || value.toLowerCase().includes("mock")) {
+  // Los IDs de Drive/Docs son alfanuméricos (+ "_-"). Los IDs de eventos de
+  // Calendar (CalendarApp#getId) tienen forma "xxxxxxxx@google.com", por eso
+  // se permite opcionalmente un sufijo "@dominio".
+  if (
+    !/^[A-Za-z0-9_-]{10,}(@[A-Za-z0-9.-]+)?$/.test(value) ||
+    value.toLowerCase().includes("mock")
+  ) {
     throw new Error(`Google devolvió un ${label} inválido.`);
   }
 }
