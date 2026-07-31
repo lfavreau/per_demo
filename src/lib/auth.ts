@@ -20,6 +20,14 @@ const DEMO_EMAILS = new Set([
   "coord.valpo@per2026.cl",
   "per.carla@per2026.cl",
   "per.valpo@per2026.cl",
+  "per.diego@per2026.cl",
+  "per.juan@per2026.cl",
+  "per.sonia@per2026.cl",
+  "per.lucas@per2026.cl",
+  "per.mario@per2026.cl",
+  "per.camila@per2026.cl",
+  "per.pedro@per2026.cl",
+  "per.elena@per2026.cl",
 ]);
 
 function sessionSecret() {
