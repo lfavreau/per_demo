@@ -61,6 +61,13 @@ export async function login(email: string, password?: string, isDemo = false): P
     return { error: "demo_not_allowed" };
   }
 
+  // Cuentas de demostración (isDemo:true en la base, ej. los PER de prueba con nombre)
+  // no pueden iniciar sesión por el formulario real, aunque conozcan la contraseña
+  // compartida — evita sesiones "reales" sobre datos que solo existen en modo demo.
+  if (!isDemo && user.isDemo) {
+    return { error: "account_is_demo_only" };
+  }
+
   // Password check for real mode (isDemo === false)
   if (!isDemo) {
     const expectedPassword = process.env.REAL_MODE_PASSWORD?.trim() || "P455w0rd!";

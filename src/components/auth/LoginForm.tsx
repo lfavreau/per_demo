@@ -43,6 +43,8 @@ export default function LoginForm() {
       ? "El usuario no está registrado o se encuentra inactivo."
       : error === "demo_not_allowed"
       ? "Esta cuenta no está habilitada para el entorno demostrativo."
+      : error === "account_is_demo_only"
+      ? "Esta es una cuenta de demostración. Ingresa con el Acceso Directo Demo, no con este formulario."
       : error === "real_mode_not_configured"
       ? "El modo real aún no tiene una contraseña configurada en Vercel."
       : null;
