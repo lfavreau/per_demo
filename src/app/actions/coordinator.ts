@@ -2,14 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
-function isNextRedirect(err: any): boolean {
-  return err && (err.message === "NEXT_REDIRECT" || (typeof err.digest === "string" && err.digest.startsWith("NEXT_REDIRECT")));
-}
+import { isNextRedirect } from "@/lib/next-errors";
 import { createCaseFromCandidate, validateMatch, formalizeMatch, transitionCaseStatus } from "@/server/services/cases.service";
 import { updateTaskStatus } from "@/server/services/tasks.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert, checkAllAlertRules } from "@/server/services/alerts.service";
+import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
@@ -245,15 +243,10 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseId = formData.get("caseId") as string;
   const toStatus = formData.get("toStatus") as string;
   const reason = formData.get("reason") as string;
-  const formUrl = formData.get("formUrl") as string;
+  const forceAdvance = formData.get("forceAdvance") === "on";
 
   if (!caseId || !toStatus) {
     throw new Error("Faltan datos obligatorios");
-  }
-
-  let finalReason = reason;
-  if (formUrl) {
-    finalReason = `${reason || "Retiro registrado"}. Link formulario: ${formUrl}`;
   }
 
   // Fetch the case code so we can keep the case selected in the UI on redirect
@@ -264,7 +257,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseCode = paCase?.code || "";
 
   try {
-    await transitionCaseStatus(caseId, toStatus, finalReason, user.id, user.isDemo);
+    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${caseCode}`);
@@ -274,6 +267,22 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
     }
     console.error("Error transitioning case status:", err.message);
     redirect(`/coordinacion/casos?caseCode=${caseCode}&error=${encodeURIComponent(err.message)}`);
+  }
+}
+
+export async function ensureWithdrawalStepAction(caseId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
+    throw new Error("No autorizado");
+  }
+
+  try {
+    await ensureWithdrawalStep(caseId, "PA", user.id, user.isDemo);
+    revalidatePath("/coordinacion");
+    revalidatePath("/per", "layout");
+  } catch (err: any) {
+    console.error("Error ensuring withdrawal step:", err);
   }
 }
 

@@ -72,6 +72,7 @@ model PACandidate {
 model PACase {
   id                          String              @id @default(cuid())
   code                        String              @unique // PA-{REGION}-{NNN}
+  alias                       String?             // trato preferido de la persona acompanada (Actividad 2). NUNCA nombre legal ni RUN.
   type                        String              // "NUEVO", "CONTINUIDAD"
   regionId                    String
   perId                       String
@@ -148,7 +149,12 @@ model Instrument {
   googleResourceId   String?
   googleUrl          String?
   phaseId            String
-  stageId            String?
+  stageId            String?          // "VINCULACION" | "CONEXION" | "FINALIZACION" | null (fuera del itinerario de caso)
+  order              Int              @default(0) // orden dentro de stageId
+  activityKey        String?          // clave estable de catálogo, ver src/lib/instrument-itinerary.ts
+  submissionMode     String           @default("EXTERNAL_LINK") // "EXTERNAL_LINK" | "NATIVE_FORM"
+  optional           Boolean          @default(false)
+  triggerCondition   String           @default("SEQUENTIAL") // "SEQUENTIAL" | "CONTINUOUS" | "ON_WITHDRAWAL"
   targetRole         String           // "ADMIN", "COORDINATOR", "PER"
   scope              String           // "NACIONAL", "REGIONAL"
   regionId           String?
@@ -167,6 +173,8 @@ model Instrument {
   updatedAt          DateTime         @updatedAt
   tasks              Task[]
   documentRecords    DocumentRecord[]
+
+  @@index([stageId, order])
 }
 
 model Task {
@@ -190,11 +198,17 @@ model Task {
   driveFileId      String?
   formResponseRef  String?
   calendarEventId  String?
+  contentJson      String?     // payload JSON de formularios nativos del itinerario (submissionMode NATIVE_FORM)
+  iterationNumber  Int         @default(1) // soporta reformulaciones (ej. Reformular Actividad 4) como nueva iteración del mismo instrumento
   isDemo           Boolean     @default(false)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   events           TaskEvent[]
   feedbacks        Feedback[]
+  domainMaps       IAPDomainMap[]
+  goals            IAPGoal[]
+
+  @@unique([paCaseId, instrumentId, iterationNumber])
 }
 
 model TaskEvent {
@@ -230,6 +244,8 @@ model IAPDomainMap {
   id               String    @id @default(cuid())
   iapRecordId      String
   iapRecord        IAPRecord @relation(fields: [iapRecordId], references: [id], onDelete: Cascade)
+  taskId           String?   // Task del itinerario (Actividad 3) que generó esta fila
+  task             Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
   recoveryDomainId String
   needs            String?
   strengths        String?
@@ -240,6 +256,10 @@ model IAPGoal {
   id               String    @id @default(cuid())
   iapRecordId      String
   iapRecord        IAPRecord @relation(fields: [iapRecordId], references: [id], onDelete: Cascade)
+  taskId           String?   // Task del itinerario (Actividad 4 / Reformular Actividad 4) que generó esta fila
+  task             Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  version          Int       @default(1)
+  isCurrent        Boolean   @default(true) // la reformulación desactiva la versión anterior sin borrarla
   recoveryDomainId String
   objective        String
   resources        String?

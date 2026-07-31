@@ -164,10 +164,12 @@ export async function returnSession(
     if (!session) throw new Error("Registro de sesión no encontrado");
     if (session.isDemo !== isDemo) throw new Error("La sesión no pertenece al modo de trabajo actual");
 
+    const perProfile = await tx.pERProfile.findUnique({ where: { id: session.perId } });
+
     const feedback = await tx.feedback.create({
       data: {
         coordinatorId: actorId,
-        perId: session.perId,
+        perId: perProfile?.userId ?? session.perId,
         entityType: "SessionLog",
         entityId: sessionId,
         text: feedbackText,
@@ -195,7 +197,6 @@ export async function returnSession(
       },
     });
 
-    const perProfile = await tx.pERProfile.findUnique({ where: { id: session.perId } });
     if (perProfile) {
       const paCase = await tx.pACase.findUnique({ where: { id: session.paCaseId } });
       await createNotificationWithPush(

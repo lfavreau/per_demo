@@ -13,6 +13,7 @@ import {
   type ValidatedCopyResult,
 } from "../google/workspace";
 import { createNotificationWithPush } from "@/server/services/push.service";
+import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/services/itinerary.service";
 
 // Helper to abbreviate Chilean regions
 function getRegionAbbreviation(region: string): string {
@@ -25,17 +26,23 @@ function getRegionAbbreviation(region: string): string {
   return "GEN";
 }
 
-// Helper to generate the next PA code
-async function generatePaCode(regionId: string, isDemo: boolean): Promise<string> {
+// Helper to generate the next PA code.
+// `PACase.code` is globally unique (not scoped by isDemo), pero el conteo que decide el
+// siguiente número SÍ debe ignorar isDemo — si se filtrara solo por el modo actual (como hacía
+// antes), el primer caso real de una región que ya tiene casos demo generaría el mismo código
+// que un caso demo existente (ej. "PA-MET-001") y la creación fallaría con un choque de
+// unicidad. Se agrega además un loop de verificación por si el conteo no refleja códigos ya
+// tomados (casos borrados, creados fuera de orden, etc.).
+async function generatePaCode(regionId: string): Promise<string> {
   const abbr = getRegionAbbreviation(regionId);
-  
-  // Get count of cases in this region to generate sequential suffix
-  const count = await prisma.pACase.count({
-    where: { regionId, isDemo },
-  });
-  
-  const sequential = String(count + 1).padStart(3, "0");
-  return `PA-${abbr}-${sequential}`;
+
+  let sequential = (await prisma.pACase.count({ where: { regionId } })) + 1;
+  let code = `PA-${abbr}-${String(sequential).padStart(3, "0")}`;
+  while (await prisma.pACase.findUnique({ where: { code } })) {
+    sequential++;
+    code = `PA-${abbr}-${String(sequential).padStart(3, "0")}`;
+  }
+  return code;
 }
 
 export async function createCaseFromCandidate(
@@ -71,7 +78,7 @@ export async function createCaseFromCandidate(
     }
 
     // 3. Generate unique code
-    const code = await generatePaCode(candidate.regionId, isDemo);
+    const code = await generatePaCode(candidate.regionId);
 
     // 4. Create case
     const newCase = await tx.pACase.create({
@@ -345,12 +352,13 @@ export async function transitionCaseStatus(
   toStatus: string,
   reason: string,
   actorId: string,
-  isDemo: boolean
+  isDemo: boolean,
+  forceAdvance = false
 ) {
   return await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({
       where: { id: caseId },
-      include: { tasks: true, per: true },
+      include: { per: true },
     });
     if (!paCase) throw new Error("Caso no encontrado");
     if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
@@ -359,17 +367,48 @@ export async function transitionCaseStatus(
       throw new Error("No autorizado para operar casos de esta región");
     }
 
-    // Egreso validations (satisfaction survey and ex-post evaluation tasks must be VALIDADA)
-    if (toStatus === "EGRESO") {
-      const activeTasks = paCase.tasks;
-      const exPostTask = activeTasks.find((t) => t.id === paCase.exPostTaskId || t.title.toLowerCase().includes("ex-post"));
-      const satTask = activeTasks.find((t) => t.id === paCase.satisfactionTaskId || t.title.toLowerCase().includes("satisfacción"));
-      
-      const isExPostValidated = exPostTask && exPostTask.status === "VALIDADA";
-      const isSatValidated = satTask && satTask.status === "VALIDADA";
+    // Puertas de avance de etapa: exigen que todos los instrumentos del itinerario de la etapa
+    // ACTUAL (la que se está por dejar) estén VALIDADA/NO_APLICA. Bloqueo blando: se puede
+    // forzar con motivo obligatorio, queda auditado.
+    if (["CONEXION", "FINALIZACION", "EGRESO"].includes(toStatus)) {
+      const gate = await assertStageAdvanceAllowed(caseId, isDemo);
+      if (!gate.satisfied) {
+        if (!forceAdvance) {
+          const missingTitles = gate.missing.map((s) => s.title).join("; ");
+          throw new Error(
+            `Bloqueo de avance de etapa: faltan instrumentos por validar (${missingTitles}). Puedes forzar el avance indicando un motivo.`
+          );
+        }
+        if (!reason || !reason.trim()) {
+          throw new Error("Forzar el avance de etapa requiere un motivo.");
+        }
+        await tx.auditLog.create({
+          data: {
+            userId: actorId,
+            role: actor.role,
+            action: "FORCE_STAGE_ADVANCE",
+            entityType: "PACase",
+            entityId: caseId,
+            previousValue: paCase.stage,
+            newValue: JSON.stringify({ toStatus, missing: gate.missing.map((s) => s.activityKey) }),
+            reason,
+            isDemo,
+          },
+        });
+      }
+    }
 
-      if (!isExPostValidated || !isSatValidated) {
-        throw new Error("Bloqueo de Egreso: Se requiere registro y validación del diagnóstico final (Ex-Post) y la Encuesta de Satisfacción.");
+    // Retiro / Deserción: exigen el Formulario de Abandono (Persona Acompañada) validado —
+    // reemplaza el hack anterior de pegar una URL de formulario dentro del campo "reason".
+    if (["RETIRO_VOLUNTARIO", "DESERCION"].includes(toStatus)) {
+      const withdrawalTask = await tx.task.findFirst({
+        where: { paCaseId: caseId, instrument: { activityKey: "FORMULARIO_ABANDONO_PA" } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!withdrawalTask || withdrawalTask.status !== "VALIDADA") {
+        throw new Error(
+          "Se requiere completar y validar el Formulario de Abandono — Persona Acompañada antes de confirmar el retiro."
+        );
       }
     }
 
@@ -421,6 +460,10 @@ export async function transitionCaseStatus(
         stageEnteredAt: new Date(),
       },
     });
+
+    if (startingOrChanging && newStage !== paCase.stage) {
+      await ensureCurrentStageTasks(caseId, actorId, isDemo, tx);
+    }
 
     await tx.caseStatusHistory.create({
       data: {
@@ -485,7 +528,7 @@ export async function transitionCaseStatus(
       userId: paCase.per.userId,
       title: `Caso ${paCase.code}: ${toStatus}`,
       message: `Tu caso asignado ${paCase.code} pasó a estado ${toStatus}.`,
-      link: `/per?highlightCaseId=${paCase.id}`,
+      link: `/per/casos/${paCase.id}/etapa`,
       isDemo,
     }, tx);
 
@@ -527,10 +570,7 @@ export async function createDirectContinuityCase(
     throw new Error("El PER seleccionado no está habilitado en la región actual");
   }
 
-  const count = await prisma.pACase.count({ where: { regionId, isDemo } });
-  const abbr = getRegionAbbreviation(regionId);
-  const sequential = String(count + 1).padStart(3, "0");
-  const code = `PA-${abbr}-${sequential}`;
+  const code = await generatePaCode(regionId);
 
   const folders = await createCaseFolder(code, regionId, perId, isDemo);
 
@@ -637,42 +677,9 @@ export async function createDirectContinuityCase(
         },
       });
 
-      const defaultInstruments = await tx.instrument.findMany({
-        where: { status: "VIGENTE" },
-      });
-      const perProfile = await tx.pERProfile.findUnique({ where: { id: perId } });
-      if (!perProfile) throw new Error("PER no encontrado");
-
-      for (const inst of defaultInstruments) {
-        if (
-          ["GOOGLE_DOC", "GOOGLE_FORM"].includes(inst.type) &&
-          inst.name !== "Inducción y Caracterización PER" &&
-          inst.name !== "Formulario de Preinscripción PA" &&
-          inst.name !== "Formulario de Retiro Voluntario"
-        ) {
-          const dueDate = new Date();
-          dueDate.setDate(dueDate.getDate() + (inst.defaultDueDays || 15));
-          const isIap = inst.name.toLowerCase().includes("itinerario");
-
-          await tx.task.create({
-            data: {
-              paCaseId: paCase.id,
-              instrumentId: inst.id,
-              title: inst.name,
-              description: inst.description,
-              status: "PENDIENTE",
-              priority: inst.mandatory ? "CRITICA" : "MEDIA",
-              dueDate,
-              regionId,
-              assignedToUserId: perProfile.userId,
-              assignedByUserId: actorId,
-              googleUrl: isIap ? createdIap.docUrl : undefined,
-              driveFileId: isIap ? createdIap.docId : undefined,
-              isDemo,
-            },
-          });
-        }
-      }
+      // Solo se materializa la Task del primer paso del itinerario de Vinculación — el resto
+      // se desbloquea a medida que se valida cada instrumento (ver ensureCurrentStageTasks).
+      await ensureCurrentStageTasks(paCase.id, actorId, isDemo, tx);
 
       return paCase;
     });

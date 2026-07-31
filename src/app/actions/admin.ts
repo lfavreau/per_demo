@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { updateInstrumentPlacement } from "@/server/services/instruments.service";
 
 export async function createPERUserAction(formData: FormData) {
   const adminUser = await requireUser(["ADMIN"]);
@@ -108,4 +109,30 @@ export async function toggleUserStatusAction(formData: FormData) {
 
   revalidatePath("/admin/usuarios");
   redirect("/admin/usuarios?success=status_updated");
+}
+
+export async function updateInstrumentPlacementAction(formData: FormData): Promise<void> {
+  const adminUser = await requireUser(["ADMIN"]);
+
+  const instrumentId = formData.get("instrumentId") as string;
+  const stageIdRaw = formData.get("stageId") as string;
+  const orderRaw = formData.get("order") as string;
+
+  if (!instrumentId) {
+    throw new Error("Falta el instrumento");
+  }
+
+  const stageId = stageIdRaw && stageIdRaw !== "" ? stageIdRaw : null;
+  const order = Number(orderRaw) || 0;
+
+  await updateInstrumentPlacement({
+    instrumentId,
+    stageId,
+    order,
+    actorId: adminUser.id,
+    isDemo: Boolean(adminUser.isDemo),
+  });
+
+  revalidatePath("/admin/instrumentos");
+  revalidatePath("/per", "layout");
 }

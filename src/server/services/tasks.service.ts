@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
-import {
-  commitValidatedCopy,
-  copyToValidadosFolder,
-  rollbackValidatedCopy,
-  verifyDriveFile,
-  type ValidatedCopyResult,
-} from "@/server/google/workspace";
+import type { ValidatedCopyResult } from "@/server/google/workspace";
+
+// Import dinámico: `@/server/google/workspace` hace `import "server-only"`, que revienta fuera
+// del compilador de Next.js (por ejemplo, en el script de seed corrido con tsx). Los pasos de
+// instrumentos nativos (submissionMode NATIVE_FORM) nunca tocan Drive, así que este módulo solo
+// se carga cuando realmente se necesita.
+function loadWorkspace() {
+  return import("@/server/google/workspace");
+}
 
 export async function assignTask({
   title,
@@ -98,6 +100,7 @@ export async function updateTaskStatus({
   actorId,
   isDemo,
   googleFileId,
+  contentJson,
 }: {
   taskId: string;
   toStatus:
@@ -107,11 +110,14 @@ export async function updateTaskStatus({
     | "EN_REVISION"
     | "VALIDADA"
     | "DEVUELTA"
-    | "CANCELADA";
+    | "CANCELADA"
+    | "NO_APLICA";
   note?: string;
   actorId: string;
   isDemo: boolean;
   googleFileId?: string;
+  /** Payload JSON de instrumentos nativos (submissionMode NATIVE_FORM) — se persiste en Task.contentJson. */
+  contentJson?: string;
 }) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
@@ -132,11 +138,14 @@ export async function updateTaskStatus({
     throw new Error("No autorizado para operar tareas de otra región");
   }
 
+  const isNativeForm = task.instrument?.submissionMode === "NATIVE_FORM";
+
   let submittedFile = null;
-  if (toStatus === "ENVIADA") {
+  if (toStatus === "ENVIADA" && !isNativeForm) {
     if (!googleFileId || !task.paCase?.driveFolderCaseId) {
       if (!isDemo) throw new Error("La tarea debe incluir un archivo dentro de la carpeta del caso");
     } else {
+      const { verifyDriveFile } = await loadWorkspace();
       submittedFile = await verifyDriveFile(
         googleFileId,
         task.paCase.driveFolderCaseId,
@@ -146,10 +155,11 @@ export async function updateTaskStatus({
   }
 
   let validatedCopy: ValidatedCopyResult | null = null;
-  if (toStatus === "VALIDADA" && task.paCaseId && task.instrument) {
+  if (toStatus === "VALIDADA" && !isNativeForm && task.paCaseId && task.instrument) {
     if (!task.driveFileId || !task.paCase?.driveFolderValidadosId) {
       if (!isDemo) throw new Error("No se puede validar una tarea sin archivo verificado");
     } else {
+      const { copyToValidadosFolder } = await loadWorkspace();
       validatedCopy = await copyToValidadosFolder(
         task.driveFileId,
         task.paCase.driveFolderValidadosId,
@@ -187,11 +197,18 @@ export async function updateTaskStatus({
       }
 
       if (toStatus === "VALIDADA" && current.paCaseId && current.instrumentId) {
+        const activityKey = current.instrument?.activityKey;
         const instrumentName = current.instrument?.name.toLowerCase() || "";
         const updateData: Record<string, string> = {};
-        if (instrumentName.includes("satisfacción")) updateData.satisfactionTaskId = current.id;
-        else if (instrumentName.includes("ex-post")) updateData.exPostTaskId = current.id;
-        else if (instrumentName.includes("ex-ante") || instrumentName.includes("itinerario")) {
+        if (activityKey === "ENCUESTA_SATISFACCION" || instrumentName.includes("satisfacción")) {
+          updateData.satisfactionTaskId = current.id;
+        } else if (activityKey === "ACTIVIDAD_5_FINAL" || instrumentName.includes("ex-post")) {
+          updateData.exPostTaskId = current.id;
+        } else if (
+          activityKey === "ACTIVIDAD_4_PLANIFICACION" ||
+          instrumentName.includes("ex-ante") ||
+          instrumentName.includes("itinerario")
+        ) {
           updateData.exAnteTaskId = current.id;
         }
         if (Object.keys(updateData).length) {
@@ -250,6 +267,7 @@ export async function updateTaskStatus({
             toStatus === "ENVIADA" && googleFileId
               ? submittedFile?.fileId || googleFileId
               : current.driveFileId,
+          contentJson: contentJson !== undefined ? contentJson : current.contentJson,
         },
       });
 
@@ -285,6 +303,7 @@ export async function updateTaskStatus({
     });
 
     if (validatedCopy) {
+      const { commitValidatedCopy } = await loadWorkspace();
       await commitValidatedCopy(validatedCopy, isDemo).catch((error) => {
         console.error("No se pudo marcar la copia validada como confirmada:", error);
       });
@@ -292,6 +311,7 @@ export async function updateTaskStatus({
     return updated;
   } catch (error) {
     if (validatedCopy) {
+      const { rollbackValidatedCopy } = await loadWorkspace();
       await rollbackValidatedCopy(validatedCopy, isDemo).catch((rollbackError) => {
         console.error("No se pudo revertir la copia validada:", rollbackError);
       });

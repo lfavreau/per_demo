@@ -6,8 +6,14 @@ import { createCaseAction, createCandidateAction } from "@/app/actions/coordinat
 
 export const dynamic = "force-dynamic";
 
-export default async function CoordinatorCandidatasPage() {
+export default async function CoordinatorCandidatasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getCurrentUser();
+  const params = await searchParams;
+  const errorMsg = params.error;
 
   // Enforce Coordinator role access
   if (!user || user.role !== "COORDINATOR" || !user.regionId) {
@@ -64,6 +70,16 @@ export default async function CoordinatorCandidatasPage() {
             </p>
           </div>
         </div>
+
+        {errorMsg && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-2xl flex items-start gap-2 shadow-sm">
+            <span className="text-sm shrink-0">⚠️</span>
+            <div className="flex-1 space-y-1">
+              <p className="font-bold text-red-900">No se pudo completar la operación</p>
+              <p className="font-normal text-[11px] leading-relaxed text-red-700">{decodeURIComponent(errorMsg)}</p>
+            </div>
+          </div>
+        )}
 
         {/* Formulario para Registrar Nueva Postulante / Candidata */}
         <div className="p-6 bg-white border border-blue-100 rounded-2xl shadow-sm space-y-4">

@@ -1,6 +1,61 @@
 import { prisma } from "../src/lib/db";
+import { ensureCurrentStageTasks } from "../src/server/services/itinerary.service";
+import { updateTaskStatus } from "../src/server/services/tasks.service";
+import { SETTINGS_CATALOG, buildInstrumentCatalog } from "./catalog/instruments";
+import { REGIONAL_COORDINATORS } from "./catalog/coordinators";
+
+/**
+ * Simula progreso real del itinerario de la etapa ACTUAL del caso reusando las funciones de
+ * servicio reales (no reimplementa reglas de estado): valida `validatedCount` pasos secuenciales
+ * en orden y, si se pide, deja el siguiente paso materializado en `currentTaskState`.
+ */
+async function seedAdvanceItinerary(
+  paCaseId: string,
+  actorId: string,
+  isDemo: boolean,
+  validatedCount: number,
+  currentTaskState?: "ENVIADA" | "DEVUELTA"
+) {
+  for (let i = 0; i < validatedCount; i++) {
+    const task = await ensureCurrentStageTasks(paCaseId, actorId, isDemo);
+    if (!task) return;
+    await updateTaskStatus({ taskId: task.id, toStatus: "VALIDADA", actorId, isDemo });
+  }
+  if (currentTaskState) {
+    const task = await ensureCurrentStageTasks(paCaseId, actorId, isDemo);
+    if (task) {
+      await updateTaskStatus({
+        taskId: task.id,
+        toStatus: currentTaskState,
+        actorId,
+        isDemo,
+        note:
+          currentTaskState === "DEVUELTA"
+            ? "Favor detallar mejor la sección de dificultades reportadas."
+            : undefined,
+      });
+    }
+  }
+}
+
+function assertNotProduction() {
+  const looksLikeProduction =
+    process.env.TURSO_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    process.env.STORAGE_URL ||
+    process.env.STORAGE_TURSO_DATABASE_URL;
+  if (looksLikeProduction && process.env.ALLOW_DESTRUCTIVE_SEED !== "true") {
+    throw new Error(
+      "Este seed borra y repuebla TODA la base de datos con datos demo/prueba. " +
+        "Se detecto una variable de entorno de base de datos remota (Turso/produccion), asi que se aborta. " +
+        "Si de verdad queres correrlo contra esa base, seteá ALLOW_DESTRUCTIVE_SEED=true explicitamente. " +
+        "Para poblar produccion de forma segura usa en su lugar: npx tsx prisma/seed-bootstrap.ts"
+    );
+  }
+}
 
 async function main() {
+  assertNotProduction();
   console.log("Starting rich seed script...");
 
   // 1. Clear database in reverse dependency order
@@ -36,15 +91,7 @@ async function main() {
 
   // 2. Seed Settings
   console.log("Seeding settings...");
-  const settingsData = [
-    { key: "alert_days_vinculacion", value: "10" },
-    { key: "alert_days_conexion", value: "14" },
-    { key: "alert_days_finalizacion", value: "10" },
-    { key: "duration_months_vinculacion", value: "1" },
-    { key: "duration_months_conexion", value: "6" },
-    { key: "duration_months_finalizacion", value: "2" },
-  ];
-  for (const s of settingsData) {
+  for (const s of SETTINGS_CATALOG) {
     await prisma.setting.create({ data: s });
   }
 
@@ -73,165 +120,10 @@ async function main() {
 
   // 4. Seed Instruments
   console.log("Seeding official instruments...");
-  const instruments = [
-    {
-      name: "Inducción y Caracterización PER",
-      description: "Recopilación de antecedentes iniciales de los PER",
-      type: "GOOGLE_FORM",
-      googleUrl: "https://docs.google.com/forms/d/e/1FAIpQLSf123_induccion_per/viewform",
-      phaseId: "FASE_1",
-      stageId: "FASE_1_ETAPA_2",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: true,
-      criticalTask: false,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_induccion_per",
-    },
-    {
-      name: "Formulario de Preinscripción PA",
-      description: "Preinscripción de candidatas en Fase 2",
-      type: "GOOGLE_FORM",
-      googleUrl: "https://docs.google.com/forms/d/e/1FAIpQLSf456_preinscripcion_pa/viewform",
-      phaseId: "FASE_2",
-      stageId: "FASE_2_ETAPA_2",
-      targetRole: "COORDINATOR",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: true,
-      criticalTask: false,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_preinscripcion_pa",
-    },
-    {
-      name: "Acta de Primer Encuentro y Encuadre",
-      description: "Registro de conformación y primer encuentro de la dupla",
-      type: "GOOGLE_DOC",
-      googleUrl: "https://docs.google.com/document/d/1_acta_primer_encuentro/edit",
-      phaseId: "FASE_3",
-      stageId: "FASE_3_ETAPA_4",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: true,
-      criticalTask: true,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_acta_primer_encuentro",
-    },
-    {
-      name: "Itinerario de Acompañamiento Personalizado (IAP)",
-      description: "Planificación de objetivos y ámbitos del caso",
-      type: "GOOGLE_DOC",
-      googleUrl: "https://docs.google.com/document/d/1_iap_plan/edit",
-      phaseId: "FASE_4",
-      stageId: "FASE_4_ETAPA_1",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: true,
-      criticalTask: true,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_iap_plan",
-    },
-    {
-      name: "Evaluación Intermedia",
-      description: "Evaluación intermedia del proceso de acompañamiento",
-      type: "GOOGLE_DOC",
-      googleUrl: "https://docs.google.com/document/d/1_evaluacion_intermedia/edit",
-      phaseId: "FASE_4",
-      stageId: "FASE_4_ETAPA_5",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: false,
-      criticalTask: false,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_evaluacion_intermedia",
-    },
-    {
-      name: "Evaluación Ex-Post",
-      description: "Evaluación final / diagnóstica ex-post",
-      type: "GOOGLE_DOC",
-      googleUrl: "https://docs.google.com/document/d/1_evaluacion_ex_post/edit",
-      phaseId: "FASE_5",
-      stageId: "FASE_5_ETAPA_1",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: true,
-      criticalTask: true,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_evaluacion_ex_post",
-    },
-    {
-      name: "Encuesta de Satisfacción PA",
-      description: "Evaluación de calidad y satisfacción del proceso",
-      type: "GOOGLE_FORM",
-      googleUrl: "https://docs.google.com/forms/d/e/1FAIpQLSf789_satisfaccion/viewform",
-      phaseId: "FASE_5",
-      stageId: "FASE_5_ETAPA_1",
-      targetRole: "PER",
-      scope: "NACIONAL",
-      version: "1.0",
-      status: "VIGENTE",
-      mandatory: true,
-      blocksProgress: false,
-      criticalTask: false,
-      validationRequired: false,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_satisfaccion",
-    },
-    {
-      name: "Formulario de Retiro Voluntario",
-      description: "Registro oficial de desvinculación voluntaria de la PA",
-      type: "GOOGLE_FORM",
-      googleUrl: "https://docs.google.com/forms/d/e/1FAIpQLSf321_retiro/viewform",
-      phaseId: "TRANSVERSAL",
-      stageId: "TRANSVERSAL_SEGUIMIENTO",
-      targetRole: "COORDINATOR",
-      scope: "NACIONAL",
-      version: "1.1",
-      status: "VIGENTE",
-      mandatory: false,
-      blocksProgress: false,
-      criticalTask: false,
-      validationRequired: true,
-      createdByUserId: admin.id,
-      effectiveFrom: new Date("2026-03-01T00:00:00Z"),
-      templateFileId: "mock_template_retiro",
-    },
-  ];
+  const instruments = buildInstrumentCatalog(admin.id);
 
-  const dbInstruments: Record<string, any> = {};
   for (const inst of instruments) {
-    const created = await prisma.instrument.create({ data: inst });
-    dbInstruments[inst.name] = created;
+    await prisma.instrument.create({ data: inst });
   }
 
   // Define regional assets
@@ -309,14 +201,13 @@ async function main() {
   let caseCodeIndex = 1;
 
   for (const reg of regions) {
-    // 1. Create Coordinator for region
-    let coordEmail = `coord.${reg.name.toLowerCase().replace(/ /g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")}@per2026.cl`;
-    if (reg.name === "Metropolitana") coordEmail = "coord.metro@per2026.cl";
-    if (reg.name === "Valparaíso") coordEmail = "coord.valpo@per2026.cl";
+    // 1. Create Coordinator for region (datos compartidos con el bootstrap de produccion, son reales)
+    const coordSeed = REGIONAL_COORDINATORS.find((c) => c.regionId === reg.name);
+    if (!coordSeed) throw new Error("No hay coordinador definido para la region " + reg.name);
     const coord = await prisma.user.create({
       data: {
-        name: `Coordinador ${reg.name}`,
-        email: coordEmail,
+        name: coordSeed.name,
+        email: coordSeed.email,
         phone: `+569${Math.floor(10000000 + Math.random() * 90000000)}`,
         role: "COORDINATOR",
         regionId: reg.name,
@@ -338,6 +229,7 @@ async function main() {
           role: "PER",
           regionId: reg.name,
           active: true,
+          isDemo: true, // dato de prueba, nunca debe aparecer en la seccion real
         },
       });
 
@@ -622,115 +514,30 @@ async function main() {
         });
       }
 
-      // 7. Create Tasks (hitos)
-      const tasksToCreate = [
-        { title: "Acta de Primer Encuentro y Encuadre", inst: "Acta de Primer Encuentro y Encuadre" },
-        { title: "Diseño del IAP", inst: "Itinerario de Acompañamiento Personalizado (IAP)" },
-        { title: "Evaluación Intermedia", inst: "Evaluación Intermedia" },
-        { title: "Evaluación Ex-Post", inst: "Evaluación Ex-Post" },
-        { title: "Encuesta de Satisfacción Final", inst: "Encuesta de Satisfacción PA" },
-      ];
-
-      for (let t = 0; t < tasksToCreate.length; t++) {
-        const taskData = tasksToCreate[t];
-        const inst = dbInstruments[taskData.inst];
-
-        let taskStatus = "PENDIENTE";
-        if (t === 0) {
-          taskStatus = "VALIDADA";
-        } else if (t === 1) {
-          if (k === 0) {
-            taskStatus = "ENVIADA";
-          } else if (reg.name === "Los Ríos" && k === 2) {
-            taskStatus = "ENVIADA";
-          } else {
-            taskStatus = "VALIDADA";
-          }
-        } else if (t === 2) {
-          if (status === "VINCULACION") taskStatus = "PENDIENTE";
-          else if (status === "CONEXION" && k === 2) taskStatus = "ENVIADA";
-          else taskStatus = "VALIDADA";
-        } else if (t === 3) {
-          if (status === "EGRESO") taskStatus = "VALIDADA";
-          else if (status === "FINALIZACION") taskStatus = "ENVIADA";
-          else taskStatus = "PENDIENTE";
-        } else if (t === 4) {
-          if (status === "EGRESO") taskStatus = "VALIDADA";
-          else if (status === "FINALIZACION") taskStatus = "ENVIADA";
-          else taskStatus = "PENDIENTE";
-        }
-
-        const dueDate = new Date(startDate);
-        dueDate.setDate(dueDate.getDate() + 10 + t * 20);
-
-        const task = await prisma.task.create({
-          data: {
-            paCaseId: paCase.id,
-            instrumentId: inst.id,
-            title: taskData.title,
-            description: inst.description,
-            status: taskStatus,
-            priority: inst.mandatory ? "CRITICA" : "MEDIA",
-            dueDate: dueDate,
-            regionId: reg.name,
-            assignedToUserId: perProfile.userId,
-            assignedByUserId: admin.id,
-            isDemo: true,
-          },
-        });
-
-        // Link task validation to Case properties
-        if (taskStatus === "VALIDADA") {
-          if (inst.name.toLowerCase().includes("satisfacción")) {
-            await prisma.pACase.update({
-              where: { id: paCase.id },
-              data: { satisfactionTaskId: task.id },
-            });
-          } else if (inst.name.toLowerCase().includes("ex-post")) {
-            await prisma.pACase.update({
-              where: { id: paCase.id },
-              data: { exPostTaskId: task.id },
-            });
-          } else if (inst.name.toLowerCase().includes("itinerario")) {
-            await prisma.pACase.update({
-              where: { id: paCase.id },
-              data: { exAnteTaskId: task.id },
-            });
-          }
-        }
-
-        // Add task events
-        await prisma.taskEvent.create({
-          data: {
-            taskId: task.id,
-            fromStatus: "PENDIENTE",
-            toStatus: taskStatus === "VALIDADA" ? "VALIDADA" : "PENDIENTE",
-            byUserId: perProfile.userId,
-            at: new Date(),
-            note: "Registro automático del seed",
-          },
-        });
-
-        // Add Document Record for files submitted/validated
-        if (taskStatus === "VALIDADA" || taskStatus === "ENVIADA") {
-          await prisma.documentRecord.create({
-            data: {
-              caseId: paCase.id,
-              instrumentId: inst.id,
-              instrumentVersion: inst.version,
-              fileId: `drive_file_${task.id}`,
-              revisionId: "revision_1",
-              fileName: `${inst.name.replace(/ /g, "_")}_${paCase.code}_v${inst.version}.pdf`,
-              fileUrl: `https://drive.google.com/open?id=drive_file_${task.id}`,
-              uploadedByUserId: perProfile.userId,
-              stage: stage,
-              status: taskStatus,
-              isFinalVigente: taskStatus === "VALIDADA",
-              driveFolderId: paCase.driveFolderValidadosId,
-              isDemo: true,
-            },
-          });
-        }
+      // 7. Simular avance del itinerario de instrumentos en la etapa ACTUAL del caso, reusando
+      // las funciones reales de servicio (ensureCurrentStageTasks + updateTaskStatus) en vez de
+      // reimplementar reglas de estado — así el seed queda garantizado consistente con el
+      // gating real en runtime. Solo se materializa (y muestra en /per) el paso actual de la
+      // etapa, no los 5 hitos de golpe como antes.
+      if (status === "VINCULACION") {
+        // 5 pasos secuenciales (Primer Encuentro..Actividad 4). Variar por k para tener demo
+        // con distintos niveles de avance: 0, 1 o 2 validados, y el actual en distintos estados.
+        const validatedCount = k % 3;
+        const currentTaskState = k === 0 ? "ENVIADA" : k % 4 === 3 ? "DEVUELTA" : undefined;
+        await seedAdvanceItinerary(paCase.id, admin.id, true, validatedCount, currentTaskState);
+      } else if (status === "CONEXION") {
+        // 2 pasos secuenciales (Actividad 5 Intermedia, Reformular Actividad 4 [opcional]).
+        const validatedCount = k % 2;
+        const currentTaskState = reg.name === "Los Ríos" && k === 2 ? "ENVIADA" : undefined;
+        await seedAdvanceItinerary(paCase.id, admin.id, true, validatedCount, currentTaskState);
+      } else if (status === "FINALIZACION") {
+        // 3 pasos secuenciales (Actividad 5 Final, Actividad 6, Encuesta de Satisfacción).
+        const validatedCount = 1 + (k % 2);
+        await seedAdvanceItinerary(paCase.id, admin.id, true, validatedCount, "ENVIADA");
+      } else if (status === "EGRESO") {
+        // Caso ya egresado: la etapa Finalización queda íntegramente validada, consistente con
+        // la puerta de avance real (assertStageAdvanceAllowed) que ahora exige esto en runtime.
+        await seedAdvanceItinerary(paCase.id, admin.id, true, 3);
       }
 
       // 8. Create some active alerts for delayed/negative cases

@@ -23,6 +23,31 @@ export function mapCaseStatusToLabel(status: string): string {
 }
 
 /**
+ * Maps PACase.stage to the official Spanish label for the 3 stages of accompaniment.
+ */
+export function mapStageToLabel(stage: string): string {
+  switch (stage) {
+    case "VINCULACION":
+      return "Vinculación";
+    case "CONEXION":
+      return "Conexión";
+    case "FINALIZACION":
+      return "Finalización";
+    default:
+      return stage;
+  }
+}
+
+/**
+ * Combina el código correlativo del caso con el alias/trato preferido de la persona
+ * acompañada (Actividad 2). Nunca incluye nombre legal ni RUN — solo lo que el PACase
+ * ya guarda como alias.
+ */
+export function formatCaseLabel(code: string, alias?: string | null): string {
+  return alias && alias.trim() ? `${code} (${alias.trim()})` : code;
+}
+
+/**
  * Maps internal database alert types to the required institutional alert names.
  */
 export function mapAlertTypeToLabel(type: string): string {
@@ -38,6 +63,10 @@ export function mapAlertTypeToLabel(type: string): string {
       return "Alerta de supervisión";
     case "ALERTA_CIERRE_INCOMPLETO":
       return "Alerta de cierre incompleto";
+    case "INSTRUMENTO_PENDIENTE_VALIDACION":
+      return "Alerta de validación pendiente";
+    case "CASO_ETAPA_ESTANCADA":
+      return "Alerta de itinerario estancado";
     default:
       // Fallback formatting for any dynamically generated types
       return type

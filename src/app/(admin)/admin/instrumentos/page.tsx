@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
+import InstrumentPlacementEditor from "@/components/admin/InstrumentPlacementEditor";
+import { mapStageToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,10 @@ export default async function AdminInstrumentosPage() {
           </div>
         </div>
 
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-700 font-semibold">
+          ⚠️ Este catálogo es compartido entre Modo Demo y Modo Real — editar la etapa/orden de un instrumento afecta ambos modos.
+        </div>
+
         {/* Stats summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="p-4 bg-card border border-border rounded-xl shadow-sm text-center">
@@ -63,6 +69,9 @@ export default async function AdminInstrumentosPage() {
                   <th className="pb-3 text-center">Hito Obligatorio</th>
                   <th className="pb-3 text-center">Versión</th>
                   <th className="pb-3 text-center">Estado</th>
+                  <th className="pb-3 text-center">Modo</th>
+                  <th className="pb-3 text-center">Opcional</th>
+                  <th className="pb-3">Etapa / Orden del Itinerario</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,6 +105,26 @@ export default async function AdminInstrumentosPage() {
                       >
                         {inst.status}
                       </span>
+                    </td>
+                    <td className="py-4 text-center text-[9px] text-slate-500 font-semibold">
+                      {inst.submissionMode === "NATIVE_FORM" ? "Nativo" : "Enlace externo"}
+                    </td>
+                    <td className="py-4 text-center">
+                      {inst.optional ? (
+                        <span className="text-amber-600 font-bold text-[9px]">Sí</span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-semibold whitespace-nowrap">
+                          {inst.stageId ? `${mapStageToLabel(inst.stageId)} · orden ${inst.order}` : "Sin etapa"}
+                        </span>
+                      </div>
+                      <div className="mt-1.5">
+                        <InstrumentPlacementEditor instrumentId={inst.id} stageId={inst.stageId} order={inst.order} />
+                      </div>
                     </td>
                   </tr>
                 ))}

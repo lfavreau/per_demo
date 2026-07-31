@@ -185,8 +185,8 @@ export default function AppShell({ children, user }: AppShellProps) {
     ],
     PER: [
       { name: "Mi Agenda", path: "/per", icon: "📅" },
-      { name: "Casos Activos", path: "/per", icon: "👥" },
-      { name: "Avisos", path: "/per", icon: "🔔" },
+      { name: "Casos Activos", path: "/per/casos", icon: "👥" },
+      { name: "Avisos", path: "/per/avisos", icon: "🔔" },
     ],
   };
 
@@ -434,7 +434,8 @@ export default function AppShell({ children, user }: AppShellProps) {
       {isPerRole && (
         <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 py-2 px-6 flex justify-around items-center z-40 shadow-lg md:hidden">
           {currentMenu.map((item) => {
-            const isActive = pathname === item.path || item.path.startsWith(pathname + "#");
+            const isActive =
+              pathname === item.path || (item.path !== "/per" && pathname.startsWith(item.path + "/"));
             return (
               <a
                 key={item.name}

@@ -162,6 +162,86 @@ export async function checkAllAlertRules(isDemo: boolean) {
     }
   }
 
+  // RULE 4: Instrumentos del itinerario enviados y pendientes de validar hace demasiado tiempo
+  const validationDaysSetting = settings.find((s) => s.key === "alert_days_validacion_pendiente");
+  const validationThresholdDays = validationDaysSetting ? parseInt(validationDaysSetting.value) || 5 : 5;
+
+  const pendingValidationTasks = await prisma.task.findMany({
+    where: {
+      status: "ENVIADA",
+      instrument: { activityKey: { not: null } },
+      isDemo,
+    },
+  });
+
+  for (const task of pendingValidationTasks) {
+    const diffDays = Math.ceil((now.getTime() - task.updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays > validationThresholdDays) {
+      const existingAlert = await prisma.alert.findFirst({
+        where: { taskId: task.id, type: "INSTRUMENTO_PENDIENTE_VALIDACION", status: "ABIERTA" },
+      });
+
+      if (!existingAlert) {
+        await prisma.alert.create({
+          data: {
+            type: "INSTRUMENTO_PENDIENTE_VALIDACION",
+            severity: "ALTA",
+            regionId: task.regionId,
+            perId: task.perId,
+            paCaseId: task.paCaseId,
+            taskId: task.id,
+            status: "ABIERTA",
+            isDemo,
+          },
+        });
+        createdCount++;
+      }
+    }
+  }
+
+  // RULE 5: Caso cuya etapa actual está estancada (el paso actual del itinerario sigue
+  // PENDIENTE, es decir, el PER ni siquiera lo inició) — distinto de CASO_SIN_SESION, que solo
+  // mira sesiones registradas.
+  const stalledStageCases = await prisma.pACase.findMany({
+    where: {
+      status: { in: ["VINCULACION", "CONEXION", "FINALIZACION"] },
+      isDemo,
+    },
+  });
+
+  for (const paCase of stalledStageCases) {
+    const threshold = alertThresholds[paCase.status] || 14;
+    const diffDays = Math.ceil((now.getTime() - paCase.stageEnteredAt.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays > threshold) {
+      const currentTask = await prisma.task.findFirst({
+        where: { paCaseId: paCase.id, instrument: { activityKey: { not: null } }, status: "PENDIENTE" },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (currentTask) {
+        const existingAlert = await prisma.alert.findFirst({
+          where: { paCaseId: paCase.id, type: "CASO_ETAPA_ESTANCADA", status: "ABIERTA" },
+        });
+
+        if (!existingAlert) {
+          await prisma.alert.create({
+            data: {
+              type: "CASO_ETAPA_ESTANCADA",
+              severity: "MEDIA",
+              regionId: paCase.regionId,
+              perId: paCase.perId,
+              paCaseId: paCase.id,
+              status: "ABIERTA",
+              isDemo,
+            },
+          });
+          createdCount++;
+        }
+      }
+    }
+  }
+
   return createdCount;
 }
 

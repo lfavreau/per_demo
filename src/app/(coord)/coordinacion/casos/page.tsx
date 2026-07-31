@@ -2,13 +2,16 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { mapCaseStatusToLabel, mapEmotionToLabel } from "@/lib/nomenclatures";
+import { mapCaseStatusToLabel, mapEmotionToLabel, mapStageToLabel } from "@/lib/nomenclatures";
 import {
   createDirectContinuityCaseAction,
   formalizeMatchAction,
-  transitionCaseStatusAction,
   validateMatchAction,
 } from "@/app/actions/coordinator";
+import { getItineraryState } from "@/server/services/itinerary.service";
+import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
+import StageAdvanceButton from "@/components/coordinator/StageAdvanceButton";
+import WithdrawalGate from "@/components/coordinator/WithdrawalGate";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +72,7 @@ export default async function CoordinatorCasosPage({
   }> = [];
 
   let selectedCaseDetails = null;
+  let itineraryState: Awaited<ReturnType<typeof getItineraryState>> | null = null;
 
   const targetCode = params.caseCode || (regionalCases.length > 0 ? regionalCases[0].code : null);
 
@@ -95,6 +99,10 @@ export default async function CoordinatorCasosPage({
 
     if (selectedCase) {
       selectedCaseDetails = selectedCase;
+
+      if (["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCase.status)) {
+        itineraryState = await getItineraryState(selectedCase.id, isDemo);
+      }
 
       // Map Status History
       selectedCase.statusHistory.forEach((h) => {
@@ -366,105 +374,63 @@ export default async function CoordinatorCasosPage({
                 </div>
               )}
 
+              {/* Itinerary Validation Panel */}
+              {itineraryState && (
+                <ItineraryValidationPanel
+                  stageLabel={mapStageToLabel(itineraryState.stage)}
+                  steps={itineraryState.steps}
+                />
+              )}
+
               {/* Status Transition Actions */}
-              {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) && (
+              {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) && itineraryState && (
                 <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
                   <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider">Acciones de Fase</h4>
-                  
+
                   {/* Next Phase Transition Button */}
                   {selectedCaseDetails.status === "VINCULACION" && (
-                    <form action={transitionCaseStatusAction} className="space-y-3">
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      <input type="hidden" name="toStatus" value="CONEXION" />
-                      <input type="hidden" name="reason" value="Tránsito a fase de Conexión" />
-                      <button 
-                        type="submit" 
-                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition duration-150 shadow text-xs cursor-pointer text-center block"
-                      >
-                        ➡️ Avanzar a Conexión (Fase 3)
-                      </button>
-                    </form>
+                    <StageAdvanceButton
+                      caseId={selectedCaseDetails.id}
+                      toStatus="CONEXION"
+                      label="➡️ Avanzar a Conexión (Fase 3)"
+                      reason="Tránsito a fase de Conexión"
+                      gateSatisfied={itineraryState.gate.satisfied}
+                      missingTitles={itineraryState.gate.missing.map((s) => s.title)}
+                    />
                   )}
 
                   {selectedCaseDetails.status === "CONEXION" && (
-                    <form action={transitionCaseStatusAction} className="space-y-3">
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      <input type="hidden" name="toStatus" value="FINALIZACION" />
-                      <input type="hidden" name="reason" value="Tránsito a fase de Finalización" />
-                      <button 
-                        type="submit" 
-                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition duration-150 shadow text-xs cursor-pointer text-center block"
-                      >
-                        ➡️ Avanzar a Finalización (Fase 4)
-                      </button>
-                    </form>
+                    <StageAdvanceButton
+                      caseId={selectedCaseDetails.id}
+                      toStatus="FINALIZACION"
+                      label="➡️ Avanzar a Finalización (Fase 4)"
+                      reason="Tránsito a fase de Finalización"
+                      gateSatisfied={itineraryState.gate.satisfied}
+                      missingTitles={itineraryState.gate.missing.map((s) => s.title)}
+                    />
                   )}
 
                   {selectedCaseDetails.status === "FINALIZACION" && (
-                    <form action={transitionCaseStatusAction} className="space-y-3">
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      <input type="hidden" name="toStatus" value="EGRESO" />
-                      <input type="hidden" name="reason" value="Egreso por cumplimiento de objetivos" />
-                      <button 
-                        type="submit" 
-                        className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition duration-150 shadow text-xs cursor-pointer text-center block"
-                      >
-                        🎓 Concluir y Egresar Caso
-                      </button>
+                    <div className="space-y-2">
+                      <StageAdvanceButton
+                        caseId={selectedCaseDetails.id}
+                        toStatus="EGRESO"
+                        label="🎓 Concluir y Egresar Caso"
+                        reason="Egreso por cumplimiento de objetivos"
+                        gateSatisfied={itineraryState.gate.satisfied}
+                        missingTitles={itineraryState.gate.missing.map((s) => s.title)}
+                        colorClass="bg-emerald-600 hover:bg-emerald-700"
+                      />
                       <p className="text-[9px] text-slate-400 leading-normal">
-                        Nota: Requiere que los hitos de diagnóstico Ex-Post y la Encuesta de Satisfacción estén validados.
+                        Nota: Requiere que Actividad 5 (Final), Actividad 6 y la Encuesta de Satisfacción estén validados.
                       </p>
-                    </form>
+                    </div>
                   )}
 
-                  {/* Forced Withdrawal (Retiro Voluntario / Deserción) Form */}
+                  {/* Forced Withdrawal (Retiro Voluntario / Deserción) */}
                   <div className="border-t border-slate-100 pt-4 space-y-3">
                     <h5 className="font-bold text-xs text-slate-800">Registrar Retiro o Deserción</h5>
-                    
-                    <form action={transitionCaseStatusAction} className="space-y-3 text-xs">
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      
-                      <div className="space-y-1">
-                        <label className="font-semibold text-slate-700 block">Tipo de salida:</label>
-                        <select 
-                          name="toStatus" 
-                          required 
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-                        >
-                          <option value="RETIRO_VOLUNTARIO">Retiro Voluntario</option>
-                          <option value="DESERCION">Deserción</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-semibold text-slate-700 block">Formulario de Retiro (URL):</label>
-                        <input 
-                          type="url" 
-                          name="formUrl" 
-                          placeholder="https://drive.google.com/..." 
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none" 
-                        />
-                        <p className="text-[9px] text-slate-400">Requerido si se selecciona Retiro Voluntario.</p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-semibold text-slate-700 block">Motivo / Observación:</label>
-                        <textarea 
-                          name="reason" 
-                          rows={2} 
-                          required
-                          placeholder="Especifica el motivo de la salida..." 
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none resize-none"
-                        ></textarea>
-                      </div>
-
-                      <button 
-                        type="submit" 
-                        className="w-full py-2 px-3 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl transition duration-150 text-[10px] cursor-pointer text-center block"
-                      >
-                        ❌ Registrar Retiro Forzado
-                      </button>
-                    </form>
+                    <WithdrawalGate caseId={selectedCaseDetails.id} withdrawalStep={itineraryState.pendingWithdrawalStep} />
                   </div>
 
                 </div>
