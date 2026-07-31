@@ -36,7 +36,11 @@ export default async function AdminUsuariosPage({
   // Fetch all registered users in system with PER profiles
   const allUsers = await prisma.user.findMany({
     include: {
-      profile: true,
+      profile: {
+        include: {
+          _count: { select: { cases: true } },
+        },
+      },
     },
     orderBy: [
       { role: "asc" },

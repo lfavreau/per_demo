@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { createPERUserAction, toggleUserStatusAction } from "@/app/actions/admin";
+import {
+  createPERUserAction,
+  toggleUserStatusAction,
+  updatePERUserAction,
+  deletePERUserAction,
+} from "@/app/actions/admin";
 
 interface UserWithProfile {
   id: string;
@@ -13,6 +18,7 @@ interface UserWithProfile {
   profile?: {
     id: string;
     certificationStatus: string;
+    _count?: { cases: number };
   } | null;
 }
 
@@ -37,6 +43,9 @@ export default function UserManagementClient({
 }: UserManagementClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState("Metropolitana");
+  const [editingPer, setEditingPer] = useState<UserWithProfile | null>(null);
+  const [editRegion, setEditRegion] = useState("Metropolitana");
+  const [deletingPer, setDeletingPer] = useState<UserWithProfile | null>(null);
 
   const admins = users.filter((u) => u.role === "ADMIN");
   const coordinators = users.filter((u) => u.role === "COORDINATOR");
@@ -73,6 +82,10 @@ export default function UserManagementClient({
               ? "Acompañante PER registrado y asignado exitosamente."
               : successMsg === "status_updated"
               ? "Estado de usuario actualizado correctamente."
+              : successMsg === "user_updated"
+              ? "Datos del acompañante PER actualizados correctamente."
+              : successMsg === "user_deleted"
+              ? "Acompañante PER eliminado correctamente."
               : "Operación realizada con éxito."}
           </span>
         </div>
@@ -88,6 +101,14 @@ export default function UserManagementClient({
               ? "Por favor, completa todos los campos requeridos."
               : errorMsg === "cannot_deactivate_admin"
               ? "No es posible desactivar la cuenta del Administrador Principal."
+              : errorMsg === "invalid_admin_password"
+              ? "Contraseña de administrador incorrecta. No se realizó ningún cambio."
+              : errorMsg === "per_has_cases"
+              ? "No se puede eliminar: este acompañante tiene casos asociados. Desactívalo en su lugar."
+              : errorMsg === "delete_failed"
+              ? "No se pudo eliminar: el usuario tiene registros asociados que lo impiden. Desactívalo en su lugar."
+              : errorMsg === "user_not_found"
+              ? "No se encontró el usuario indicado."
               : "Ocurrió un error al procesar la solicitud."}
           </span>
         </div>
@@ -150,20 +171,39 @@ export default function UserManagementClient({
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <form action={toggleUserStatusAction}>
-                        <input type="hidden" name="userId" value={per.id} />
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <form action={toggleUserStatusAction}>
+                          <input type="hidden" name="userId" value={per.id} />
+                          <button
+                            type="submit"
+                            className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer ${
+                              per.active
+                                ? "bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-300 hover:border-red-200"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                            }`}
+                          >
+                            {per.active ? "Desactivar" : "Activar"}
+                          </button>
+                        </form>
                         <button
-                          type="submit"
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer ${
-                            per.active
-                              ? "bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-700 border border-slate-300 hover:border-red-200"
-                              : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                          }`}
+                          type="button"
+                          onClick={() => {
+                            setEditingPer(per);
+                            setEditRegion(per.regionId || "Metropolitana");
+                          }}
+                          className="px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
                         >
-                          {per.active ? "Desactivar" : "Activar"}
+                          Editar
                         </button>
-                      </form>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingPer(per)}
+                          className="px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -303,6 +343,190 @@ export default function UserManagementClient({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR PER */}
+      {editingPer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md flex flex-col text-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                  <span>✏️</span> Editar Acompañante PER
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">{editingPer.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingPer(null)}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form action={updatePERUserAction} className="p-6 space-y-4 text-xs">
+              <input type="hidden" name="userId" value={editingPer.id} />
+
+              <div>
+                <label htmlFor="edit-name" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  id="edit-name"
+                  required
+                  defaultValue={editingPer.name}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-slate-900 text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-username" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Nombre de Usuario / Identificador
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  id="edit-username"
+                  required
+                  defaultValue={editingPer.email.replace("@per2026.cl", "")}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-slate-900 font-mono text-sm"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-regionId" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Coordinación Regional Asignada
+                </label>
+                <select
+                  name="regionId"
+                  id="edit-regionId"
+                  value={editRegion}
+                  onChange={(e) => setEditRegion(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 outline-none text-slate-900 font-bold text-sm"
+                >
+                  {REGIONS.map((reg) => (
+                    <option key={reg} value={reg}>
+                      📍 {reg}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200">
+                <label htmlFor="edit-adminPassword" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Confirmar con Contraseña de Admin
+                </label>
+                <input
+                  type="password"
+                  name="adminPassword"
+                  id="edit-adminPassword"
+                  required
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-slate-900 text-sm"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPer(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-md cursor-pointer"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ELIMINAR PER */}
+      {deletingPer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md flex flex-col text-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-red-50">
+              <div>
+                <h3 className="font-extrabold text-base text-red-900 flex items-center gap-2">
+                  <span>🗑️</span> Eliminar Acompañante PER
+                </h3>
+                <p className="text-xs text-red-700 mt-0.5">{deletingPer.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletingPer(null)}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {(deletingPer.profile?._count?.cases ?? 0) > 0 ? (
+              <div className="p-6 space-y-4 text-xs">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 font-semibold">
+                  Este acompañante tiene {deletingPer.profile?._count?.cases} caso(s) asociado(s). No se puede
+                  eliminar para no dejar registros huérfanos. Desactívalo en su lugar desde el botón
+                  &quot;Desactivar&quot;.
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setDeletingPer(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form action={deletePERUserAction} className="p-6 space-y-4 text-xs">
+                <input type="hidden" name="userId" value={deletingPer.id} />
+                <p className="text-slate-600">
+                  Esta acción es permanente y no se puede deshacer. Se eliminará la cuenta y el perfil de{" "}
+                  <span className="font-bold">{deletingPer.name}</span> ({deletingPer.email}).
+                </p>
+
+                <div>
+                  <label htmlFor="delete-adminPassword" className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Confirmar con Contraseña de Admin
+                  </label>
+                  <input
+                    type="password"
+                    name="adminPassword"
+                    id="delete-adminPassword"
+                    required
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none text-slate-900 text-sm"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeletingPer(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition shadow-md cursor-pointer"
+                  >
+                    Eliminar Definitivamente
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

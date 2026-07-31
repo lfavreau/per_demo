@@ -95,6 +95,15 @@ export async function login(email: string, password?: string, isDemo = false): P
   return sessionUser;
 }
 
+// Verifica la contraseña compartida de modo real (misma usada para iniciar sesión).
+// Se reusa para confirmar acciones destructivas/sensibles del Admin (editar/eliminar usuarios).
+export function verifyRealModePassword(password?: string): boolean {
+  const expectedPassword = process.env.REAL_MODE_PASSWORD?.trim() || "P455w0rd!";
+  const supplied = Buffer.from(password?.trim() || "");
+  const expected = Buffer.from(expectedPassword);
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+}
+
 // Logout: Clear session cookie
 export async function logout(): Promise<void> {
   const cookieStore = await cookies();
