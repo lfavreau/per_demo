@@ -16,13 +16,11 @@
 5. [Navegación general: ¿Cómo me muevo dentro de la app?](#5-navegación-general-cómo-me-muevo-dentro-de-la-app)
 6. [Guía para el PER (Acompañante)](#6-guía-para-el-per-acompañante)
    - [6.1 Tu pantalla principal](#61-tu-pantalla-principal)
-   - [6.2 Registrar una bitácora de sesión](#62-registrar-una-bitácora-de-sesión)
+   - [6.2 Completar el itinerario de un caso](#62-completar-el-itinerario-de-un-caso)
    - [6.3 Tus acompañamientos activos](#63-tus-acompañamientos-activos)
-   - [6.4 Tareas y pendientes documentales](#64-tareas-y-pendientes-documentales)
-   - [6.5 Historial de bitácoras enviadas](#65-historial-de-bitácoras-enviadas)
-   - [6.6 Supervisiones registradas](#66-supervisiones-registradas)
-   - [6.7 Notificaciones y avisos del coordinador](#67-notificaciones-y-avisos-del-coordinador)
-   - [6.8 Modo sin internet (offline)](#68-modo-sin-internet-offline)
+   - [6.4 Supervisiones registradas](#64-supervisiones-registradas)
+   - [6.5 Notificaciones y avisos del coordinador](#65-notificaciones-y-avisos-del-coordinador)
+   - [6.6 Modo sin internet (offline)](#66-modo-sin-internet-offline)
 7. [Guía para el Coordinador Regional](#7-guía-para-el-coordinador-regional)
    - [7.1 Panel de casos y acompañamientos](#71-panel-de-casos-y-acompañamientos)
    - [7.2 Nómina e ingreso de nuevas personas (Fase 2)](#72-nómina-e-ingreso-de-nuevas-personas-fase-2)
@@ -43,8 +41,8 @@ Esta aplicación es una **herramienta digital de apoyo** al programa PER (Pares 
 
 **En palabras simples**: es como una libreta de trabajo digital que te ayuda a:
 
-- ✅ **Registrar** tus encuentros con las personas que acompañas (las "bitácoras").
-- ✅ **Ver** qué tareas tienes pendientes y cuáles ya entregaste.
+- ✅ **Registrar** tus encuentros con las personas que acompañas, siguiendo el itinerario del IAP paso a paso.
+- ✅ **Ver** qué actividad tienes pendiente ahora y cuáles ya entregaste.
 - ✅ **Recibir** avisos de tu coordinador cuando revisa tu trabajo.
 - ✅ **Organizar** toda la documentación del acompañamiento en un solo lugar.
 
@@ -67,7 +65,7 @@ Solo necesitas **una de estas tres cosas**:
 ### ¿Necesito internet?
 
 - **Para la mayoría de las acciones, sí**. Necesitas conexión a internet (datos móviles o WiFi).
-- **Pero** si estás en terreno y no tienes señal, puedes **guardar borradores** de tus bitácoras. Cuando vuelvas a tener internet, la app los enviará automáticamente (más detalles en la [sección 6.8](#68-modo-sin-internet-offline)).
+- **Pero** si estás en terreno y no tienes señal, puedes **guardar borradores** de tus registros. Cuando vuelvas a tener internet, la app los enviará automáticamente (más detalles en la [sección 6.6](#66-modo-sin-internet-offline)).
 
 ---
 
@@ -79,16 +77,18 @@ Solo necesitas **una de estas tres cosas**:
 2. **Escribe la dirección web** que te entregó tu coordinador en la barra de direcciones (la barra de arriba donde aparecen las páginas web).
 3. Verás una pantalla con el título **"PER 2026-2027"** y un escudo azul.
 4. En el campo que dice **"Nombre de Usuario"**, escribe tu usuario. Por ejemplo:
-   - Si eres Carla Muñoz (PER de la región Metropolitana): escribe `per.carla`
    - Si eres coordinador de la región Metropolitana: escribe `coord.metro`
+   - Si eres un PER creado por el Administrador Nacional: escribe el usuario que te entregaron (ej. `per.maria`)
 5. Presiona el botón azul **"Ingresar al Portal"**.
 6. ¡Listo! La app te llevará automáticamente a tu panel de trabajo según tu rol.
 
-> **💡 Consejo**: Si no recuerdas tu usuario, pregúntale a tu coordinador regional. Abajo del formulario de ingreso hay una lista de cuentas de prueba que puedes usar para explorar la app.
+> **💡 Consejo**: Si no recuerdas tu usuario, pregúntale a tu coordinador regional, o toca **"👥 Ver Usuarios"** junto al campo de usuario — se abre una lista de las cuentas institucionales reales (Admin y los 5 Coordinadores). Al tocar "Usar" sobre una de ellas, el campo se completa solo.
+>
+> Al final de la pantalla hay un botón aparte, **"🧪 Cuentas de Evaluación Operativa"**, que abre las cuentas de prueba para explorar la app sin afectar datos reales.
 
 ### ¿Qué pasa si me equivoco?
 
-Si escribes un usuario que no existe, aparecerá un mensaje en rojo que dice: *"El correo no está registrado o se encuentra inactivo"*. Revisa que escribiste bien tu usuario y vuelve a intentar.
+Si escribes un usuario que no existe, aparecerá un mensaje en rojo que dice: *"El usuario no está registrado o se encuentra inactivo"*. Revisa que escribiste bien tu usuario y vuelve a intentar.
 
 ---
 
@@ -146,7 +146,7 @@ Para cerrar el menú, toca la **X** o toca fuera del panel.
 
 ### Si eres PER
 
-Como acompañante PER, tu vista es más simple y directa. Todo lo que necesitas está en **una sola página**: tu panel principal. No necesitas navegar entre muchas secciones.
+Como acompañante PER, tu vista tiene 3 pestañas fijas abajo de la pantalla: **📅 Mi Agenda** (tus casos activos), **👥 Casos Activos** (el listado completo) y **🔔 Avisos** (retroalimentación y supervisiones). Al entrar a un caso llegas a su pantalla de trabajo, donde está el itinerario que se explica en la [sección 6.2](#62-completar-el-itinerario-de-un-caso).
 
 ---
 
@@ -156,92 +156,61 @@ Esta es la sección más importante si eres un Par Especialista en Recuperación
 
 ### 6.1 Tu pantalla principal
 
-Cuando entras a la app, ves tu **panel de trabajo** dividido en varias tarjetas (cuadros blancos con bordes suaves). Cada tarjeta tiene una función específica:
+Cuando entras a la app, tu vista tiene 3 pestañas fijas abajo de la pantalla:
 
-| Tarjeta                         | ¿Para qué sirve?                                        |
-| ---------------------------------| ---------------------------------------------------------|
-| **Registro de Bitácora**        | Para anotar cada encuentro con una persona acompañada   |
-| **Mis Acompañamientos Activos** | Lista de las personas que estás acompañando actualmente |
-| **Historial de Bitácoras**      | Tus últimas 5 bitácoras enviadas y su estado            |
-| **Agenda de Tareas**            | Documentos y formularios que debes entregar             |
-| **Notificaciones**              | Mensajes de tu coordinador                              |
-| **Mis Supervisiones**           | Registro de las supervisiones técnicas que has tenido   |
+| Pestaña | ¿Para qué sirve? |
+| ---------| -------------------|
+| **📅 Mi Agenda** | Pantalla de entrada. Lista tus acompañamientos activos; si tienes solo uno, te lleva directo a trabajar en él |
+| **👥 Casos Activos** | Listado completo de tus acompañamientos |
+| **🔔 Avisos** | Retroalimentación de tu coordinador y tus supervisiones registradas |
+
+Al entrar a un caso llegas a su pantalla de trabajo, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)).
 
 ### Si ves un aviso rojo que dice "Estado: No Habilitado para Terreno"
 
 Esto significa que tu coordinador aún no ha validado tu habilitación técnica. Mientras aparezca este aviso:
-- **No podrás** recibir tareas críticas (como el IAP o el Acta de Primer Encuentro).
+- **No podrás** recibir tareas críticas.
 - **Sí puedes** ver tu panel y familiarizarte con la app.
 - **¿Qué hacer?** Contacta a tu coordinador regional para que complete tu proceso de habilitación.
 
 ---
 
-### 6.2 Registrar una bitácora de sesión
+### 6.2 Completar el itinerario de un caso
 
-La bitácora es el **registro de cada encuentro** que tienes con la persona que acompañas. Es uno de los registros más importantes del programa.
+Cuando entras a un caso, ves un tablero con tres partes: lo que ya está **✔ completado** (puedes desplegarlo para revisarlo), el paso **▶ actual** (con su formulario abierto y listo para llenar) y lo que viene **después** (solo el nombre, todavía bloqueado).
 
-#### Paso a paso:
+No ves todos los formularios del IAP a la vez — solo el que corresponde ahora. Cuando tu coordinador valida el paso actual, se desbloquea el siguiente automáticamente.
 
-1. **Busca la tarjeta** que dice **"📝 Registrar Bitácora de Sesión"** (es la primera tarjeta grande en tu panel).
+#### Paso a paso general
 
-2. **Selecciona el caso**: Toca donde dice *"-- Seleccionar Caso --"* y elige el código de la persona acompañada (por ejemplo: `PA-MET-001`).
+1. Completa los campos del formulario que está abierto. Los que tienen algún marcador de obligatorio no te van a dejar enviar si los dejas vacíos.
+2. Si no terminaste o no tienes internet, presiona **"💾 Guardar Borrador Local"** — no se pierde tu avance.
+3. Cuando termines, presiona **"Enviar a Coordinación"**.
+4. Si tu coordinador te lo **devuelve** con observaciones, el mismo formulario reaparece con lo que ya habías escrito. Corrígelo y vuelve a enviarlo.
+5. Cuando tu coordinador lo **valida**, aparece el siguiente paso.
 
-3. **Pon la fecha**: La app pone la fecha de hoy automáticamente. Si el encuentro fue otro día, cámbiala tocando el campo de fecha.
+#### Actividad 2: la que pide tu alias sugerido para la persona
 
-4. **Elige la modalidad** (cómo fue el encuentro):
-   - **Presencial**: Se vieron en persona.
-   - **Telefónica**: Hablaron por teléfono.
-   - **Videollamada**: Se conectaron por video (Meet, Zoom, etc.).
-   - **Mensajería**: Se comunicaron por WhatsApp u otra app de mensajes.
-   - **Otra**: Cualquier otro medio.
+Uno de los primeros pasos (Actividad 2) trae varias preguntas agrupadas en secciones con un título arriba (por ejemplo "1. Presentación y contexto"). La primera pregunta es *"¿Cómo te gustaría que te llamara?"* — es **opcional**, y sirve para guardar un apodo o forma de trato (nunca el nombre legal ni el RUN). Si lo completas, después vas a ver ese apodo junto al código del caso en toda la app.
 
-5. **Duración** (en minutos): Escribe cuánto duró el encuentro. Por defecto dice 60 minutos (1 hora).
+#### El Registro de Acompañamiento (etapa Conexión)
 
-6. **Dominio de Recuperación**: Selecciona el área principal que trabajaron en la sesión:
-   - Apoyo social
-   - Ejercicio de ciudadanía
-   - Tiempo libre
-   - Empleo
-   - Situación judicial
-   - Educación y formación
-   - Habitabilidad
-   - Situación financiera
-   - Física y mental
+A diferencia de los pasos anteriores, este **no es un paso único**: se llena una vez por cada encuentro, durante toda la etapa Conexión. Pide:
 
-7. **Asistencia**: Indica si la sesión se realizó o no:
-   - **Realizada**: La sesión se llevó a cabo normalmente.
-   - **No asiste PA**: La persona acompañada no llegó.
-   - **No asiste PER**: Tú no pudiste asistir.
-   - **Reagendada**: Se cambió para otra fecha.
-   - **Cancelada**: Se canceló definitivamente.
+- **Fecha**, **Modalidad** (Presencial, Telefónica, Videollamada, Mensajería u Otra) y **Ámbito de Recuperación** trabajado.
+- **Objetivo**: eliges de una lista — son los objetivos que ya definiste con la persona antes, no se escriben de nuevo.
+- Tu **estado emocional** (😊 Bien / 😐 Neutro / 😢 Triste / 😠 Molesto).
+- **Descripción** del encuentro y tu **Reflexión Personal**.
 
-8. **Resumen**: Escribe con tus propias palabras qué pasó en la sesión. No tiene que ser largo, pero sí claro. Ejemplo: *"Conversamos sobre su búsqueda de empleo. Revisamos juntos las opciones en la OMIL del sector."*
-
-9. **Acuerdos** (opcional): ¿Quedaron de acuerdo en algo para la próxima vez? Ejemplo: *"Nos juntamos el martes a revisar su CV."*
-
-10. **Dificultades** (opcional): ¿Hubo algún problema? Ejemplo: *"La persona se mostró desanimada por no tener respuesta del programa de vivienda."*
-
-11. **Próxima acción** (opcional): ¿Qué viene después? Ejemplo: *"Contactar a la asistente social del CESFAM."*
-
-12. **¿Cómo te sentiste?** (Escala emocional): Elige una carita que represente cómo te sentiste tú como acompañante después de la sesión:
-    - 😊 Bien
-    - 😐 Neutro
-    - 😢 Triste
-    - 😠 Enojado/a
-
-13. **Reflexión personal** (opcional): Un espacio para que escribas lo que tú quieras reflexionar sobre la sesión.
-
-14. **Presiona el botón verde "Enviar Bitácora"**.
-
-> **✅ ¡Listo!** Tu bitácora queda enviada al sistema. Tu coordinador la recibirá en su bandeja de validación de sesiones.
+El número de sesión se pone solo, en orden. Al enviarlo con **"Enviar a Coordinación"** queda en la bandeja de tu coordinador para validación.
 
 ---
 
 ### 6.3 Tus acompañamientos activos
 
-En la tarjeta **"Mis Acompañamientos Activos"** verás una lista con los casos que tienes asignados. Cada caso muestra:
+En **"Casos Activos"** verás una lista con los casos que tienes asignados. Cada caso muestra:
 
-- **Código del caso**: Por ejemplo, `PA-MET-001`. Este código es la forma de identificar a cada persona acompañada en el sistema (por privacidad, no se usan nombres).
+- **Código del caso**: Por ejemplo, `PA-MET-001`. Este código es la forma de identificar a cada persona acompañada en el sistema (por privacidad, no se usan nombres). Si le pusiste un alias en la Actividad 2, aparece al lado: `PA-MET-001 (Fer)`.
 - **Tipo**: Si es un caso *Nuevo* o de *Continuidad*.
 - **Estado**: En qué etapa del acompañamiento está:
   - 🟡 **Vinculación**: Recién se están conociendo, construyendo el vínculo.
@@ -250,47 +219,9 @@ En la tarjeta **"Mis Acompañamientos Activos"** verás una lista con los casos 
 
 ---
 
-### 6.4 Tareas y pendientes documentales
+### 6.4 Supervisiones registradas
 
-En la tarjeta **"Agenda de Tareas y Pendientes"** verás los documentos o formularios que debes entregar. Cada tarea muestra:
-
-- **Nombre de la tarea**: Por ejemplo, *"Diseño del IAP"* o *"Evaluación Intermedia"*.
-- **Caso asociado**: A qué persona acompañada corresponde (ej: `PA-MET-001`).
-- **Estado**: 
-  - 🟡 **Pendiente**: Aún no la has hecho.
-  - 🔵 **En curso**: Ya empezaste a trabajar en ella.
-  - 🟠 **Atrasada**: Se pasó la fecha de entrega.
-  - 🔴 **Devuelta**: Tu coordinador la revisó y te pidió correcciones.
-  - ✅ **Validada**: Tu coordinador la aprobó. ¡Buen trabajo!
-- **Prioridad**: Baja, Media, Alta o Crítica.
-
-#### ¿Cómo entregar una tarea?
-
-1. Busca la tarea pendiente en tu lista.
-2. En el campo que dice **"Enlace de Google Drive"**, pega la dirección web (URL) del documento que preparaste en Google Drive.
-   - **¿Cómo copio la dirección?** Abre el documento en Google Drive, toca los tres puntitos y selecciona "Copiar enlace".
-3. Presiona el botón **"Enviar a Revisión"**.
-4. La tarea cambiará a estado *"Enviada"* y tu coordinador recibirá un aviso para revisarla.
-
-#### Si una tarea fue devuelta
-
-Si ves una tarea con borde rojo y estado **"DEVUELTA"**, significa que tu coordinador te la devolvió con observaciones. Busca debajo de la tarea un texto en cursiva que empieza con *"Observación:"*. Ahí verás qué debes corregir. Una vez corregido, vuelve a enviarla.
-
----
-
-### 6.5 Historial de bitácoras enviadas
-
-En la tarjeta **"Historial de Mis Bitácoras Enviadas"** puedes ver tus últimas 5 bitácoras y su estado:
-
-- 🟡 **Enviada** (borrador o pendiente de revisión): Tu coordinador aún no la ha revisado.
-- ✅ **Validada**: Tu coordinador aprobó la bitácora.
-- 🔴 **Devuelta**: Tu coordinador encontró algo que corregir y te dejó una observación.
-
----
-
-### 6.6 Supervisiones registradas
-
-En la tarjeta **"Mis Supervisiones Registradas"** puedes ver las reuniones de supervisión técnica que tu coordinador ha registrado contigo. Cada una muestra:
+En la pestaña **"Avisos"**, en el bloque **"Mis Supervisiones Registradas"**, puedes ver las reuniones de supervisión técnica que tu coordinador ha registrado contigo. Cada una muestra:
 
 - **Modalidad**: Si fue presencial, por Meet, telefónica, etc.
 - **Fecha**: Cuándo se realizó.
@@ -301,9 +232,9 @@ En la tarjeta **"Mis Supervisiones Registradas"** puedes ver las reuniones de su
 
 ---
 
-### 6.7 Notificaciones y avisos del coordinador
+### 6.5 Notificaciones y avisos del coordinador
 
-En la tarjeta **"Notificaciones y Avisos de Coordinación"** verás los mensajes que tu coordinador te ha enviado. Pueden ser retroalimentaciones sobre tus bitácoras, recordatorios de tareas o indicaciones generales.
+En la pestaña **"Avisos"**, en el bloque **"Notificaciones y Avisos de Coordinación"**, verás los mensajes que tu coordinador te ha enviado. Pueden ser retroalimentaciones sobre tus registros, recordatorios o indicaciones generales.
 
 También puedes ver avisos tocando la **campanita** 🔔 en la barra superior.
 
@@ -313,17 +244,17 @@ Si instalaste la app en tu celular, puede enviarte avisos directamente a tu pant
 
 ---
 
-### 6.8 Modo sin internet (offline)
+### 6.6 Modo sin internet (offline)
 
-Si estás en terreno y **no tienes señal de internet**, la app te permite guardar borradores de tus bitácoras.
+Si estás en terreno y **no tienes señal de internet**, la app te permite guardar borradores de lo que estás llenando.
 
 #### ¿Cómo funciona?
 
 1. Cuando no tienes internet, verás un **banner amarillo** arriba que dice *"Sin conexión a internet — Los borradores se guardan localmente"*.
-2. Llena el formulario de bitácora normalmente.
-3. En lugar del botón verde "Enviar", verás un botón que dice **"💾 Guardar Borrador Local"**. Presiónalo.
-4. Tu bitácora se guardará **dentro de tu celular** (no se pierde aunque cierres la app).
-5. Cuando vuelvas a tener internet, aparecerá un botón que dice **"Sincronizar Borradores"**. Presiónalo y todas tus bitácoras guardadas se enviarán al sistema.
+2. Llena el formulario del paso actual o del Registro de Acompañamiento normalmente.
+3. En lugar de "Enviar a Coordinación", presiona **"💾 Guardar Borrador Local"**.
+4. Tu borrador se guardará **dentro de tu celular** (no se pierde aunque cierres la app).
+5. Cuando vuelvas a tener internet, verás un aviso de borradores pendientes con un botón **"🔄 Sincronizar ahora"**. Presiónalo y se enviarán al sistema.
 
 > **⚠️ Importante**: Los borradores se guardan **solo en ese dispositivo**. Si cambias de celular o borras los datos del navegador, se perderán. Intenta sincronizar apenas tengas internet.
 
@@ -337,22 +268,17 @@ Como coordinador/a regional, tu rol es supervisar el trabajo de los PER de tu re
 
 **Ubicación en el menú**: 📊 Casos
 
-Aquí ves todos los casos de acompañamiento de tu región. Para cada caso puedes ver:
+Selecciona un caso en el buscador de arriba para ver su ficha completa: código, PER asignado, fase actual y una línea de tiempo con todo el historial (sesiones, cambios de fase, intentos de contacto).
 
-- **Código del caso** (ej: `PA-MET-001`).
-- **PER asignado**: Quién es el acompañante.
-- **Estado y fase actual**: En qué etapa va el acompañamiento.
-- **Línea de tiempo**: Un historial cronológico con todas las sesiones, tareas y movimientos del caso.
+#### Validar el itinerario del caso
+
+Debajo del historial aparece el panel **"Itinerario de Instrumentos"**: te muestra el paso actual que el PER ya envió (con todo su contenido) y dos botones, **"✅ Validar"** o **"❌ Devolver"** (con un campo para escribir por qué). Al validar, el siguiente paso del caso se desbloquea automáticamente para el PER.
 
 #### Avanzar de fase un caso
 
-Cuando un caso cumple los requisitos para avanzar de etapa, verás botones para moverlo:
+El botón para avanzar de etapa (Vinculación → Conexión → Finalización → Egreso) solo se habilita cuando **ya validaste todos los instrumentos obligatorios de la etapa actual**. Si falta alguno, en su lugar ves la lista de lo que falta y un botón **"Forzar avance de etapa"** que te pide escribir un motivo antes de confirmar (queda registrado en la auditoría).
 
-- **Vinculación → Conexión**: Cuando el vínculo ya está establecido y se diseña el IAP.
-- **Conexión → Finalización**: Cuando se están cerrando los objetivos del IAP.
-- **Finalización → Egreso**: Cuando se completaron todas las evaluaciones finales.
-
-> **⚠️ Requisito para el Egreso**: El sistema no te dejará egresar un caso si no se han validado la *Evaluación Ex-Post* y la *Encuesta de Satisfacción*. Si intentas hacerlo, verás un aviso amarillo que dice *"Requisito Metodológico del Convenio"*.
+> **⚠️ Requisito para el Egreso**: no vas a poder egresar un caso si no se han validado la *Evaluación Ex-Post* (Actividad 5 Final), la Actividad 6 y la *Encuesta de Satisfacción*.
 
 #### Retiro voluntario y deserción
 
@@ -361,6 +287,7 @@ Si una persona acompañada abandona el programa:
 1. Abre el caso correspondiente.
 2. Usa el botón **"Retiro Voluntario"** o **"Deserción"**.
 3. El sistema pedirá que existan al menos **3 intentos de contacto** registrados antes de permitir marcar una deserción.
+4. Se habilita un Formulario de Abandono que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar el caso.
 
 ---
 
@@ -390,14 +317,14 @@ Para crear una nueva dupla de acompañamiento:
 
 ---
 
-### 7.3 Validación de sesiones
+### 7.3 Validación de Registros de Acompañamiento
 
 **Ubicación en el menú**: 📝 Sesiones
 
-Aquí llegan las bitácoras de sesión que tus PER envían desde terreno. El flujo de revisión funciona de la siguiente manera:
+Esta bandeja es distinta al panel de itinerario de la sección 7.1: aquí llegan específicamente los **Registros de Acompañamiento** (los encuentros recurrentes de la etapa Conexión) que tus PER envían desde terreno. El flujo de revisión funciona de la siguiente manera:
 
 1. **Bandeja de tarjetas**: Verás una lista de tarjetas de vista previa que muestran el código del caso (ej. `PA-MET-001`), el número de sesión, el emoji del registro emocional de la sesión y las primeras líneas del resumen.
-2. **Abrir el Detalle Completo**: Haz clic en cualquier tarjeta. Se abrirá una ventana emergente (modal) que contiene **toda la información registrada por el PER** en su bitácora:
+2. **Abrir el Detalle Completo**: Haz clic en cualquier tarjeta. Se abrirá una ventana emergente (modal) que contiene **toda la información registrada por el PER** en su Registro de Acompañamiento:
    - Datos generales: Fecha, modalidad, duración, ámbito trabajado e indicador emocional con carita.
    - Campos de texto completos: Resumen, acuerdos, dificultades/retos del caso, próximas acciones planificadas y la reflexión personal del PER.
 3. **Tomar acción**:
@@ -478,13 +405,24 @@ Aquí se registran las actividades grupales del equipo: reuniones de equipo, foc
 Aquí ves las notificaciones críticas del sistema:
 
 - **Hitos pendientes**: Documentos enviados por los PER que esperan tu validación (IAP, evaluaciones, etc.).
-- **Alertas de inactividad**: El sistema detecta automáticamente cuando una dupla lleva **más de 14 días** sin registrar bitácoras y genera una alerta para que intervengas.
+- **Alertas de inactividad**: El sistema detecta automáticamente cuando una dupla lleva **más de 14 días** sin registrar un Registro de Acompañamiento y genera una alerta para que intervengas.
 
 ---
 
 ## 8. Guía para el Administrador Nacional
 
 Como administrador nacional, tienes acceso a las siguientes secciones:
+
+### Gestión de Usuarios (`/admin/usuarios`)
+
+Aquí creas y administras las cuentas de los acompañantes PER.
+
+- **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna.
+- **Activar / Desactivar**: Un botón junto a cada PER. Uno desactivado no puede iniciar sesión.
+- **Editar**: Cambia nombre, usuario o región. Te va a pedir la **contraseña de administrador** para confirmar.
+- **Eliminar**: Si el PER tiene casos asociados, el sistema **no te deja eliminarlo** (para no dejar casos sin dueño) — desactívalo en su lugar. Si no tiene casos, te pide la contraseña de administrador y lo elimina de forma permanente.
+
+> Editar y eliminar quedan siempre registrados en la Bitácora de Auditoría.
 
 ### Consola de KPIs y Reportes (`/admin/reportes`)
 
@@ -514,7 +452,9 @@ Si eres nuevo en el programa, aquí tienes un glosario de los términos más imp
 | **PA**             | Persona Acompañada. La persona que recibe el acompañamiento del PER.                                                                              |
 | **Dupla**          | La pareja formada por un PER y una PA.                                                                                                            |
 | **IAP**            | Itinerario de Acompañamiento Personalizado. El plan de trabajo individual que se diseña para cada persona acompañada.                             |
-| **Bitácora**       | El registro escrito de cada sesión de acompañamiento.                                                                                             |
+| **Actividad**      | Cada paso del itinerario del IAP (Primer Encuentro, Actividad 1 a 6). Se completan en orden, uno se desbloquea cuando el anterior queda validado. |
+| **Registro de Acompañamiento** | El registro de cada encuentro durante la etapa Conexión. Es lo que antes se llamaba "bitácora".                                       |
+| **Alias**          | Apodo o forma de trato que la persona acompañada elige (opcional, en la Actividad 2). Nunca es su nombre legal ni su RUN.                         |
 | **Supervisión**    | Reunión periódica entre el coordinador y el PER para revisar casos y dar orientación técnica.                                                     |
 | **SENDA**          | Servicio Nacional para la Prevención y Rehabilitación del Consumo de Drogas y Alcohol. Organismo público que financia el programa.                |
 | **Remesa**         | Pago parcial que SENDA libera al cumplirse ciertos indicadores del convenio.                                                                      |
@@ -548,15 +488,15 @@ Si eres nuevo en el programa, aquí tienes un glosario de los términos más imp
 
 > **Excepción**: Los borradores offline solo se guardan en el dispositivo donde los creaste.
 
-### ¿Qué pasa si cierro la app sin enviar mi bitácora?
+### ¿Qué pasa si cierro la app sin enviar mi paso del itinerario o mi Registro de Acompañamiento?
 
-Si llenaste el formulario pero **no presionaste enviar**, se perderá lo que escribiste. Asegúrate de presionar "Enviar Bitácora" antes de cerrar.
+Si llenaste el formulario pero **no presionaste "Enviar a Coordinación"**, se perderá lo que escribiste. Asegúrate de presionarlo antes de cerrar.
 
 Si **no tienes internet**, usa el botón "Guardar Borrador Local" para no perder tu trabajo.
 
-### ¿Puedo corregir una bitácora que ya envié?
+### ¿Puedo corregir un registro que ya envié?
 
-No puedes editarla directamente. Si tu coordinador te la devuelve con observaciones, podrás enviar una nueva versión corregida.
+No puedes editarlo directamente mientras está en revisión. Si tu coordinador te lo devuelve con observaciones, el formulario reaparece con lo que ya habías escrito para que lo corrijas y reenvíes.
 
 ### ¿Qué significan los colores de los estados?
 
