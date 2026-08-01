@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { isNextRedirect } from "@/lib/next-errors";
 import {
   submitItineraryStep,
   validateItineraryStep,
@@ -59,15 +60,20 @@ export async function syncOfflineItineraryStepsAction(
 export async function markStepNotApplicableAction(taskId: string, reason: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "PER" && user.role !== "COORDINATOR" && user.role !== "ADMIN") {
+  // Marcar un instrumento como NO_APLICA satisface la puerta de avance de etapa
+  // (ver assertStageAdvanceAllowed), así que es una decisión metodológica de
+  // coordinación — nunca del propio PER que debe completarlo.
+  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
     throw new Error("No autorizado");
   }
 
   try {
     await markStepNotApplicable(taskId, user.id, user.isDemo, reason);
     revalidateItineraryPaths();
-  } catch (err: any) {
-    console.error("Error marking itinerary step as not applicable:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo marcar el instrumento como no aplicable";
+    redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -81,8 +87,10 @@ export async function validateItineraryStepAction(taskId: string): Promise<void>
   try {
     await validateItineraryStep(taskId, user.id, user.isDemo);
     revalidateItineraryPaths();
-  } catch (err: any) {
-    console.error("Error validating itinerary step:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo validar el instrumento";
+    redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -100,7 +108,9 @@ export async function returnItineraryStepAction(formData: FormData): Promise<voi
   try {
     await returnItineraryStep(taskId, user.id, user.isDemo, feedback);
     revalidateItineraryPaths();
-  } catch (err: any) {
-    console.error("Error returning itinerary step:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo devolver el instrumento";
+    redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
   }
 }

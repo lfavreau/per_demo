@@ -517,12 +517,12 @@ export default async function AdminDashboardPage({
             {/* Operational Sessions & Instruments Index */}
             <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
               <h3 className="font-bold text-sm text-slate-800 mb-4">
-                Índice de Bitácoras e Instrumentos
+                Índice de Registros de Acompañamiento e Instrumentos
               </h3>
               <div className="space-y-3 text-xs">
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-slate-500">Total Encuentros (Bitácoras):</span>
+                    <span className="text-slate-500">Total Encuentros (Registros de Acompañamiento):</span>
                     <span className="font-extrabold text-slate-800">{totalSessionsCount}</span>
                   </div>
                   <div className="flex justify-between text-[10px] text-slate-500 pl-2 border-l-2 border-slate-200">

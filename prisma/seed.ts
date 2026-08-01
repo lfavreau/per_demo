@@ -527,7 +527,10 @@ async function main() {
         await seedAdvanceItinerary(paCase.id, admin.id, true, validatedCount, currentTaskState);
       } else if (status === "CONEXION") {
         // 2 pasos secuenciales (Actividad 5 Intermedia, Reformular Actividad 4 [opcional]).
-        const validatedCount = k % 2;
+        // CONEXION solo ocurre en k=2 (ver `statuses` arriba), así que "k % 2" siempre daba 0:
+        // ningún caso de la demo validaba su Evaluación Intermedia. Se fija en 1 para que el
+        // KPI de evaluaciones intermedias (ver reports.service.ts) tenga datos que mostrar.
+        const validatedCount = 1;
         const currentTaskState = reg.name === "Los Ríos" && k === 2 ? "ENVIADA" : undefined;
         await seedAdvanceItinerary(paCase.id, admin.id, true, validatedCount, currentTaskState);
       } else if (status === "FINALIZACION") {

@@ -21,6 +21,7 @@ interface WithdrawalGateProps {
 export default function WithdrawalGate({ caseId, withdrawalStep }: WithdrawalGateProps) {
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [toStatus, setToStatus] = useState("RETIRO_VOLUNTARIO");
 
   if (!withdrawalStep) {
     return (
@@ -119,7 +120,13 @@ export default function WithdrawalGate({ caseId, withdrawalStep }: WithdrawalGat
 
       <div className="space-y-1">
         <label className="font-semibold text-slate-700 block">Tipo de salida:</label>
-        <select name="toStatus" required className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none">
+        <select
+          name="toStatus"
+          required
+          value={toStatus}
+          onChange={(e) => setToStatus(e.target.value)}
+          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+        >
           <option value="RETIRO_VOLUNTARIO">Retiro Voluntario</option>
           <option value="DESERCION">Deserción</option>
         </select>
@@ -135,6 +142,15 @@ export default function WithdrawalGate({ caseId, withdrawalStep }: WithdrawalGat
           className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none resize-none"
         ></textarea>
       </div>
+
+      {toStatus === "DESERCION" && (
+        <label className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-700 cursor-pointer">
+          <input type="checkbox" name="forceDesertion" className="mt-0.5" />
+          <span>
+            Forzar deserción sin los 3 intentos de contacto registrados (requiere motivo arriba). Queda auditado.
+          </span>
+        </label>
+      )}
 
       <button
         type="submit"

@@ -71,7 +71,7 @@ model PACandidate {
 
 model PACase {
   id                          String              @id @default(cuid())
-  code                        String              @unique // PA-{REGION}-{NNN}
+  code                        String              // PA-{REGION}-{NNN} — único por modo, ver @@unique al final del modelo
   alias                       String?             // trato preferido de la persona acompanada (Actividad 2). NUNCA nombre legal ni RUN.
   type                        String              // "NUEVO", "CONTINUIDAD"
   regionId                    String
@@ -117,6 +117,8 @@ model PACase {
   sessionLogs                 SessionLog[]
   documentRecords             DocumentRecord[]
   networkActivations          NetworkActivation[]
+
+  @@unique([code, isDemo])
 }
 
 model CaseStatusHistory {

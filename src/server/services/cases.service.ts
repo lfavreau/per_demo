@@ -22,23 +22,24 @@ function getRegionAbbreviation(region: string): string {
   if (clean.includes("valpara")) return "VAL";
   if (clean.includes("tarapac")) return "TAR";
   if (clean.includes("bio")) return "BIO";
-  if (clean.includes("los rios") || clean.includes("ríos")) return "RIO";
+  // "LOS" es la abreviatura canónica: es la que emite prisma/seed.ts y la que
+  // aparece en toda la documentación del pilotaje.
+  if (clean.includes("los rios") || clean.includes("ríos")) return "LOS";
   return "GEN";
 }
 
 // Helper to generate the next PA code.
-// `PACase.code` is globally unique (not scoped by isDemo), pero el conteo que decide el
-// siguiente número SÍ debe ignorar isDemo — si se filtrara solo por el modo actual (como hacía
-// antes), el primer caso real de una región que ya tiene casos demo generaría el mismo código
-// que un caso demo existente (ej. "PA-MET-001") y la creación fallaría con un choque de
-// unicidad. Se agrega además un loop de verificación por si el conteo no refleja códigos ya
-// tomados (casos borrados, creados fuera de orden, etc.).
-async function generatePaCode(regionId: string): Promise<string> {
+// El correlativo es por región Y por modo: demo y real llevan series independientes,
+// de modo que el primer caso real de una región siempre es 001 aunque existan casos
+// demo. La unicidad en base de datos es @@unique([code, isDemo]).
+async function generatePaCode(regionId: string, isDemo: boolean): Promise<string> {
   const abbr = getRegionAbbreviation(regionId);
 
-  let sequential = (await prisma.pACase.count({ where: { regionId } })) + 1;
+  let sequential = (await prisma.pACase.count({ where: { regionId, isDemo } })) + 1;
   let code = `PA-${abbr}-${String(sequential).padStart(3, "0")}`;
-  while (await prisma.pACase.findUnique({ where: { code } })) {
+  // Loop defensivo por si el conteo no refleja códigos ya tomados (casos eliminados,
+  // creados fuera de orden, etc.)
+  while (await prisma.pACase.findFirst({ where: { code, isDemo }, select: { id: true } })) {
     sequential++;
     code = `PA-${abbr}-${String(sequential).padStart(3, "0")}`;
   }
@@ -78,7 +79,7 @@ export async function createCaseFromCandidate(
     }
 
     // 3. Generate unique code
-    const code = await generatePaCode(candidate.regionId);
+    const code = await generatePaCode(candidate.regionId, isDemo);
 
     // 4. Create case
     const newCase = await tx.pACase.create({
@@ -353,7 +354,8 @@ export async function transitionCaseStatus(
   reason: string,
   actorId: string,
   isDemo: boolean,
-  forceAdvance = false
+  forceAdvance = false,
+  forceDesertion = false
 ) {
   return await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({
@@ -415,8 +417,28 @@ export async function transitionCaseStatus(
     // Deserción validations (requires contact attempts log verification or reason)
     if (toStatus === "DESERCION") {
       const attempts = await tx.contactAttempt.count({ where: { paCaseId: caseId } });
-      if (attempts < 3 && !reason.toLowerCase().includes("forzada")) {
-        throw new Error("No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos.");
+      if (attempts < 3) {
+        if (!forceDesertion) {
+          throw new Error(
+            `No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos (hay ${attempts}). Puedes forzarlo indicando un motivo.`
+          );
+        }
+        if (!reason || !reason.trim()) {
+          throw new Error("Forzar una deserción con menos de 3 intentos de contacto requiere un motivo.");
+        }
+        await tx.auditLog.create({
+          data: {
+            userId: actorId,
+            role: actor.role,
+            action: "FORCE_DESERTION",
+            entityType: "PACase",
+            entityId: caseId,
+            previousValue: paCase.status,
+            newValue: JSON.stringify({ toStatus, contactAttempts: attempts }),
+            reason,
+            isDemo,
+          },
+        });
       }
     }
 
@@ -570,7 +592,7 @@ export async function createDirectContinuityCase(
     throw new Error("El PER seleccionado no está habilitado en la región actual");
   }
 
-  const code = await generatePaCode(regionId);
+  const code = await generatePaCode(regionId, isDemo);
 
   const folders = await createCaseFolder(code, regionId, perId, isDemo);
 
