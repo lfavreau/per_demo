@@ -56,7 +56,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
     <div className="space-y-6">
       <div className="p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
         <h4 className="font-semibold text-xs text-slate-500 uppercase tracking-wider">
-          Bitácoras Pendientes de Revisión ({pendingSessions.length})
+          Registros de Acompañamiento Pendientes de Revisión ({pendingSessions.length})
         </h4>
 
         {/* Preview Cards Grid */}
@@ -101,7 +101,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
 
           {pendingSessions.length === 0 && (
             <div className="col-span-full py-8 text-center text-slate-400">
-              No hay bitácoras pendientes de validación en tu región. ¡Buen trabajo!
+              No hay Registros de Acompañamiento pendientes de validación en tu región. ¡Buen trabajo!
             </div>
           )}
         </div>
@@ -118,7 +118,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
             <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                  <span>📝</span> Bitácora del Caso: <span className="text-blue-700">{selectedSession.paCase.code}</span>
+                  <span>📝</span> Registro de Acompañamiento del Caso: <span className="text-blue-700">{selectedSession.paCase.code}</span>
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">
                   Revisión metodológica del encuentro de acompañamiento

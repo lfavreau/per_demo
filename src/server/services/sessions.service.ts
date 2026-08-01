@@ -87,7 +87,7 @@ export async function logSession(input: CreateSessionLogInput, actorId: string, 
       await createNotificationWithPush(
         {
           userId: paCase.coordinatorId,
-          title: "Nueva Bitácora por Validar",
+          title: "Nuevo Registro de Acompañamiento por validar",
           message: `El acompañante PER envió la sesión #${sessionNumber} del caso ${paCase.code} para su validación.`,
           link: `/coordinacion/sesiones?highlightSessionId=${session.id}`,
           isDemo,
@@ -140,7 +140,7 @@ export async function validateSession(sessionId: string, actorId: string, isDemo
       await createNotificationWithPush(
         {
           userId: perProfile.userId,
-          title: "Bitácora Validada",
+          title: "Registro de Acompañamiento validado",
           message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} ha sido aprobada.`,
           link: `/per?highlightSessionId=${session.id}`,
           isDemo,
@@ -202,7 +202,7 @@ export async function returnSession(
       await createNotificationWithPush(
         {
           userId: perProfile.userId,
-          title: "Bitácora Devuelta",
+          title: "Registro de Acompañamiento devuelto",
           message: `La sesión #${session.sessionNumber} del caso ${paCase?.code || ""} fue devuelta con observaciones.`,
           link: `/per?highlightSessionId=${session.id}`,
           isDemo,

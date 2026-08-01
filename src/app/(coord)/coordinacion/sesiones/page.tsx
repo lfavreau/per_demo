@@ -55,7 +55,7 @@ export default async function CoordinatorSesionesPage({
 
         {/* Page Header */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <h3 className="font-extrabold text-base text-slate-900">Validación de Bitácoras de Sesión</h3>
+          <h3 className="font-extrabold text-base text-slate-900">Validación de Registros de Acompañamiento</h3>
           <p className="text-xs text-slate-500 mt-1">
             Revisa los reportes de encuentros cargados por los PER y apruébalos para consolidar metas, o devuélvelos con observaciones de ajuste.
           </p>

@@ -130,7 +130,7 @@ export default async function CoordinatorCasosPage({
       selectedCase.sessionLogs.forEach((s) => {
         timelineEvents.push({
           date: s.date,
-          title: `Bitácora - Sesión #${s.sessionNumber} (${s.modality})`,
+          title: `Registro de Acompañamiento - Sesión #${s.sessionNumber} (${s.modality})`,
           description: `Asistencia: ${s.attendance}. Resumen: ${s.summary}. Estado emocional registrado en IAP: ${mapEmotionToLabel(s.perEmotion || "BIEN")}. Acuerdos: ${s.agreements || "Ninguno"}`,
           type: "session",
           badgeColor: "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -222,7 +222,7 @@ export default async function CoordinatorCasosPage({
                   </div>
                 ))}
                 {timelineEvents.length === 0 && (
-                  <p className="text-xs text-slate-400 py-4">No se han registrado hitos en la bitácora de este caso.</p>
+                  <p className="text-xs text-slate-400 py-4">No se han registrado hitos en el Registro de Acompañamiento de este caso.</p>
                 )}
               </div>
             </div>

@@ -49,7 +49,9 @@ export const getDb = (): PrismaClient => {
   // 3. Local SQLite fallback (dev.db)
   try {
     const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3");
-    const adapter = new PrismaBetterSqlite3({ url: "file:dev.db" });
+    // LOCAL_SQLITE_URL permite apuntar a una base desechable en pruebas sin tocar dev.db.
+    // No usa DATABASE_URL a propósito: esa variable ya está reservada arriba para Turso.
+    const adapter = new PrismaBetterSqlite3({ url: process.env.LOCAL_SQLITE_URL || "file:dev.db" });
     return new PrismaClient({ adapter });
   } catch (e) {
     return new PrismaClient();

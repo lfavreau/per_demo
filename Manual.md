@@ -633,7 +633,7 @@ La plataforma tiene **dos modos de operación** completamente independientes:
 
 ### 🧪 Modo Demo
 
-- Se accede desde el botón **"🧪 Cuentas de Evaluación Operativa"** al final de la pantalla de login, que abre un modal con **13 cuentas** de acceso directo: 1 Administrador, los 5 Coordinadores Regionales y 8 acompañantes PER (dos por región, cubriendo Vinculación/Conexión/Finalización con distintos estados de habilitación).
+- Se accede desde el botón **"🧪 Cuentas de Evaluación Operativa"** al final de la pantalla de login, que abre un modal con **16 cuentas** de acceso directo: 1 Administrador, los 5 Coordinadores Regionales y 10 acompañantes PER (dos por región, cubriendo Vinculación/Conexión/Finalización con distintos estados de habilitación).
 - Contiene **datos ficticios** precargados: casos, registros de acompañamiento, tareas, supervisiones, candidatas y alertas.
 - Ideal para **explorar la plataforma**, capacitarse y conocer las funcionalidades sin afectar datos reales.
 - Los datos demo están completamente aislados del modo real.

@@ -106,7 +106,7 @@ export async function validateSessionAction(sessionId: string): Promise<void> {
     revalidatePath("/admin");
   } catch (err) {
     if (isNextRedirect(err)) throw err;
-    const message = err instanceof Error ? err.message : "No se pudo validar la bitácora";
+    const message = err instanceof Error ? err.message : "No se pudo validar el Registro de Acompañamiento";
     redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
   }
 }
@@ -133,7 +133,7 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
     revalidatePath("/admin");
   } catch (err) {
     if (isNextRedirect(err)) throw err;
-    const message = err instanceof Error ? err.message : "No se pudo devolver la bitácora";
+    const message = err instanceof Error ? err.message : "No se pudo devolver el Registro de Acompañamiento";
     redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
   }
 }

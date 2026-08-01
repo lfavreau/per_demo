@@ -198,7 +198,7 @@ export default function AppShell({ children, user }: AppShellProps) {
       {/* Offline Status Warning Banner */}
       {!isOnline && (
         <div className="bg-amber-600 text-white text-xs font-semibold text-center py-2 px-4 flex items-center justify-center gap-2 animate-bounce z-50">
-          <span>⚠️ Estás trabajando en modo desconectado. Los borradores de bitácoras se guardarán localmente.</span>
+          <span>⚠️ Estás trabajando en modo desconectado. Los borradores de Registro de Acompañamiento se guardarán localmente.</span>
         </div>
       )}
 
