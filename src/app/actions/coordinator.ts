@@ -104,8 +104,10 @@ export async function validateSessionAction(sessionId: string): Promise<void> {
     await validateSession(sessionId, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error validating session:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo validar la bitácora";
+    redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -129,8 +131,10 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
     await returnSession(sessionId, feedback, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error returning session:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo devolver la bitácora";
+    redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -152,8 +156,10 @@ export async function validateTaskAction(taskId: string): Promise<void> {
     });
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error validating task:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo validar la tarea";
+    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -183,8 +189,10 @@ export async function returnTaskAction(formData: FormData): Promise<void> {
     });
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error returning task:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo devolver la tarea";
+    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -208,8 +216,10 @@ export async function resolveAlertAction(formData: FormData): Promise<void> {
     await resolveAlert(alertId, note, user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error resolving alert:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo resolver la alerta";
+    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -226,8 +236,10 @@ export async function triggerAlertRulesAction(formData: FormData): Promise<void>
     await checkAllAlertRules(user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
-  } catch (err: any) {
-    console.error("Error triggering alert rules:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudieron ejecutar las reglas de alerta";
+    redirect(`/coordinacion?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -282,8 +294,10 @@ export async function ensureWithdrawalStepAction(caseId: string): Promise<void> 
     await ensureWithdrawalStep(caseId, "PA", user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/per", "layout");
-  } catch (err: any) {
-    console.error("Error ensuring withdrawal step:", err);
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo iniciar el formulario de abandono";
+    redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
   }
 }
 

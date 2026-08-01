@@ -7,8 +7,14 @@ import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
-export default async function CoordinatorAlertasPage() {
+export default async function CoordinatorAlertasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getCurrentUser();
+  const params = await searchParams;
+  const errorMsg = params.error;
 
   // Enforce Coordinator role access
   if (!user || user.role !== "COORDINATOR" || !user.regionId) {
@@ -44,7 +50,14 @@ export default async function CoordinatorAlertasPage() {
   return (
     <AppShell user={user}>
       <div className="space-y-6">
-        
+
+        {errorMsg && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-2xl flex items-start gap-2 shadow-sm">
+            <span className="text-sm shrink-0">⚠️</span>
+            <p className="font-normal text-[11px] leading-relaxed text-red-755">{decodeURIComponent(errorMsg)}</p>
+          </div>
+        )}
+
         {/* Page Header */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
           <h3 className="font-extrabold text-base text-slate-900">Validación de Tareas y Notas de Apoyo</h3>
