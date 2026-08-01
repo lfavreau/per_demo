@@ -244,6 +244,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const toStatus = formData.get("toStatus") as string;
   const reason = formData.get("reason") as string;
   const forceAdvance = formData.get("forceAdvance") === "on";
+  const forceDesertion = formData.get("forceDesertion") === "on";
 
   if (!caseId || !toStatus) {
     throw new Error("Faltan datos obligatorios");
@@ -257,7 +258,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseCode = paCase?.code || "";
 
   try {
-    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance);
+    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance, forceDesertion);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${caseCode}`);
@@ -629,14 +630,48 @@ export async function updatePerStatusAction(formData: FormData): Promise<void> {
   if (!perId || !toStatus) {
     throw new Error("Faltan datos obligatorios");
   }
+  if (!["HABILITADO", "PENDIENTE", "NO_HABILITADO"].includes(toStatus)) {
+    throw new Error("Estado de certificación inválido");
+  }
 
-  await prisma.pERProfile.update({
+  const profile = await prisma.pERProfile.findUnique({
     where: { id: perId },
-    data: {
-      certificationStatus: toStatus,
-      certifiedByUserId: user.id,
-      certifiedAt: toStatus === "HABILITADO" ? new Date() : null,
-    },
+    include: { user: true },
+  });
+  if (!profile) throw new Error("PER no encontrado");
+
+  // Mismo control regional que el resto de operaciones de coordinación
+  if (user.role !== "ADMIN" && user.regionId !== profile.regionId) {
+    throw new Error("No autorizado para operar acompañantes de esta región");
+  }
+  // La habilitación no puede cruzar modos: un coordinador en sesión demo no
+  // debe alterar el estado de un PER real, ni al revés.
+  if (Boolean(profile.user.isDemo) !== Boolean(user.isDemo)) {
+    throw new Error("El acompañante no pertenece al modo de trabajo actual");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.pERProfile.update({
+      where: { id: perId },
+      data: {
+        certificationStatus: toStatus,
+        certifiedByUserId: user.id,
+        certifiedAt: toStatus === "HABILITADO" ? new Date() : null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        role: user.role,
+        action: toStatus === "HABILITADO" ? "HABILITACION_PER" : "SUSPENSION_PER",
+        entityType: "PERProfile",
+        entityId: perId,
+        previousValue: profile.certificationStatus,
+        newValue: toStatus,
+        isDemo: Boolean(user.isDemo),
+      },
+    });
   });
 
   revalidatePath("/coordinacion/supervisiones");
@@ -656,7 +691,10 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
   const gender = (formData.get("gender") as string) || null;
   const ageRange = (formData.get("ageRange") as string) || null;
 
-  const regionId = user.regionId || (formData.get("regionId") as string) || "MET";
+  const regionId = user.regionId || (formData.get("regionId") as string);
+  if (!regionId) {
+    throw new Error("Región no especificada");
+  }
 
   await prisma.pACandidate.create({
     data: {

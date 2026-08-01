@@ -59,7 +59,10 @@ export async function syncOfflineItineraryStepsAction(
 export async function markStepNotApplicableAction(taskId: string, reason: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "PER" && user.role !== "COORDINATOR" && user.role !== "ADMIN") {
+  // Marcar un instrumento como NO_APLICA satisface la puerta de avance de etapa
+  // (ver assertStageAdvanceAllowed), así que es una decisión metodológica de
+  // coordinación — nunca del propio PER que debe completarlo.
+  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
     throw new Error("No autorizado");
   }
 

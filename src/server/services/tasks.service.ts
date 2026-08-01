@@ -43,6 +43,7 @@ export async function assignTask({
 
     const assignedUser = await tx.user.findUnique({ where: { id: assignedToUserId } });
     if (!assignedUser) throw new Error("Usuario asignado no encontrado");
+    if (!assignedUser.regionId) throw new Error("El usuario asignado no tiene región asignada");
 
     if (paCaseId) {
       const paCase = await tx.pACase.findUnique({ where: { id: paCaseId } });
@@ -58,7 +59,7 @@ export async function assignTask({
         instrumentId,
         assignedToUserId,
         assignedByUserId: actorId,
-        regionId: assignedUser.regionId || "MET",
+        regionId: assignedUser.regionId,
         paCaseId,
         dueDate,
         status: "PENDIENTE",

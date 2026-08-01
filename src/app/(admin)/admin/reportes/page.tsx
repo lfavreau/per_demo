@@ -297,10 +297,12 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     const supervisionCount = supervisions.length;
     
     // Intermediate evaluations: count tasks validated that belong to the instrument "Evaluación Intermedia"
+    // Comparar por activityKey (clave estable del catálogo), no por nombre visible:
+    // el nombre es editable desde /admin/instrumentos y rompería el indicador.
     let intermediateEvaluationsCount = 0;
     allCases.forEach((c) => {
       c.tasks.forEach((t: any) => {
-        if (t.instrument?.name === "Evaluación Intermedia" && t.status === "VALIDADA") {
+        if (t.instrument?.activityKey === "ACTIVIDAD_5_INTERMEDIA" && t.status === "VALIDADA") {
           intermediateEvaluationsCount++;
         }
       });

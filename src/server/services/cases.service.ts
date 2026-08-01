@@ -354,7 +354,8 @@ export async function transitionCaseStatus(
   reason: string,
   actorId: string,
   isDemo: boolean,
-  forceAdvance = false
+  forceAdvance = false,
+  forceDesertion = false
 ) {
   return await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({
@@ -416,8 +417,28 @@ export async function transitionCaseStatus(
     // Deserción validations (requires contact attempts log verification or reason)
     if (toStatus === "DESERCION") {
       const attempts = await tx.contactAttempt.count({ where: { paCaseId: caseId } });
-      if (attempts < 3 && !reason.toLowerCase().includes("forzada")) {
-        throw new Error("No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos.");
+      if (attempts < 3) {
+        if (!forceDesertion) {
+          throw new Error(
+            `No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos (hay ${attempts}). Puedes forzarlo indicando un motivo.`
+          );
+        }
+        if (!reason || !reason.trim()) {
+          throw new Error("Forzar una deserción con menos de 3 intentos de contacto requiere un motivo.");
+        }
+        await tx.auditLog.create({
+          data: {
+            userId: actorId,
+            role: actor.role,
+            action: "FORCE_DESERTION",
+            entityType: "PACase",
+            entityId: caseId,
+            previousValue: paCase.status,
+            newValue: JSON.stringify({ toStatus, contactAttempts: attempts }),
+            reason,
+            isDemo,
+          },
+        });
       }
     }
 
