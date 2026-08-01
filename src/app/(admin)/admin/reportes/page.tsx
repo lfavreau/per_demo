@@ -47,7 +47,9 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       where: {
         periodKey: selectedPeriod,
         regionId: selectedRegion || null,
+        isDemo,
       },
+      orderBy: { createdAt: "desc" },
     });
   } catch (e) {
     console.error("Error fetching reportSnapshot:", e);
