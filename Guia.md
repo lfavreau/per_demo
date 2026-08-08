@@ -24,10 +24,10 @@
 7. [Guía para el Coordinador Regional](#7-guía-para-el-coordinador-regional)
    - [7.1 Panel de casos y acompañamientos](#71-panel-de-casos-y-acompañamientos)
    - [7.2 Nómina e ingreso de nuevas personas (Fase 2)](#72-nómina-e-ingreso-de-nuevas-personas-fase-2)
-   - [7.3 Validación de sesiones](#73-validación-de-sesiones)
+   - [7.3 Bandeja de Validación (Registros de Acompañamiento e hitos)](#73-bandeja-de-validación-registros-de-acompañamiento-e-hitos)
    - [7.4 Dotación PER y supervisiones](#74-dotación-per-y-supervisiones)
    - [7.5 Redes e integración social](#75-redes-e-integración-social)
-   - [7.6 Alertas, hitos y entregables](#76-alertas-hitos-y-entregables)
+   - [7.6 Alertas automáticas y apoyo metodológico](#76-alertas-automáticas-y-apoyo-metodológico)
 8. [Guía para el Administrador Nacional](#8-guía-para-el-administrador-nacional)
 9. [Conceptos clave del programa PER](#9-conceptos-clave-del-programa-per)
 10. [Preguntas frecuentes](#10-preguntas-frecuentes)
@@ -137,16 +137,15 @@ Si eres coordinador o administrador, verás un botón de **tres líneas horizont
 - 📋 Panel Principal
 - 👥 Nómina / Fase 2
 - 📊 Casos
-- 📝 Sesiones
+- ✓ Validación (Registros de Acompañamiento e hitos del itinerario, en una sola bandeja)
 - 🏥 Supervisiones
 - 🌐 Redes
-- ⚠️ Alertas
 
 Para cerrar el menú, toca la **X** o toca fuera del panel.
 
 ### Si eres PER
 
-Como acompañante PER, tu vista tiene 3 pestañas fijas abajo de la pantalla: **📅 Mi Agenda** (tus casos activos), **👥 Casos Activos** (el listado completo) y **🔔 Avisos** (retroalimentación y supervisiones). Al entrar a un caso llegas a su pantalla de trabajo, donde está el itinerario que se explica en la [sección 6.2](#62-completar-el-itinerario-de-un-caso).
+Como acompañante PER, tu vista tiene **2 pestañas fijas** abajo de la pantalla: **📅 Mi Agenda** y **🔔 Avisos**. No hay una pestaña de "Casos Activos" porque llevas como máximo un acompañamiento activo a la vez: al entrar a la app llegas directo a la pantalla de trabajo del caso, donde está el itinerario que se explica en la [sección 6.2](#62-completar-el-itinerario-de-un-caso).
 
 ---
 
@@ -156,15 +155,14 @@ Esta es la sección más importante si eres un Par Especialista en Recuperación
 
 ### 6.1 Tu pantalla principal
 
-Cuando entras a la app, tu vista tiene 3 pestañas fijas abajo de la pantalla:
+Cuando entras a la app, tu vista tiene **2 pestañas fijas** abajo de la pantalla:
 
 | Pestaña | ¿Para qué sirve? |
 | ---------| -------------------|
-| **📅 Mi Agenda** | Pantalla de entrada. Lista tus acompañamientos activos; si tienes solo uno, te lleva directo a trabajar en él |
-| **👥 Casos Activos** | Listado completo de tus acompañamientos |
+| **📅 Mi Agenda** | Pantalla de entrada. Te lleva directo a trabajar en tu acompañamiento activo — como llevas como máximo uno a la vez, no hay una lista que recorrer |
 | **🔔 Avisos** | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
-Al entrar a un caso llegas a su pantalla de trabajo, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)).
+Al entrar a la app llegas directo a la pantalla de trabajo de tu caso, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)). Si no tienes ningún acompañamiento asignado todavía, Mi Agenda te lo indica ahí mismo.
 
 ### Si ves un aviso rojo que dice "Estado: No Habilitado para Terreno"
 
@@ -206,9 +204,9 @@ El número de sesión se pone solo, en orden. Al enviarlo con **"Enviar a Coordi
 
 ---
 
-### 6.3 Tus acompañamientos activos
+### 6.3 Tu acompañamiento activo
 
-En **"Casos Activos"** verás una lista con los casos que tienes asignados. Cada caso muestra:
+En el encabezado de tu pantalla de trabajo (donde llegas al abrir **"Mi Agenda"**) ves los datos de tu caso:
 
 - **Código del caso**: Por ejemplo, `PA-MET-001`. Este código es la forma de identificar a cada persona acompañada en el sistema (por privacidad, no se usan nombres). Si le pusiste un alias en la Actividad 2, aparece al lado: `PA-MET-001 (Fer)`.
 - **Tipo**: Si es un caso *Nuevo* o de *Continuidad*.
@@ -216,6 +214,8 @@ En **"Casos Activos"** verás una lista con los casos que tienes asignados. Cada
   - 🟡 **Vinculación**: Recién se están conociendo, construyendo el vínculo.
   - 🔵 **Conexión**: Ya están trabajando juntos con el IAP.
   - 🟢 **Finalización**: Preparando el cierre del acompañamiento.
+
+Como llevas como máximo un acompañamiento activo a la vez, no hay una lista de casos que revisar — este es el único.
 
 ---
 
@@ -297,31 +297,38 @@ Si una persona acompañada abandona el programa:
 
 Aquí gestionas el ingreso de nuevas personas al programa. La pantalla tiene dos partes:
 
-#### Tabla de personas preseleccionadas (izquierda)
+#### Tabla de la nómina (izquierda)
 
-Muestra las candidatas que están en estado *Admisible* o *Seleccionada*, listas para ser emparejadas con un PER.
+Muestra **a todas** las personas de tu nómina de preselección, no solo las aptas para match. Cada fila tiene un selector de estado (Derivada, Contactada, Preinscrita, Entrevistada, Admisible, No Admisible, Seleccionada, En Espera, Descartada) que puedes cambiar ahí mismo con un clic — se guarda solo, sin botón aparte. Una vez que la persona fue convertida a caso, el estado queda fijo ("Convertida a caso") y ya no se edita desde aquí.
 
 #### Formulario "Registrar Dupla & Proponer Match" (derecha)
 
-Para crear una nueva dupla de acompañamiento:
+Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo envío**:
 
-1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista.
-2. **Acompañante PER (Habilitado)**: Selecciona al PER que la acompañará. Solo aparecen los PER habilitados de tu región.
-3. **Tipo de Acompañamiento**: 
+1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista (solo aparecen las que están en *Admisible* o *Seleccionada*).
+2. **Acompañante PER Disponible**: Selecciona al PER que la acompañará. Solo aparecen los PER habilitados de tu región que **no tengan ya un acompañamiento activo** — cada PER lleva como máximo uno a la vez.
+3. **Tipo de Acompañamiento**:
    - *Nuevo*: Primera vez que esta persona entra al programa.
    - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esta persona (afinidad territorial, experiencia, disponibilidad, etc.).
-5. Presiona **"Conformar Dupla"**.
+5. **Acta de Primer Encuentro**: pega el enlace del acta en Drive (en modo demo puedes dejarlo en blanco).
+6. Presiona **"Conformar Dupla"**.
+
+Al enviar, la plataforma crea de una vez la carpeta del caso en Drive, el documento IAP y deja el caso formalizado — no existe un paso intermedio de "proponer" que alguien tenga que volver a abrir y aprobar por separado. Si algo falla al aprovisionar Drive, no se crea nada: vuelves a intentar con el mismo formulario.
 
 > **¿Por qué dice "Fase 2"?** Porque en el modelo del programa PER, la Fase 2 es la etapa de *Admisibilidad e Ingreso*. Las personas pasan por este proceso antes de comenzar el acompañamiento activo (Fase 3 en adelante).
 
+> **¿Y si me equivoqué de PER, o el acompañante ya no puede seguir?** En la ficha del caso (sección 7.1) hay una tarjeta **"Reasignar Acompañante"** — cambia el PER a cargo, libera el cupo del anterior y notifica a ambos.
+
 ---
 
-### 7.3 Validación de Registros de Acompañamiento
+### 7.3 Bandeja de Validación (Registros de Acompañamiento e hitos)
 
-**Ubicación en el menú**: 📝 Sesiones
+**Ubicación en el menú**: ✓ Validación
 
-Esta bandeja es distinta al panel de itinerario de la sección 7.1: aquí llegan específicamente los **Registros de Acompañamiento** (los encuentros recurrentes de la etapa Conexión) que tus PER envían desde terreno. El flujo de revisión funciona de la siguiente manera:
+Esta bandeja junta dos cosas que para ti son el mismo gesto —"lo que mis PER me mandaron y espera revisión"— aunque técnicamente sean dos tipos de contenido distintos:
+
+**Registros de Acompañamiento** (los encuentros recurrentes de la etapa Conexión):
 
 1. **Bandeja de tarjetas**: Verás una lista de tarjetas de vista previa que muestran el código del caso (ej. `PA-MET-001`), el número de sesión, el emoji del registro emocional de la sesión y las primeras líneas del resumen.
 2. **Abrir el Detalle Completo**: Haz clic en cualquier tarjeta. Se abrirá una ventana emergente (modal) que contiene **toda la información registrada por el PER** en su Registro de Acompañamiento:
@@ -331,6 +338,10 @@ Esta bandeja es distinta al panel de itinerario de la sección 7.1: aquí llegan
    - **Aprobar**: Presiona el botón azul **"✅ Aprobar y Validar"** en el pie del modal si todo está en orden.
    - **Devolver**: Si necesitas que el PER corrija algún detalle, escribe tus comentarios en el campo de texto *"Observaciones de Devolución"* dentro del pie del modal y luego presiona el botón rojo **"❌ Devolver"**.
    - **Cerrar**: Puedes cerrar el modal en cualquier momento presionando la **X** de arriba a la derecha o en el botón *"Cancelar"*.
+
+**Hitos y Entregables en Espera de Validación**: más abajo, en la misma página, ves los instrumentos del itinerario (IAP, evaluaciones, etc.) que tus PER enviaron y esperan tu aprobación — mismo par de botones, Aprobar / Devolver con observación.
+
+> Si llegaste desde una notificación de un registro puntual, el modal de ese registro se abre solo al entrar a la página.
 
 ---
 
@@ -344,8 +355,8 @@ Esta sección tiene dos partes:
 
 Ves a todos los PER de tu región con su información:
 
-- **Estado de habilitación**: *Habilitado* (puede trabajar) o *Pendiente* (aún no habilitado).
-- **Casos activos**: Cuántos acompañamientos tiene asignados (máximo 5 por PER).
+- **Estado de habilitación**: *Habilitado*, *Pendiente* o *No Habilitado* — de solo lectura.
+- **Acompañamiento**: si tiene o no un caso activo asignado (*Disponible* / *Asignado*) — cada PER lleva como máximo uno a la vez.
 - **Horas de supervisión acumuladas**.
 - **Última supervisión**: Cuándo fue su última reunión de supervisión contigo.
 - **Indicador de cumplimiento**:
@@ -353,13 +364,11 @@ Ves a todos los PER de tu región con su información:
   - ⚠️ Alerta (más de 15 días sin supervisión)
   - 🔴 Crítico (más de 30 días sin supervisión)
 
-#### Cambiar el estado de habilitación de un PER
+#### Sobre la habilitación de un PER
 
-Al lado del estado de cada PER verás un botón:
-- **"⚙️ Habilitar"** (si está en Pendiente): Presiona para habilitarlo para trabajo en terreno.
-- **"⚙️ Suspender"** (si ya está Habilitado): Presiona para suspenderlo temporalmente.
+Esta pantalla ya **no** tiene botones para habilitar o suspender: el estado se muestra de solo lectura, con una nota que apunta a Administración → Gestión de Usuarios. Un PER nuevo nace habilitado (la decisión de contratación y habilitación se toma en la reunión de coordinación, fuera de la app); el selector en Administración queda como excepción, para suspender a alguien puntualmente.
 
-> Un PER suspendido o pendiente **no puede recibir nuevos casos ni tareas críticas**.
+> Un PER no habilitado **no puede recibir nuevos casos ni tareas críticas**.
 
 #### Registrar una supervisión
 
@@ -398,14 +407,19 @@ Aquí se registran las actividades grupales del equipo: reuniones de equipo, foc
 
 ---
 
-### 7.6 Alertas, hitos y entregables
+### 7.6 Alertas automáticas y apoyo metodológico
 
-**Ubicación en el menú**: ⚠️ Alertas
+**Ubicación**: Panel Principal (Resumen Regional), sección *"Casos que Requieren Apoyo Metodológico"*.
 
-Aquí ves las notificaciones críticas del sistema:
+Ya no hay un botón para "revisar alertas": el sistema recalcula todo **solo, cada vez que entras a tu Panel Principal**. Ahí ves las alertas abiertas:
 
-- **Hitos pendientes**: Documentos enviados por los PER que esperan tu validación (IAP, evaluaciones, etc.).
-- **Alertas de inactividad**: El sistema detecta automáticamente cuando una dupla lleva **más de 14 días** sin registrar un Registro de Acompañamiento y genera una alerta para que intervengas.
+- Casos sin Registros de Acompañamiento por más de 10-14 días según su etapa.
+- Tareas vencidas (pasan a estado *Atrasada* automáticamente).
+- PER sin habilitación con una tarea crítica asignada.
+- Instrumentos enviados hace más de 5 días sin que los hayas revisado.
+- Casos estancados en su etapa actual.
+
+Para cerrar una alerta, escribe una nota de resolución y presiona **"Guardar Registro"** — queda en la Bitácora de Auditoría.
 
 ---
 
@@ -417,12 +431,17 @@ Como administrador nacional, tienes acceso a las siguientes secciones:
 
 Aquí creas y administras las cuentas de los acompañantes PER.
 
-- **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna.
+- **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna. Nace **Habilitado** — se asume que la contratación ya se resolvió fuera de la app.
+- **Habilitación**: selector junto a cada PER (Habilitado / Pendiente / No Habilitado) — cámbialo con un clic, se guarda solo. Es la única pantalla donde se puede cambiar; úsalo como excepción para suspender a alguien.
 - **Activar / Desactivar**: Un botón junto a cada PER. Uno desactivado no puede iniciar sesión.
 - **Editar**: Cambia nombre, usuario o región. Te va a pedir la **contraseña de administrador** para confirmar.
 - **Eliminar**: Si el PER tiene casos asociados, el sistema **no te deja eliminarlo** (para no dejar casos sin dueño) — desactívalo en su lugar. Si no tiene casos, te pide la contraseña de administrador y lo elimina de forma permanente.
 
-> Editar y eliminar quedan siempre registrados en la Bitácora de Auditoría.
+> Editar, eliminar y los cambios de habilitación quedan siempre registrados en la Bitácora de Auditoría.
+
+### Catálogo Nacional de Redes (`/admin/redes`)
+
+Vista de solo lectura con todos los dispositivos territoriales que cada coordinación regional ha registrado, filtrable por región. Sirve de referencia para reportes SENDA y dirección — el alta de un dispositivo se hace desde la Coordinación Regional correspondiente, no desde aquí.
 
 ### Consola de KPIs y Reportes (`/admin/reportes`)
 

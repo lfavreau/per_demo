@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { triggerAlertRulesAction } from "@/app/actions/coordinator";
+import { resolveAlertAction } from "@/app/actions/coordinator";
+import { checkAllAlertRules } from "@/server/services/alerts.service";
+import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,12 @@ export default async function CoordinatorPage({
 
   const isDemo = Boolean(user.isDemo);
 
+  // Recalcula atrasos e inactividad en cada carga del resumen regional — nadie
+  // tiene que acordarse de apretar un botón para que las alertas existan.
+  await checkAllAlertRules(isDemo).catch((err) => {
+    console.error("No se pudieron recalcular las reglas de alerta:", err);
+  });
+
   // 1. Fetch Candidates (Fase 2 preselection funnel)
   const candidates = await prisma.pACandidate.findMany({
     where: { regionId: user.regionId, isDemo },
@@ -34,8 +42,10 @@ export default async function CoordinatorPage({
     "PREINSCRITA",
     "ENTREVISTADA",
     "ADMISIBLE",
+    "NO_ADMISIBLE",
     "SELECCIONADA",
     "EN_ESPERA",
+    "DESCARTADA",
   ];
 
   const funnelSummary = stages.map((st) => ({
@@ -55,6 +65,12 @@ export default async function CoordinatorPage({
     where: { regionId: user.regionId, isDemo },
   });
 
+  // 4. Fetch open methodological support alerts for the region
+  const activeAlerts = await prisma.alert.findMany({
+    where: { regionId: user.regionId, status: "ABIERTA", isDemo },
+    orderBy: { createdAt: "desc" },
+  });
+
   return (
     <AppShell user={user}>
       <div className="space-y-8">
@@ -67,21 +83,11 @@ export default async function CoordinatorPage({
         )}
 
         {/* Top Action Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm gap-4">
-          <div>
-            <h3 className="font-extrabold text-base text-slate-900">Coordinación Regional: {user.regionId}</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Monitoreo operativo de hitos y consolidación regional.
-            </p>
-          </div>
-          <form action={triggerAlertRulesAction}>
-            <button
-              type="submit"
-              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition active:scale-[0.98] cursor-pointer"
-            >
-              🔄 Verificar Atrasos e Inactividad
-            </button>
-          </form>
+        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
+          <h3 className="font-extrabold text-base text-slate-900">Coordinación Regional: {user.regionId}</h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Monitoreo operativo de hitos y consolidación regional.
+          </p>
         </div>
 
         {/* Indicators Summary Grid */}
@@ -154,13 +160,55 @@ export default async function CoordinatorPage({
           <h3 className="font-bold text-sm text-slate-800 mb-4">
             Distribución del Embudo de Preselección (Fase 2)
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 text-center">
             {funnelSummary.map((f) => (
               <div key={f.stage} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="block text-lg font-extrabold text-blue-700">{f.count}</span>
                 <span className="text-[9px] text-slate-500 font-bold tracking-wider">{f.stage}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Methodological support panel */}
+        <div className="p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
+          <div>
+            <h3 className="font-bold text-sm text-slate-800">Casos que Requieren Apoyo Metodológico</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Alertas abiertas por atraso o inactividad. Registra la nota de seguimiento para cerrarlas.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeAlerts.map((alert) => (
+              <div key={alert.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                <div className="flex justify-between items-center text-[10px]">
+                  <span className="font-bold text-slate-900">
+                    {mapAlertTypeToLabel(alert.type)}
+                  </span>
+                </div>
+                <form action={resolveAlertAction} className="space-y-2">
+                  <input type="hidden" name="alertId" value={alert.id} />
+                  <textarea
+                    name="note"
+                    placeholder="Registrar notas de apoyo o resolución..."
+                    required
+                    rows={3}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-[10px] outline-none focus:border-primary resize-none"
+                  ></textarea>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="py-1 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-semibold cursor-pointer"
+                    >
+                      Guardar Registro
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ))}
+            {activeAlerts.length === 0 && (
+              <p className="col-span-full text-xs text-slate-450 py-4 text-center">✔️ Todos los acompañamientos al día.</p>
+            )}
           </div>
         </div>
 

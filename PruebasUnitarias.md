@@ -420,12 +420,15 @@ El archivo más importante de la batería. Escenas E09, E16–E20, E23, E25–E2
 | `CASE-01` | Un coordinador no crea casos de otra región | E12 | `createCaseFromCandidate` con candidata de otra región → lanza *«No autorizado para operar casos de esta región»* |
 | `CASE-02` | El ADMIN sí puede operar cualquier región | E12 | Mismo escenario con rol ADMIN → tiene éxito |
 | `CASE-03` | No se asigna caso a PER no habilitado | E14 | PER `NO_HABILITADO` → lanza |
+| `CASE-03b` | **Tope de 1 caso activo por PER** | E14 | PER con un `PACase` en estado no terminal (`VINCULACION`/`CONEXION`/`FINALIZACION`) → `createCaseFromCandidate` lanza *«ya tiene un acompañamiento activo…»* (`MAX_ACTIVE_CASES_PER_PER` en [program-config.ts](src/lib/program-config.ts)). Con un caso solo en estado terminal (`EGRESO`/`RETIRO_VOLUNTARIO`/`DESERCION`) → tiene éxito |
 | `CASE-04` | El código correlativo se genera por región y es único | E14 | Primer caso de Metropolitana → `PA-MET-001`; el siguiente → `PA-MET-002` |
 | `CASE-05` | El correlativo **ignora `isDemo`** al contar | E14 | Con casos demo existentes, el primer caso real no colisiona (regresión conocida: ver comentario en [cases.service.ts:29](src/server/services/cases.service.ts:29)) |
 | `CASE-06` | Crear el caso cambia la candidata a `SELECCIONADA` y la enlaza | E14 | `convertedToCaseId` apunta al caso; se registra `CREATE_CASE` en auditoría y se notifica al PER |
-| `CASE-07` | Formalizar exige match `VALIDADO` | E14 | `formalizeMatch` sobre un match `PROPUESTO` → lanza |
-| `CASE-08` | Formalizar aprovisiona Drive + IAP y pasa a Vinculación | E14 | Se crean las 4 subcarpetas, `IAPRecord` con `driveDocId`, `stage: VINCULACION` y la primera Task del itinerario |
-| `CASE-09` | **Rollback**: si falla la copia del Acta, no queda nada a medias | E14 | `mockWorkspace({ failOn: "acta" })` → se llama al rollback de IAP y carpeta, y el caso **no** queda formalizado |
+| `CASE-07` | **Match en un solo paso**: no existen `PROPUESTO`/`VALIDADO` intermedios | E14 | `createCaseFromCandidate(...)` persiste directo con `matchStatus: "FORMALIZADO"`, `status: "VINCULACION"` — no hay una llamada separada de validación previa a la formalización |
+| `CASE-08` | Conformar la dupla aprovisiona Drive + IAP y pasa a Vinculación | E14 | Se crean las 4 subcarpetas, `IAPRecord` con `driveDocId`, `stage: VINCULACION` y la primera Task del itinerario, todo dentro de la misma llamada a `createCaseFromCandidate` |
+| `CASE-09` | **Nada a medias**: si falla la copia del Acta, no se persiste el caso | E14 | `mockWorkspace({ failOn: "acta" })` → se llama al rollback de IAP y carpeta; `provisionAndPersistCase` lanza **antes** de la transacción de Prisma, así que no queda ningún `PACase` creado (a diferencia del flujo viejo, no hay estado intermedio que limpiar) |
+| `CASE-16` | **Reasignar caso**: cambia el PER a cargo y libera el cupo del anterior | E14 | `reassignCase(caseId, newPerId, reason, ...)` → `paCase.perId` actualizado, `AuditLog` `REASSIGN_CASE` con el PER anterior/nuevo, notificación a ambos. Sin `reason` → lanza. Caso ya cerrado (`EGRESO`/`RETIRO_VOLUNTARIO`/`DESERCION`) → lanza |
+| `CASE-17` | Reasignar respeta el tope de 1 caso del PER de destino | E14 | `newPerId` con otro caso activo → lanza *«El PER de destino ya tiene un acompañamiento activo…»* |
 | `CASE-10` | Avanzar de etapa con instrumentos pendientes está bloqueado | E23 | `transitionCaseStatus(→ CONEXION)` sin gate satisfecho y sin forzar → lanza con la lista de faltantes en el mensaje |
 | `CASE-11` | Forzar sin motivo está prohibido; con motivo queda auditado | E24 | `forceAdvance: true, reason: ""` → lanza. Con motivo → transición aplicada + `AuditLog` `FORCE_STAGE_ADVANCE` con `reason` y los `activityKey` omitidos |
 | `CASE-12` | **No se egresa sin la Encuesta de Satisfacción validada** | E26 | Finalización con la encuesta pendiente → `→ EGRESO` lanza. Validándola → tiene éxito |
@@ -449,7 +452,7 @@ El archivo más importante de la batería. Escenas E09, E16–E20, E23, E25–E2
 | `SESS-05` | Validar no retrocede `lastSessionDate` | E21 | Validar un registro **anterior** al último no modifica el campo |
 | `SESS-06` | Devolver crea `Feedback`, deja `DEVUELTA` y notifica al PER | E21 | `coordinatorFeedbackId` enlazado |
 | `SESS-07` | **Sincronización offline idempotente** | E33 | Dos `logSession` con el mismo `offlineDraftId` → un solo `SessionLog`; el segundo devuelve el existente |
-| `SESS-08` | Enviar notifica a la coordinación del caso | E21 | Notificación con enlace a `/coordinacion/sesiones?highlightSessionId=…` |
+| `SESS-08` | Enviar notifica a la coordinación del caso | E21 | Notificación con enlace a `/coordinacion/alertas?highlightSessionId=…` (bandeja de validación fusionada; la ruta `/coordinacion/sesiones` ya no existe) |
 | `SESS-09` | Aislamiento demo/real | — | `isDemo` cruzado → lanza en `logSession`, `validateSession` y `returnSession` |
 
 ---
@@ -518,11 +521,14 @@ Extraer el cálculo de KPIs de [`/admin/reportes/page.tsx`](src/app/(admin)/admi
 
 ---
 
-### 5.13 `tests/actions/coordinator.action.test.ts` — L2 · Escenas E29–E31
+### 5.13 `tests/actions/admin.action.test.ts` y `tests/actions/coordinator.action.test.ts` — L2 · Escenas E29–E31
+
+`updatePerStatusAction` vive en `src/app/actions/admin.ts` y es exclusiva de rol `ADMIN` (antes admitía `COORDINATOR`; el coordinador ahora solo lee el estado, de solo lectura en `/coordinacion/supervisiones`).
 
 | ID | Caso | Escena | Aserción |
 |---|---|---|---|
 | `SUP-01` | Habilitar un PER actualiza estado, certificador y fecha | E29 | `certificationStatus: HABILITADO`, `certifiedByUserId`, `certifiedAt` |
+| `SUP-01b` | Solo ADMIN puede invocar `updatePerStatusAction` | E29 | Rol `COORDINATOR` → redirige con `?error=` (ya no autorizado) |
 | `SUP-02` | Suspender limpia `certifiedAt` | E29 | `certifiedAt: null` |
 | `SUP-03` | Registrar supervisión crea el evento de Calendar y notifica al PER | E30 | `calendarEventId` guardado + notificación + `AuditLog` `SCHEDULE_SUPERVISION` |
 | `SUP-04` | **Rollback**: si falla la escritura en BD, se revierte el evento de Calendar | E30 | Se llama `rollbackSupervisionEvent` y no queda `Supervision` |
@@ -531,6 +537,8 @@ Extraer el cálculo de KPIs de [`/admin/reportes/page.tsx`](src/app/(admin)/admi
 | `NET-02` | Una activación de red no puede cruzar región ni modo | E31 | Caso de otra región o `isDemo` distinto → lanza |
 | `NET-03` | Registrar actividad de Fase 5 | E31 | Persistida con tipo, fecha, participantes y URL |
 | `CAND-01` | Crear candidata la deja en la región de la sesión y con el `isDemo` de la sesión | E13 | Sin fuga entre modos |
+| `CAND-02` | Cambiar el estado de una candidata desde la nómina | E13 | `updateCandidateStatusAction` acepta los 9 estados oficiales (`DERIVADA`…`DESCARTADA`); persiste y aparece reflejado en el embudo del resumen regional |
+| `CAND-03` | No se puede cambiar el estado de una candidata ya convertida a caso | E13 | `convertedToCaseId` no nulo → lanza *«Ya fue convertida a un acompañamiento…»* |
 | `NOTIF-01` | Toda notificación creada lleva enlace profundo | E22 | `link` apunta a la vista exacta del recurso |
 | `NOTIF-02` | El envío push no bloquea la transacción | E22 | Falla del push → la notificación en BD igual se crea (se despacha con `setImmediate`) |
 

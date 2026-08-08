@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ensureCurrentStageTasks, getItineraryState, getCurrentGoalsForCase } from "@/server/services/itinerary.service";
@@ -11,6 +10,7 @@ import AppShell from "@/components/shell/AppShell";
 import StageItineraryBoard from "@/components/per/StageItineraryBoard";
 import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import RegistroAcompanamientoForm from "@/components/per/RegistroAcompanamientoForm";
+import SessionHighlightModal from "@/components/per/SessionHighlightModal";
 
 function daysAgo(date: Date | null): string {
   if (!date) return "sin registro";
@@ -20,12 +20,19 @@ function daysAgo(date: Date | null): string {
   return `hace ${diff} días`;
 }
 
-export default async function PERCaseStagePage({ params }: { params: Promise<{ caseId: string }> }) {
+export default async function PERCaseStagePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ caseId: string }>;
+  searchParams: Promise<{ highlightCaseId?: string; highlightSessionId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user || user.role !== "PER") {
     redirect("/login");
   }
   const { caseId } = await params;
+  const { highlightCaseId, highlightSessionId } = await searchParams;
 
   const profile = await prisma.pERProfile.findUnique({ where: { userId: user.id } });
   if (!profile) {
@@ -39,7 +46,7 @@ export default async function PERCaseStagePage({ params }: { params: Promise<{ c
   const isDemo = Boolean(user.isDemo);
   const paCase = await prisma.pACase.findUnique({ where: { id: caseId } });
   if (!paCase || paCase.perId !== profile.id || paCase.isDemo !== isDemo) {
-    redirect("/per/casos");
+    redirect("/per");
   }
 
   await ensureCurrentStageTasks(paCase.id, user.id, isDemo);
@@ -58,13 +65,27 @@ export default async function PERCaseStagePage({ params }: { params: Promise<{ c
 
   const currentGoals = state.stage === "CONEXION" ? await getCurrentGoalsForCase(paCase.id) : [];
 
+  const highlightSessionVisible =
+    !!highlightSessionId && recentSessions.some((s) => s.id === highlightSessionId);
+
+  let offscreenHighlightSession: (typeof recentSessions)[number] & { feedbackText: string | null } | null = null;
+  if (highlightSessionId && !highlightSessionVisible) {
+    const session = await prisma.sessionLog.findUnique({ where: { id: highlightSessionId } });
+    if (session && session.paCaseId === paCase.id) {
+      let feedbackText: string | null = null;
+      if (session.coordinatorFeedbackId) {
+        const feedback = await prisma.feedback.findUnique({ where: { id: session.coordinatorFeedbackId } });
+        feedbackText = feedback?.text ?? null;
+      }
+      offscreenHighlightSession = { ...session, feedbackText };
+    }
+  }
+
+  const isCaseHighlighted = highlightCaseId === paCase.id;
+
   return (
     <AppShell user={user}>
       <div className="space-y-6">
-        <Link href="/per/casos" className="text-xs font-semibold text-slate-500 hover:text-slate-700">
-          ← Mis Casos
-        </Link>
-
         {state.pendingWithdrawalStep && state.pendingWithdrawalStep.status !== "VALIDADA" && (
           <NativeInstrumentForm
             taskId={state.pendingWithdrawalStep.taskId}
@@ -76,13 +97,15 @@ export default async function PERCaseStagePage({ params }: { params: Promise<{ c
           />
         )}
 
-        <StageItineraryBoard
-          caseId={paCase.id}
-          caseCode={formatCaseLabel(paCase.code, paCase.alias)}
-          stageLabel={mapStageToLabel(state.stage)}
-          metaLine={metaLine}
-          steps={state.steps}
-        />
+        <div className={isCaseHighlighted ? "rounded-2xl animate-highlight" : undefined}>
+          <StageItineraryBoard
+            caseId={paCase.id}
+            caseCode={formatCaseLabel(paCase.code, paCase.alias)}
+            stageLabel={mapStageToLabel(state.stage)}
+            metaLine={metaLine}
+            steps={state.steps}
+          />
+        </div>
 
         {state.continuousStep && (
           <div className="space-y-4">
@@ -103,7 +126,12 @@ export default async function PERCaseStagePage({ params }: { params: Promise<{ c
                 <h3 className="font-bold text-sm text-slate-800 mb-3">Últimos Registros (5)</h3>
                 <div className="space-y-3 text-xs">
                   {recentSessions.map((s) => (
-                    <div key={s.id} className="p-3 border rounded-xl space-y-2 bg-white border-slate-200">
+                    <div
+                      key={s.id}
+                      className={`p-3 border rounded-xl space-y-2 bg-white border-slate-200 ${
+                        s.id === highlightSessionId ? "ring-2 ring-blue-300 animate-highlight" : ""
+                      }`}
+                    >
                       <div className="flex justify-between items-center border-b pb-1">
                         <span className="text-[10px] text-slate-500">Sesión #{s.sessionNumber}</span>
                         <span
@@ -127,6 +155,16 @@ export default async function PERCaseStagePage({ params }: { params: Promise<{ c
           </div>
         )}
       </div>
+
+      {offscreenHighlightSession && (
+        <SessionHighlightModal
+          sessionNumber={offscreenHighlightSession.sessionNumber}
+          date={new Date(offscreenHighlightSession.date).toLocaleDateString("es-CL")}
+          status={offscreenHighlightSession.status}
+          summary={offscreenHighlightSession.summary}
+          feedbackText={offscreenHighlightSession.feedbackText}
+        />
+      )}
     </AppShell>
   );
 }

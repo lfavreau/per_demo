@@ -1,13 +1,15 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
-import { mapCaseStatusToLabel, mapStageToLabel } from "@/lib/nomenclatures";
 
-export default async function PERDashboardPage() {
+export default async function PERDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ highlightCaseId?: string; highlightSessionId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user || user.role !== "PER") {
     redirect("/login");
@@ -23,19 +25,41 @@ export default async function PERDashboardPage() {
     );
   }
 
+  const { highlightCaseId, highlightSessionId } = await searchParams;
   const isDemo = Boolean(user.isDemo);
 
-  const activeCases = await prisma.pACase.findMany({
+  // Session notifications only carry the sessionId; resolve it to its case so
+  // we can route straight into the case detail (the "instrumento" view) where
+  // that session is actually rendered.
+  let resolvedCaseId = highlightCaseId;
+  if (!resolvedCaseId && highlightSessionId) {
+    const session = await prisma.sessionLog.findUnique({
+      where: { id: highlightSessionId },
+      select: { paCaseId: true },
+    });
+    resolvedCaseId = session?.paCaseId;
+  }
+
+  if (resolvedCaseId) {
+    const highlightQuery = new URLSearchParams();
+    if (highlightCaseId) highlightQuery.set("highlightCaseId", highlightCaseId);
+    if (highlightSessionId) highlightQuery.set("highlightSessionId", highlightSessionId);
+    redirect(`/per/casos/${resolvedCaseId}/etapa?${highlightQuery.toString()}`);
+  }
+
+  // Un PER lleva como máximo un acompañamiento activo a la vez, así que esta
+  // vista solo necesita decidir entre redirigir al instrumento o mostrar el
+  // estado vacío — nunca hay una lista que recorrer.
+  const activeCase = await prisma.pACase.findFirst({
     where: {
       perId: profile.id,
       isDemo,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
-    include: { candidate: true },
   });
 
-  if (activeCases.length === 1) {
-    redirect(`/per/casos/${activeCases[0].id}/etapa`);
+  if (activeCase) {
+    redirect(`/per/casos/${activeCase.id}/etapa`);
   }
 
   return (
@@ -55,32 +79,7 @@ export default async function PERDashboardPage() {
 
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
           <h3 className="font-bold text-sm text-slate-800 mb-3">Mi Agenda</h3>
-          {activeCases.length === 0 ? (
-            <p className="text-slate-400 text-center py-4 text-xs">No tienes acompañamientos activos asignados.</p>
-          ) : (
-            <div className="space-y-2 text-xs">
-              {activeCases.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/per/casos/${c.id}/etapa`}
-                  className="flex justify-between items-center p-3 border border-border rounded-xl bg-secondary/20 hover:bg-secondary/40 transition"
-                >
-                  <div>
-                    <span className="font-extrabold text-blue-700">{c.code}</span>
-                    <span className="text-[10px] text-slate-400 ml-2">({c.type})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">
-                      {mapStageToLabel(c.stage)}
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold text-[10px]">
-                      {mapCaseStatusToLabel(c.status)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+          <p className="text-slate-400 text-center py-4 text-xs">No tienes un acompañamiento activo asignado.</p>
         </div>
       </div>
     </AppShell>

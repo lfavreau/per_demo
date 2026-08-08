@@ -5,6 +5,10 @@
  *   API_SHARED_SECRET, ROOT_FOLDER_ID, TEMPLATE_DOC_ID,
  *   SPREADSHEET_ID y CALENDAR_ID.
  *
+ * Servicio avanzado obligatorio: Drive (Servicios > Drive API). Sin él no se puede
+ * leer la revisión real de un archivo y los documentos quedan sin trazabilidad de
+ * versión. Ejecutar authorizeWorkspace() comprueba que esté habilitado.
+ *
  * Desplegar como Web App, ejecutar como el usuario que despliega y usar
  * exclusivamente la URL de producción terminada en /exec.
  */
@@ -29,7 +33,8 @@ function doPost(e) {
           data.caseCode,
           data.regionId,
           data.perId,
-          data.requestId
+          data.requestId,
+          data.perFolderName
         );
         break;
       case "commitCaseFolderHierarchy":
@@ -97,6 +102,9 @@ function doPost(e) {
       case "rollbackValidatedCopy":
         result = rollbackValidatedCopy(data.fileId, data.copyRequestId);
         break;
+      case "syncCaseDocuments":
+        result = syncCaseDocuments(data.caseCode, data.documents, data.requestId);
+        break;
       default:
         throw new Error("Acción no soportada");
     }
@@ -144,10 +152,22 @@ function authorizeWorkspace() {
     throw new Error("CALENDAR_ID no corresponde a un calendario accesible");
   }
 
+  if (typeof Drive === "undefined" || !Drive.Revisions) {
+    throw new Error(
+      "Falta habilitar el servicio avanzado Drive API (Servicios > Drive). " +
+        "Sin él no se puede registrar la revisión real de los documentos."
+    );
+  }
+  var templateRevision = getLatestRevisionId_(values.TEMPLATE_DOC_ID);
+  if (!templateRevision) {
+    throw new Error("Drive API está habilitado pero no devolvió revisiones para TEMPLATE_DOC_ID");
+  }
+
   var result = {
     success: true,
     rootFolder: rootFolder.getName(),
     template: templateFile.getName(),
+    templateRevision: templateRevision,
     spreadsheet: spreadsheet.getName(),
     calendar: calendar.getName()
   };
@@ -208,6 +228,24 @@ function safeFolderName_(value) {
     .trim();
 }
 
+// La revisión real de un archivo solo la expone el servicio avanzado Drive, no DriveApp.
+// Devuelve null si el servicio no está habilitado o el archivo no tiene historial legible:
+// es preferible guardar null a guardar un identificador inventado que no apunta a nada.
+// Drive v2 responde en "items" y v3 en "revisions"; se aceptan ambas formas.
+function getLatestRevisionId_(fileId) {
+  try {
+    if (typeof Drive === "undefined" || !Drive.Revisions) return null;
+    var response = Drive.Revisions.list(fileId);
+    var items = (response && (response.items || response.revisions)) || [];
+    if (!items.length) return null;
+    var latest = items[items.length - 1];
+    return latest && latest.id ? String(latest.id) : null;
+  } catch (error) {
+    console.error("No se pudo leer la revisión de " + fileId + ": " + error);
+    return null;
+  }
+}
+
 function getSingleChildFolder_(parent, name) {
   var iterator = parent.getFoldersByName(name);
   if (!iterator.hasNext()) return null;
@@ -223,10 +261,15 @@ function getOrCreateChildFolder_(parent, name) {
   return existing || parent.createFolder(name);
 }
 
-function createCaseFolderHierarchy(caseCode, regionId, perId, requestId) {
+function createCaseFolderHierarchy(caseCode, regionId, perId, requestId, perFolderName) {
   caseCode = safeFolderName_(caseCode);
   regionId = safeFolderName_(regionId);
   perId = safeFolderName_(perId);
+  // Nombre legible del PER ("PER_Juana_Rojas_a7bt3z"). Los casos aprovisionados antes de
+  // este cambio viven bajo "PER_{cuid}", ilegible al navegar Drive: si aparece esa carpeta
+  // se renombra en sitio en vez de crear una nueva, para no partir el historial del PER.
+  var legacyPerFolderName = "PER_" + perId;
+  var desiredPerFolderName = perFolderName ? safeFolderName_(perFolderName) : legacyPerFolderName;
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -236,7 +279,21 @@ function createCaseFolderHierarchy(caseCode, regionId, perId, requestId) {
 
     var rootFolder = DriveApp.getFolderById(rootFolderId);
     var regionFolder = getOrCreateChildFolder_(rootFolder, regionId);
-    var perFolder = getOrCreateChildFolder_(regionFolder, "PER_" + perId);
+
+    var perFolder = getSingleChildFolder_(regionFolder, desiredPerFolderName);
+    if (!perFolder) {
+      var legacyPerFolder =
+        desiredPerFolderName === legacyPerFolderName
+          ? null
+          : getSingleChildFolder_(regionFolder, legacyPerFolderName);
+      if (legacyPerFolder) {
+        legacyPerFolder.setName(desiredPerFolderName);
+        perFolder = legacyPerFolder;
+      } else {
+        perFolder = regionFolder.createFolder(desiredPerFolderName);
+      }
+    }
+
     var caseFolder = getSingleChildFolder_(perFolder, caseCode);
     var createdCaseFolder = false;
 
@@ -466,7 +523,7 @@ function copyActaPrimerEncuentro(fileId, destinationFolderId, caseCode, requestI
     if (matches.hasNext()) throw new Error("Existen Actas duplicadas para " + caseCode);
     return {
       newFileId: existing.getId(),
-      newRevisionId: "existing",
+      newRevisionId: getLatestRevisionId_(existing.getId()),
       fileName: existing.getName(),
       fileUrl: existing.getUrl(),
       createdCopy: false,
@@ -478,7 +535,7 @@ function copyActaPrimerEncuentro(fileId, destinationFolderId, caseCode, requestI
   copied.setDescription(PROVISIONING_PREFIX + requestId);
   return {
     newFileId: copied.getId(),
-    newRevisionId: Utilities.getUuid(),
+    newRevisionId: getLatestRevisionId_(copied.getId()),
     fileName: copied.getName(),
     fileUrl: copied.getUrl(),
     createdCopy: true,
@@ -500,7 +557,7 @@ function copyToValidados(fileId, destFolderId, caseCode, instrumentName, version
     if (matches.hasNext()) throw new Error("Existen copias validadas duplicadas");
     return {
       newFileId: existing.getId(),
-      newRevisionId: "existing",
+      newRevisionId: getLatestRevisionId_(existing.getId()),
       fileName: existing.getName(),
       fileUrl: existing.getUrl(),
       createdCopy: false,
@@ -512,7 +569,7 @@ function copyToValidados(fileId, destFolderId, caseCode, instrumentName, version
   copied.setDescription(PROVISIONING_PREFIX + requestId);
   return {
     newFileId: copied.getId(),
-    newRevisionId: Utilities.getUuid(),
+    newRevisionId: getLatestRevisionId_(copied.getId()),
     fileName: copied.getName(),
     fileUrl: copied.getUrl(),
     createdCopy: true,
@@ -536,4 +593,148 @@ function rollbackValidatedCopy(fileId, copyRequestId) {
   }
   file.setTrashed(true);
   return { rolledBack: true };
+}
+
+// --- Documentos generados por la app (instrumentos NATIVE_FORM materializados en Drive) ---
+//
+// Un lote por caso: cada elemento de "documents" o se crea copiando una plantilla, o —si ya
+// existe (corrección validada de nuevo)— se reconstruye en el mismo archivo para conservar
+// fileId y URL. El historial de la corrección queda en las revisiones nativas de Drive, no en
+// archivos "_v1", "_v2".
+//
+// Tolerante a fallas parciales a propósito: un documento con plantilla mal configurada no debe
+// tumbar los demás del lote. Los que fallan vuelven en "errors" y quedan pendientes para el
+// próximo intento (siguiente cierre de etapa o botón de forzado).
+function syncCaseDocuments(caseCode, documents, requestId) {
+  caseCode = safeFolderName_(caseCode);
+  if (!documents || !documents.length) throw new Error("No se recibieron documentos para sincronizar");
+  if (documents.length > 15) throw new Error("Demasiados documentos en un solo lote (máximo 15)");
+
+  var props = PropertiesService.getScriptProperties();
+  var results = [];
+  var errors = [];
+
+  documents.forEach(function (doc) {
+    try {
+      results.push(syncSingleCaseDocument_(caseCode, doc, props));
+    } catch (error) {
+      errors.push({
+        activityKey: doc && doc.activityKey,
+        message: String((error && error.message) || error)
+      });
+    }
+  });
+
+  return { results: results, errors: errors, requestId: requestId };
+}
+
+function syncSingleCaseDocument_(caseCode, doc, props) {
+  var activityKey = requireText_(doc.activityKey, "activityKey");
+  var fileSuffix = safeFolderName_(doc.fileSuffix || activityKey).replace(/\s+/g, "_");
+  var fileName = caseCode + "_" + fileSuffix;
+
+  var templateId = props.getProperty("TEMPLATE_DOC_" + activityKey);
+  if (!templateId) throw new Error("Falta configurar TEMPLATE_DOC_" + activityKey + " en las propiedades del script");
+
+  var docFile;
+  var created = false;
+
+  if (doc.existingFileId) {
+    docFile = DriveApp.getFileById(requireText_(doc.existingFileId, "existingFileId"));
+    if (docFile.isTrashed()) throw new Error("El documento existente está en la papelera");
+    rebuildDocumentFromTemplate_(docFile.getId(), templateId, doc.fields, doc.tables);
+  } else {
+    var destination = DriveApp.getFolderById(requireText_(doc.targetFolderId, "targetFolderId"));
+    var matches = destination.getFilesByName(fileName);
+    if (matches.hasNext()) {
+      docFile = matches.next();
+      if (matches.hasNext()) throw new Error("Existen documentos duplicados llamados " + fileName);
+      rebuildDocumentFromTemplate_(docFile.getId(), templateId, doc.fields, doc.tables);
+    } else {
+      docFile = DriveApp.getFileById(templateId).makeCopy(fileName, destination);
+      fillDocumentFields_(docFile.getId(), doc.fields, doc.tables);
+      created = true;
+    }
+  }
+
+  return {
+    activityKey: activityKey,
+    fileId: docFile.getId(),
+    revisionId: getLatestRevisionId_(docFile.getId()),
+    fileUrl: docFile.getUrl(),
+    created: created
+  };
+}
+
+// Una corrección no puede volver a aplicar replaceText sobre el mismo archivo: los
+// placeholders de la copia original ya fueron reemplazados en la validación anterior. En vez
+// de crear un archivo nuevo (lo que cambiaría el fileId), se vacía el cuerpo y se reimporta el
+// de la plantilla, para volver a tener placeholders limpios sobre el mismo documento.
+function rebuildDocumentFromTemplate_(fileId, templateId, fields, tables) {
+  var doc = DocumentApp.openById(fileId);
+  var body = doc.getBody();
+  body.clear();
+  appendTemplateBody_(body, templateId);
+  doc.saveAndClose();
+  fillDocumentFields_(fileId, fields, tables);
+}
+
+// DocumentApp no ofrece "importar el contenido de otro documento": se copian los elementos del
+// cuerpo de la plantilla uno por uno. Cubre los tipos de elemento que usan las plantillas
+// actuales (párrafos, listas, tablas); no cubre imágenes ni saltos de sección, que no se usan.
+function appendTemplateBody_(targetBody, templateId) {
+  var templateBody = DocumentApp.openById(templateId).getBody();
+  var count = templateBody.getNumChildren();
+  for (var i = 0; i < count; i++) {
+    var child = templateBody.getChild(i).copy();
+    var type = child.getType();
+    if (type === DocumentApp.ElementType.TABLE) {
+      targetBody.appendTable(child);
+    } else if (type === DocumentApp.ElementType.LIST_ITEM) {
+      targetBody.appendListItem(child);
+    } else if (type === DocumentApp.ElementType.PARAGRAPH) {
+      targetBody.appendParagraph(child);
+    }
+  }
+}
+
+function fillDocumentFields_(fileId, fields, tables) {
+  var doc = DocumentApp.openById(fileId);
+  var body = doc.getBody();
+
+  Object.keys(fields || {}).forEach(function (key) {
+    var pattern = "\\{\\{" + escapeRegex_(key) + "\\}\\}";
+    body.replaceText(pattern, escapeReplacement_(String(fields[key] || "")));
+  });
+
+  (tables || []).forEach(function (table) {
+    insertTableAtPlaceholder_(body, table.placeholder, table.header, table.rows);
+  });
+
+  doc.saveAndClose();
+}
+
+// La tabla reemplaza al párrafo completo que contiene el placeholder "{{PLACEHOLDER}}" —así la
+// plantilla no necesita dejar una tabla vacía prearmada con un número de filas fijo.
+function insertTableAtPlaceholder_(body, placeholder, header, rows) {
+  var pattern = "\\{\\{" + escapeRegex_(placeholder) + "\\}\\}";
+  var found = body.findText(pattern);
+  if (!found) return; // La plantilla no trae esta tabla: se omite en vez de fallar el documento entero.
+
+  var paragraph = found.getElement().getParent();
+  var index = body.getChildIndex(paragraph);
+  var values = [header].concat(rows || []);
+
+  body.insertTable(index, values);
+  body.removeChild(body.getChild(index + 1));
+}
+
+function escapeRegex_(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Body.replaceText trata "$" como referencia a grupo de captura en el reemplazo: sin escapar,
+// un valor de campo que contenga "$" (montos, por ejemplo) corrompería el resultado.
+function escapeReplacement_(value) {
+  return value.replace(/\$/g, "$$$$");
 }

@@ -6,7 +6,9 @@ import {
   toggleUserStatusAction,
   updatePERUserAction,
   deletePERUserAction,
+  updatePerStatusAction,
 } from "@/app/actions/admin";
+import { REGION_NAMES as REGIONS } from "@/lib/program-config";
 
 interface UserWithProfile {
   id: string;
@@ -27,14 +29,6 @@ interface UserManagementClientProps {
   successMsg?: string | null;
   errorMsg?: string | null;
 }
-
-const REGIONS = [
-  "Metropolitana",
-  "Valparaíso",
-  "Tarapacá",
-  "Biobío",
-  "Los Ríos",
-];
 
 export default function UserManagementClient({
   users,
@@ -86,6 +80,8 @@ export default function UserManagementClient({
               ? "Datos del acompañante PER actualizados correctamente."
               : successMsg === "user_deleted"
               ? "Acompañante PER eliminado correctamente."
+              : successMsg === "cert_updated"
+              ? "Estado de habilitación actualizado correctamente."
               : "Operación realizada con éxito."}
           </span>
         </div>
@@ -109,6 +105,10 @@ export default function UserManagementClient({
               ? "No se pudo eliminar: el usuario tiene registros asociados que lo impiden. Desactívalo en su lugar."
               : errorMsg === "user_not_found"
               ? "No se encontró el usuario indicado."
+              : errorMsg === "invalid_certification_status"
+              ? "Estado de habilitación inválido."
+              : errorMsg === "mode_mismatch"
+              ? "El acompañante no pertenece al modo de trabajo actual (Demo/Real)."
               : "Ocurrió un error al procesar la solicitud."}
           </span>
         </div>
@@ -146,6 +146,7 @@ export default function UserManagementClient({
                   <th className="py-3 px-4">Acompañante</th>
                   <th className="py-3 px-4">Usuario / Email</th>
                   <th className="py-3 px-4">Región / Coordinador</th>
+                  <th className="py-3 px-4 text-center">Habilitación</th>
                   <th className="py-3 px-4 text-center">Estado</th>
                   <th className="py-3 px-4 text-right">Acción</th>
                 </tr>
@@ -159,6 +160,31 @@ export default function UserManagementClient({
                       <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold text-[10px] border border-blue-100">
                         📍 {per.regionId}
                       </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {per.profile ? (
+                        <form action={updatePerStatusAction} className="flex flex-col items-center gap-1">
+                          <input type="hidden" name="perId" value={per.profile.id} />
+                          <select
+                            name="status"
+                            defaultValue={per.profile.certificationStatus}
+                            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] border outline-none cursor-pointer ${
+                              per.profile.certificationStatus === "HABILITADO"
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                : per.profile.certificationStatus === "PENDIENTE"
+                                ? "bg-amber-100 text-amber-800 border-amber-200"
+                                : "bg-red-100 text-red-800 border-red-200"
+                            }`}
+                          >
+                            <option value="HABILITADO">Habilitado</option>
+                            <option value="PENDIENTE">Pendiente</option>
+                            <option value="NO_HABILITADO">No Habilitado</option>
+                          </select>
+                        </form>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {per.active ? (

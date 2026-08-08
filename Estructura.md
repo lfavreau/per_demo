@@ -33,14 +33,16 @@ El proyecto está construido sobre **Next.js (App Router)** utilizando la versi�
     ├── components/
     │   ├── shell/AppShell.tsx  # Contenedor principal con menús responsivos y campana de avisos
     │   ├── admin/               # InstrumentPlacementEditor.tsx (etapa + orden editable)
-    │   ├── coordinator/         # ItineraryValidationPanel, StageAdvanceButton, WithdrawalGate
-    │   ├── per/                 # StageItineraryBoard, NativeInstrumentForm, RegistroAcompanamientoForm, ExternalLinkStepForm, CompletedStepSummary
+    │   ├── coordinator/         # ItineraryValidationPanel, StageAdvanceButton, WithdrawalGate, CandidateStatusSelect
+    │   ├── per/                 # StageItineraryBoard, NativeInstrumentForm, RegistroAcompanamientoForm, ExternalLinkStepForm, CompletedStepSummary, SessionHighlightModal
+    │   ├── sessions/SessionValidationQueue.tsx # Bandeja de Registros de Acompañamiento pendientes, compartida por /coordinacion/alertas
     │   └── PWARegistration.tsx # Registrador del Service Worker e iniciador de suscripciones push
     ├── lib/
     │   ├── db.ts                # Selección dinámica de adaptador Prisma (Turso vs. SQLite local)
     │   ├── auth.ts               # Sesión firmada por cookie; modo demo/real definido por el método de login, no por el usuario
     │   ├── instrument-itinerary.ts # Catálogo puro del itinerario secuencial (actividades, campos de formulario, gating por etapa)
-    │   └── nomenclatures.ts     # Traducción de estados a etiquetas oficiales + formatCaseLabel (código + alias)
+    │   ├── nomenclatures.ts     # Traducción de estados a etiquetas oficiales + formatCaseLabel (código + alias)
+    │   └── program-config.ts   # Parámetros del programa: REGIONS (cupo), MAX_ACTIVE_CASES_PER_PER, SUPERVISION_ALERT_DAYS
     └── server/services/         # Lógica de negocio: cases, tasks, sessions, itinerary, instruments, alerts, push
 ```
 
@@ -74,9 +76,10 @@ Panel de control centralizado enfocado en la transparencia, auditoría y control
 
 #### 1. Gestión de Usuarios (`/admin/usuarios`)
 * **Función**: Alta, edición, baja y activación/desactivación de las cuentas de Acompañantes PER. Muestra por separado la nómina de PER (editable) y la de los 5 Coordinadores Regionales (fijos).
-* **Crear**: Formulario con nombre, usuario y coordinación regional asignada; genera el correo institucional `usuario@per2026.cl` automáticamente.
+* **Crear**: Formulario con nombre, usuario y coordinación regional asignada; genera el correo institucional `usuario@per2026.cl` automáticamente. El PER nace **`HABILITADO`** — se asume que la contratación y el criterio de habilitación ya se resolvieron en la reunión de coordinación, fuera de la app; la app solo deja constancia.
+* **Habilitación**: selector inline por fila (Habilitado / Pendiente / No Habilitado, `updatePerStatusAction`) — se usa como excepción para suspender a alguien, no como paso obligatorio de alta. Es exclusivo de Admin desde este cambio; el coordinador ve el estado pero no puede modificarlo (ver `/coordinacion/supervisiones`).
 * **Editar / Eliminar**: Ambas acciones abren un modal que exige la **contraseña compartida de modo real** (`verifyRealModePassword()` en `src/lib/auth.ts`) antes de aplicar el cambio. La eliminación se bloquea a nivel de servidor (`src/app/actions/admin.ts`) si el PER tiene algún `PACase` asociado, para no dejar casos huérfanos.
-* **Auditoría**: Creación, edición y eliminación quedan registradas como `CREACION_USUARIO_PER` / `EDICION_USUARIO_PER` / `ELIMINACION_USUARIO_PER` en `AuditLog`.
+* **Auditoría**: Creación, edición y eliminación quedan registradas como `CREACION_USUARIO_PER` / `EDICION_USUARIO_PER` / `ELIMINACION_USUARIO_PER` en `AuditLog`; los cambios de habilitación como `HABILITACION_PER` / `SUSPENSION_PER`.
 
 #### 2. Consola de KPIs y Reportes Oficiales (`/admin/reportes`)
 * **Función**: Panel cuantitativo que calcula y muestra las **8 métricas críticas del convenio** exigidas por SENDA (adherencia $\ge 3$ meses, tasa del 60% de casos nuevos, evaluación ex-ante/ex-post completadas al 80%, entre otros).
@@ -93,58 +96,64 @@ Panel de control centralizado enfocado en la transparencia, auditoría y control
 * **Función**: Registro cronológico e inalterable de cada mutación de datos clave en la plataforma (creación de casos, asignación de duplas, egresos, retiros forzados, y configuraciones).
 * **Auditoría**: Registra el ID de usuario, rol, fecha, acción, dirección IP y los valores previos/nuevos en formato JSON para evidenciar el control técnico ante los auditores de SENDA.
 
+#### 5. Catálogo Nacional de Redes (`/admin/redes`)
+* **Función**: vista de solo lectura, consolidada a nivel país, del catálogo de dispositivos territoriales que cada coordinación regional carga desde `/coordinacion/redes`. Sirve como referencia para reportes SENDA y dirección — el alta sigue gestionándose desde cada región, no desde aquí.
+* **Componentes**: tabla con filtro por región y conteo de activaciones por dispositivo (`_count.activations`).
+
 ---
 
 ### B. Vista del Coordinador Técnico Regional (`(coord)/coordinacion`)
 
 Panel de control enfocado en el monitoreo diario de casos, validación metodológica y soporte técnico regional.
 
+#### 0. Resumen Regional (`/coordinacion`)
+* **Función**: Tablero de aterrizaje del coordinador. Al cargar la página, ejecuta automáticamente `checkAllAlertRules()` — ya no existe un botón manual "Verificar Atrasos e Inactividad"; las alertas de atraso/inactividad se recalculan solas en cada visita.
+* **Componentes**:
+  - Indicadores de hitos regionales, casos activos y nómina de preselección.
+  - **Distribución del Embudo de Preselección**: los **9 estados oficiales** de `PACandidate` (Derivada, Contactada, Preinscrita, Entrevistada, Admisible, No Admisible, Seleccionada, En espera, Descartada), con conteos reales — cada uno alcanzable desde la nómina, no solo valores de siembra.
+  - **Casos que Requieren Apoyo Metodológico**: panel de alertas abiertas (`Alert.status = "ABIERTA"`) con formulario de nota de resolución (`resolveAlertAction`). Antes vivía en `/coordinacion/alertas`; se movió aquí porque es el mismo tablero donde ya se recalculan.
+
 #### 1. Nómina y Preselección de Candidatas (`/coordinacion/candidatas`)
-* **Función**: Control del funnel de Fase 2 para el ingreso de personas acompañadas.
-* **Componentes**: Muestra el funnel metodológico interactivo a través de sus **7 estados oficiales** (Derivada $\rightarrow$ Contactada $\rightarrow$ Preinscrita $\rightarrow$ Entrevistada $\rightarrow$ Admisible $\rightarrow$ Seleccionada $\rightarrow$ En espera).
-* **Conformación de Duplas**: Formulario para asignar a una candidata admisible con un acompañante PER habilitado en la región, ingresando la fundamentación técnica que justifica el match de la dupla.
+* **Función**: Control del funnel de Fase 2 para el ingreso de personas acompañadas. La tabla lista **toda** la nómina (no solo los estados aptos para match); cada fila tiene un selector de estado editable en un clic (`CandidateStatusSelect`, `updateCandidateStatusAction`) que se bloquea una vez que la persona fue convertida a caso (`convertedToCaseId`).
+* **Conformación de Duplas — match en un solo paso**: el formulario pide candidata (solo `SELECCIONADA`/`ADMISIBLE`), **PER disponible** (el desplegable ya excluye a quien tenga un acompañamiento activo — tope de 1 caso por PER, `MAX_ACTIVE_CASES_PER_PER` en `src/lib/program-config.ts`), fundamentación y el **Acta de Primer Encuentro**. Al enviar, `createCaseFromCandidate()` aprovisiona la carpeta de Drive, el IAP y la copia del Acta, y crea el caso directo en `matchStatus: "FORMALIZADO"` / `status: "VINCULACION"` — ya no existen los pasos intermedios `PROPUESTO` → `VALIDADO` que exigían dos clics de coordinación. Si el aprovisionamiento en Drive falla, no se escribe nada en la base: el coordinador reintenta el mismo formulario.
 
 #### 2. Acompañamientos y validación del itinerario (`/coordinacion/casos`)
 * **Funcionamiento**: Ficha de caso con timeline metodológico (cambios de fase, intentos de contacto, registros de acompañamiento y eventos de tareas) más el componente `ItineraryValidationPanel`, que muestra el paso actual del itinerario que el PER envió y permite **"✅ Validar"** o **"❌ Devolver"** (con observación obligatoria).
 * **Avance de Fase**: `StageAdvanceButton` habilita el botón de transición (`VINCULACION` $\rightarrow$ `CONEXION` $\rightarrow$ `FINALIZACION` $\rightarrow$ `EGRESO`) solo cuando `assertStageAdvanceAllowed()` confirma que todos los instrumentos con `countsTowardStageGate: true` de la etapa actual están validados. Si falta alguno, muestra la lista de pendientes y un botón de **"Forzar avance de etapa"** que exige un motivo escrito y queda auditado.
 * **Validación de Bloqueos (Egreso)**: El gate de la etapa Finalización exige *Actividad 5 (Final)*, *Actividad 6* y la *Encuesta de Satisfacción* validadas. En caso de omisión, despliega un banner de advertencia contextual: *«Requisito Metodológico del Convenio»*.
 * **Retiro Voluntario y Deserción**: `WithdrawalGate` habilita bajo demanda el Formulario de Abandono correspondiente (persona acompañada o PER) — un instrumento más del catálogo con `triggerCondition: "ON_WITHDRAWAL"` — que debe completarse y validarse antes de cerrar el caso. Exige al menos 3 intentos de contacto registrados previamente en la base de datos antes de permitir marcar deserción voluntaria.
+* **Reasignar Acompañante**: tarjeta visible en cualquier caso no cerrado. `reassignCaseAction` → `reassignCase()` cambia el PER a cargo (validando tope de 1 caso, habilitación y misma región), libera el cupo del PER anterior, audita `REASSIGN_CASE` y notifica a ambos. Es el CRUD de excepción para corregir una dupla ya formalizada, ahora que el match no pasa por un estado intermedio revisable.
 
-#### 3. Validación de Registros de Acompañamiento (`/coordinacion/sesiones`)
-* **Función**: Bandeja de entrada y revisión metodológica de los Registros de Acompañamiento (encuentros recurrentes de la etapa Conexión, modelo `SessionLog`) enviados por los PER — independiente del panel de itinerario del punto anterior.
+#### 3. Dotación PER y Supervisiones (`/coordinacion/supervisiones`)
+* **Función**: Monitorea el cumplimiento metodológico del pilotaje (frecuencia de supervisión técnica).
 * **Componentes**:
-  - **Bandeja de Entrada**: Tarjetas de vista previa responsiva con resumen de registros en estado `ENVIADA`.
-  - **Modal de Detalle Completo**: Al hacer clic en una tarjeta, se abre una ventana modal con todos los campos del `SessionLog` (Fecha, Modalidad, Ámbito de Recuperación, Objetivo asociado, Emoción, Descripción y Reflexión del PER).
-  - **Acciones y Retroalimentación**: Permite aprobar el registro directamente o escribir comentarios de observación en un campo dedicado y devolverlo al PER en el pie del mismo modal.
-
-#### 4. Dotación PER y Supervisiones (`/coordinacion/supervisiones`)
-* **Función**: Monitorea el estado de habilitación técnica de los acompañantes y controla el cumplimiento metodológico del pilotaje.
-* **Componentes**:
-  - **Listado de PER**: Registro de acompañantes regionales indicando su estado (*Habilitado* o *Pendiente*) y si firmaron/validaron su Código de Ética. **Incluye botones de acción para que el Coordinador o Admin pueda Habilitar o Suspender directamente a un profesional desde la interfaz**, actualizando su estatus para permitirle o bloquearle la asignación de tareas críticas y casos nuevos.
+  - **Listado de PER**: Registro de acompañantes regionales, su estado real de habilitación (*Habilitado* / *Pendiente* / *No Habilitado*, de solo lectura) y si tienen o no un acompañamiento activo. **La habilitación/suspensión ya no se gestiona desde aquí** — es de solo lectura, con una nota que apunta a `/admin/usuarios`. El coordinador no vuelve a decidir sobre certificación PER; esa decisión se toma en la reunión de coordinación y se registra en admin.
+  - **Umbrales de alerta**: 15 días sin supervisión → amarillo, 30 días → rojo. Constantes en `SUPERVISION_ALERT_DAYS` (`src/lib/program-config.ts`).
   - **Supervisión Técnica**: Formulario para registrar las reuniones semanales obligatorias de supervisión de dupla. Genera automáticamente una cita de reunión y enlace de Google Meet mediante la API de Google Calendar y notifica al PER.
 
-#### 5. Gestión de Redes e Integración Social (`/coordinacion/redes`)
-* **Función**: Catálogo de dispositivos y mapa de actores territoriales activos para derivaciones e integración de Fase 5.
+#### 4. Gestión de Redes e Integración Social (`/coordinacion/redes`)
+* **Función**: Catálogo de dispositivos y mapa de actores territoriales activos para derivaciones e integración de Fase 5. Alta y baja de dispositivos por región — el coordinador es quien descubre en terreno qué actor falta cargar, así que el alta se mantiene aquí (no en admin).
 * **Componentes**:
-  - **Dispositivos Territoriales**: Registro de instituciones y redes locales (Salud, Empleo, Educación, Habitabilidad, etc.) con sus personas de contacto.
+  - **Dispositivos Territoriales**: Registro de instituciones y redes locales (Salud, Empleo, Educación, Habitabilidad, etc.) con sus personas de contacto, con formulario de alta (`registerNetworkDeviceAction`).
   - **Activación de Red**: Bitácora de derivaciones que asocia un caso con un dispositivo de la red territorial, registrando el informe de vinculación social.
   - **Actividades Grupales**: Registro de encuentros de equipos, Focus Groups regionales y Open Spaces de Fase 5.
+  - Existe además una vista nacional de solo lectura en `/admin/redes` (ver sección A.5), consolidada para reportes SENDA y dirección.
 
-#### 6. Alertas, Hitos y Entregables (`/coordinacion/alertas`)
-* **Función**: Central de notificaciones críticas del pilotaje.
+#### 5. Bandeja de Validación (`/coordinacion/alertas`)
+* **Función**: bandeja única para "lo que el PER envió y espera revisión" — antes eran dos ítems de menú separados (`/coordinacion/sesiones` y la mitad de `/coordinacion/alertas`); ahora es un solo gesto.
 * **Componentes**:
-  - **Hitos Pendientes**: Muestra hitos documentales enviados por los PER (IAP, Evaluaciones Intermedia/Ex-Post, etc.) pendientes de aprobación.
-  - **Alertas de Inactividad**: Alertas automáticas gatilladas por el sistema si una dupla registra inactividad metodológica (sin Registros de Acompañamiento) durante 14 días.
-  - **Instrumento pendiente de validación / Etapa estancada**: reglas nuevas del itinerario que alertan cuando un paso lleva enviado varios días sin que coordinación lo revise, o cuando un caso no avanza de etapa a pesar de tener todo validado.
+  - **Registros de Acompañamiento Pendientes** (`SessionValidationQueue`): tarjetas de vista previa de `SessionLog` en estado `ENVIADA`; al hacer clic se abre un modal con el detalle completo (Fecha, Modalidad, Ámbito, Objetivo, Emoción, Descripción, Reflexión del PER) y las acciones de Aprobar/Devolver. Si una notificación trae `?highlightSessionId=`, el modal se abre solo al cargar la página.
+  - **Hitos y Entregables en Espera de Validación**: hitos documentales enviados por los PER (IAP, Evaluaciones Intermedia/Ex-Post, etc.) pendientes de aprobación — el mismo bloque que antes vivía aquí.
+  - Las alertas de inactividad (Caso sin sesión, Tarea atrasada, Instrumento pendiente de validación, Etapa estancada) ya no se disparan desde un botón en esta página: se recalculan automáticamente al cargar `/coordinacion` (ver sección 0) y se resuelven desde el panel "Casos que Requieren Apoyo Metodológico" ahí mismo.
 
 ---
 
 ### C. Vista del Par Especialista en Recuperación (`(per)/per`)
 
-Aplicación móvil PWA (diseño de un toque y carga veloz) pensada para el trabajo en terreno de los acompañantes PER. Navegación fija de 3 pestañas: **Mi Agenda** (`/per`), **Casos Activos** (`/per/casos`) y **Avisos** (`/per/avisos`).
+Aplicación móvil PWA (diseño de un toque y carga veloz) pensada para el trabajo en terreno de los acompañantes PER. Navegación fija de **2 pestañas**: **Mi Agenda** (`/per`) y **Avisos** (`/per/avisos`). Un PER lleva como máximo un acompañamiento activo a la vez (`MAX_ACTIVE_CASES_PER_PER` en `src/lib/program-config.ts`), así que ya no existe una pestaña ni ruta "Casos Activos" — con tope 1 esa lista nunca tendría más de un elemento.
 
-#### 1. Mi Agenda y Casos Activos
-* **Función**: `/per` lista los acompañamientos activos y redirige directo a la etapa del caso si el PER tiene solo uno asignado. `/per/casos` muestra el listado completo, con `formatCaseLabel()` mostrando el alias junto al código cuando existe (ej. `PA-MET-001 (Fer)`).
+#### 1. Mi Agenda
+* **Función**: `/per` resuelve directo a la etapa del único caso activo del PER (`redirect`) o muestra el estado vacío "No tienes un acompañamiento activo asignado" si no tiene ninguno. Las notificaciones que traen `?highlightCaseId=` o `?highlightSessionId=` se resuelven aquí mismo al caso correspondiente antes de redirigir, para no perder el destino aunque el PER tenga cero o un caso.
 
 #### 2. Itinerario del caso (`/per/casos/[caseId]/etapa`)
 * **Función**: `StageItineraryBoard` muestra los pasos completados (colapsables), el paso actual (con su formulario) y los próximos (bloqueados, solo título). `ensureCurrentStageTasks()` en el servidor garantiza que solo exista materializada la `Task` del siguiente paso pendiente — nunca toda la etapa de una vez.

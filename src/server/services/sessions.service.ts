@@ -89,7 +89,7 @@ export async function logSession(input: CreateSessionLogInput, actorId: string, 
           userId: paCase.coordinatorId,
           title: "Nuevo Registro de Acompañamiento por validar",
           message: `El acompañante PER envió la sesión #${sessionNumber} del caso ${paCase.code} para su validación.`,
-          link: `/coordinacion/sesiones?highlightSessionId=${session.id}`,
+          link: `/coordinacion/alertas?highlightSessionId=${session.id}`,
           isDemo,
         },
         tx

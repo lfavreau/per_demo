@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import { syncMirrorSheet } from "@/server/google/workspace";
 import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
+import { REGIONS } from "@/lib/program-config";
 
 // Server action for manual Sheets Mirror sync from the dashboard
 async function triggerSheetsSync(formData: FormData) {
@@ -167,16 +168,8 @@ export default async function AdminDashboardPage({
   const totalInstrumentsCount = await prisma.instrument.count();
 
   // 2. Fetch Regional summary
-  const regions = [
-    { name: "Metropolitana", quota: 20 },
-    { name: "Valparaíso", quota: 8 },
-    { name: "Tarapacá", quota: 6 },
-    { name: "Biobío", quota: 4 },
-    { name: "Los Ríos", quota: 11 },
-  ];
-
   const regionalData = await Promise.all(
-    regions.map(async (reg) => {
+    REGIONS.map(async (reg) => {
       const activeCount = await prisma.pACase.count({
         where: { regionId: reg.name, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
       });
@@ -261,7 +254,7 @@ export default async function AdminDashboardPage({
           >
             🌐 Todo el País (Nacional)
           </a>
-          {regions.map((reg) => {
+          {REGIONS.map((reg) => {
             const isActive = selectedRegion === reg.name;
             return (
               <a

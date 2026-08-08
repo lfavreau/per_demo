@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import { createCaseAction, createCandidateAction } from "@/app/actions/coordinator";
+import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,8 @@ export default async function CoordinatorCandidatasPage({
     },
   });
   const perProfiles = allPerProfiles.filter((p: any) => Boolean(p.user?.isDemo) === isDemo);
+  // Tope: un PER lleva como máximo un acompañamiento activo a la vez.
+  const availablePers = perProfiles.filter((p) => p.certificationStatus !== "NO_HABILITADO" && p.cases.length === 0);
 
   // 3. Fetch Existing Cases/Matches created in region
   const allCases = await prisma.pACase.findMany({
@@ -136,7 +139,7 @@ export default async function CoordinatorCandidatasPage({
           {/* Candidates Table (Left side) */}
           <div className="lg:col-span-2 p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
             <h4 className="font-semibold text-xs text-slate-500 uppercase tracking-wider">
-              Personas Preseleccionadas
+              Nómina de Preselección ({candidates.length})
             </h4>
             <div className="overflow-x-auto text-xs">
               <table className="w-full text-left border-collapse">
@@ -145,32 +148,34 @@ export default async function CoordinatorCandidatasPage({
                     <th className="pb-2">Centro / Red Derivadora</th>
                     <th className="pb-2">Fórmula</th>
                     <th className="pb-2">Estado</th>
-                    <th className="pb-2">Fecha Derivación</th>
+                    <th className="pb-2">Última Actualización</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {candidates
-                    .filter((c) => c.status === "SELECCIONADA" || c.status === "ADMISIBLE")
-                    .map((cand) => (
-                      <tr key={cand.id} className="border-b border-border/50 hover:bg-secondary/10">
-                        <td className="py-3 font-semibold text-slate-800">{cand.sourceCenter || "No especificado"}</td>
-                        <td className="py-3 text-slate-400">
-                          {cand.preRegistrationFormResponseRef ? "Formulario" : "Planilla"}
-                        </td>
-                        <td className="py-3">
-                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-[10px]">
-                            {cand.status}
+                  {candidates.map((cand) => (
+                    <tr key={cand.id} className="border-b border-border/50 hover:bg-secondary/10">
+                      <td className="py-3 font-semibold text-slate-800">{cand.sourceCenter || "No especificado"}</td>
+                      <td className="py-3 text-slate-400">
+                        {cand.preRegistrationFormResponseRef ? "Formulario" : "Planilla"}
+                      </td>
+                      <td className="py-3">
+                        {cand.convertedToCaseId ? (
+                          <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-semibold text-[10px]">
+                            Convertida a caso
                           </span>
-                        </td>
-                        <td className="py-3 text-slate-500">
-                          {new Date(cand.createdAt).toLocaleDateString("es-CL")}
-                        </td>
-                      </tr>
-                    ))}
-                  {candidates.filter((c) => c.status === "SELECCIONADA" || c.status === "ADMISIBLE").length === 0 && (
+                        ) : (
+                          <CandidateStatusSelect candidateId={cand.id} status={cand.status} />
+                        )}
+                      </td>
+                      <td className="py-3 text-slate-500">
+                        {new Date(cand.updatedAt).toLocaleDateString("es-CL")}
+                      </td>
+                    </tr>
+                  ))}
+                  {candidates.length === 0 && (
                     <tr>
                       <td colSpan={4} className="py-4 text-center text-slate-400">
-                        No hay personas preseleccionadas esperando dupla.
+                        No hay personas en la nómina de preselección aún.
                       </td>
                     </tr>
                   )}
@@ -205,19 +210,24 @@ export default async function CoordinatorCandidatasPage({
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acompañante PER (Habilitado)</label>
+                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acompañante PER Disponible</label>
                 <select
                   name="perId"
                   required
                   className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
                 >
                   <option value="">-- Seleccionar --</option>
-                  {perProfiles.map((p) => (
+                  {availablePers.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.user?.name || "PER"} [{p.certificationStatus}] ({p.cases.length} casos activos)
+                      {p.user?.name || "PER"}
                     </option>
                   ))}
                 </select>
+                {availablePers.length === 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">
+                    No hay PER disponibles: todos tienen un acompañamiento activo o no están habilitados.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -243,6 +253,20 @@ export default async function CoordinatorCandidatasPage({
                   rows={4}
                   className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary resize-none"
                 ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acta de Primer Encuentro</label>
+                <input
+                  type="url"
+                  name="actaPrimerEncuentro"
+                  required={!isDemo}
+                  placeholder="https://drive.google.com/file/d/..."
+                  className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
+                />
+                <p className="text-[9px] text-slate-400 mt-1">
+                  Se copiará con nombre normalizado dentro de 01_Vinculación. La dupla queda formalizada y con carpeta e IAP creados al enviar este formulario.
+                </p>
               </div>
 
               <button

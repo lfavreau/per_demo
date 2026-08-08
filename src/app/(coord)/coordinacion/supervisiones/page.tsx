@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { logSupervisionAction, updatePerStatusAction } from "@/app/actions/coordinator";
+import { logSupervisionAction } from "@/app/actions/coordinator";
+import { SUPERVISION_ALERT_DAYS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +59,9 @@ export default async function CoordinatorSupervisionesPage({
     }
     
     let alertStatus: "RED" | "YELLOW" | "GREEN" = "GREEN";
-    if (daysSinceLast >= 30) {
+    if (daysSinceLast >= SUPERVISION_ALERT_DAYS.RED) {
       alertStatus = "RED";
-    } else if (daysSinceLast >= 15) {
+    } else if (daysSinceLast >= SUPERVISION_ALERT_DAYS.YELLOW) {
       alertStatus = "YELLOW";
     }
     
@@ -97,21 +98,25 @@ export default async function CoordinatorSupervisionesPage({
           <div className="lg:col-span-2 space-y-6">
             
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
-              <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider">
-                Profesionales de Acompañamiento Habilitados ({perProfiles.length})
-              </h4>
+              <div>
+                <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider">
+                  Dotación PER de la Región ({perProfiles.length})
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  La habilitación de terreno se gestiona desde Administración → Gestión de Usuarios.
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {perComplianceList.map(({ per, lastDate, daysSinceLast, alertStatus, totalHours }) => {
-                  const isCertified = per.certificationStatus === "HABILITADO";
                   return (
-                    <div 
-                      key={per.id} 
+                    <div
+                      key={per.id}
                       className={`p-4 rounded-xl border flex flex-col justify-between space-y-3 text-xs ${
-                        alertStatus === "RED" 
-                          ? "bg-rose-50/50 border-rose-200" 
-                          : alertStatus === "YELLOW" 
-                          ? "bg-amber-50/50 border-amber-200" 
+                        alertStatus === "RED"
+                          ? "bg-rose-50/50 border-rose-200"
+                          : alertStatus === "YELLOW"
+                          ? "bg-amber-50/50 border-amber-200"
                           : "bg-slate-50 border-slate-200"
                       }`}
                     >
@@ -122,8 +127,20 @@ export default async function CoordinatorSupervisionesPage({
                             <p className="text-[10px] text-slate-500 mt-0.5">Generación: {per.generation}</p>
                           </div>
                           <div className="shrink-0">
-                            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              ✓ Habilitado
+                            <span
+                              className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                                per.certificationStatus === "HABILITADO"
+                                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                  : per.certificationStatus === "PENDIENTE"
+                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  : "bg-red-50 text-red-800 border-red-200"
+                              }`}
+                            >
+                              {per.certificationStatus === "HABILITADO"
+                                ? "✓ Habilitado"
+                                : per.certificationStatus === "PENDIENTE"
+                                ? "⏳ Pendiente"
+                                : "✕ No Habilitado"}
                             </span>
                           </div>
                         </div>
@@ -131,8 +148,10 @@ export default async function CoordinatorSupervisionesPage({
                         {/* Case load & cumulative hours */}
                         <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-200/60 text-[10px]">
                           <div>
-                            <span className="text-slate-400 block">Casos Activos:</span>
-                            <span className="font-bold text-slate-700">{per.cases.length} acompañamiento(s)</span>
+                            <span className="text-slate-400 block">Acompañamiento:</span>
+                            <span className="font-bold text-slate-700">
+                              {per.cases.length > 0 ? "Asignado" : "Disponible"}
+                            </span>
                           </div>
                           <div>
                             <span className="text-slate-400 block">Horas Supervisión:</span>
@@ -152,11 +171,11 @@ export default async function CoordinatorSupervisionesPage({
                       {/* Compliance Alert Indicator */}
                       {alertStatus === "RED" ? (
                         <div className="p-2 bg-red-100/70 text-red-900 border border-red-200 rounded-lg text-[9px] font-bold text-center">
-                          🔴 CRÍTICO: Más de 30 días sin supervisión ({daysSinceLast} días)
+                          🔴 CRÍTICO: Más de {SUPERVISION_ALERT_DAYS.RED} días sin supervisión ({daysSinceLast} días)
                         </div>
                       ) : alertStatus === "YELLOW" ? (
                         <div className="p-2 bg-amber-100/70 text-amber-900 border border-amber-200 rounded-lg text-[9px] font-bold text-center">
-                          ⚠️ ALERTA: Más de 15 días sin supervisión ({daysSinceLast} días)
+                          ⚠️ ALERTA: Más de {SUPERVISION_ALERT_DAYS.YELLOW} días sin supervisión ({daysSinceLast} días)
                         </div>
                       ) : (
                         <div className="p-2 bg-emerald-100/70 text-emerald-950 border border-emerald-200 rounded-lg text-[9px] font-bold text-center">

@@ -5,8 +5,7 @@ import AppShell from "@/components/shell/AppShell";
 import { mapCaseStatusToLabel, mapEmotionToLabel, mapStageToLabel } from "@/lib/nomenclatures";
 import {
   createDirectContinuityCaseAction,
-  formalizeMatchAction,
-  validateMatchAction,
+  reassignCaseAction,
 } from "@/app/actions/coordinator";
 import { getItineraryState } from "@/server/services/itinerary.service";
 import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
@@ -61,6 +60,8 @@ export default async function CoordinatorCasosPage({
     },
   });
   const regionalPers = allRegionalPers.filter((p) => Boolean(p.user?.isDemo) === isDemo);
+  // Tope: un PER lleva como máximo un acompañamiento activo a la vez.
+  const availablePers = regionalPers.filter((p) => p.cases.length === 0);
 
   // 2. Generate Timeline if a case is selected
   let timelineEvents: Array<{
@@ -316,61 +317,56 @@ export default async function CoordinatorCasosPage({
                 </div>
               </div>
 
-              {selectedCaseDetails.matchStatus !== "FORMALIZADO" && (
-                <div className="p-6 bg-white border border-blue-200 rounded-2xl shadow-sm space-y-4">
+              {!["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"].includes(selectedCaseDetails.status) && (
+                <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
                   <div>
                     <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider">
-                      Formalización y Google Drive
+                      Reasignar Acompañante
                     </h4>
                     <p className="text-[10px] text-slate-500 mt-1">
-                      Estado de la propuesta: {selectedCaseDetails.matchStatus}
+                      Cambia el PER a cargo de este caso. Se libera el cupo del PER actual y se notifica a ambos.
                     </p>
                   </div>
 
-                  {selectedCaseDetails.matchStatus === "PROPUESTO" && (
-                    <form action={validateMatchAction}>
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
-                      <button
-                        type="submit"
-                        className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs"
+                  <form action={reassignCaseAction} className="space-y-3">
+                    <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
+                    <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
+                    <div className="space-y-1">
+                      <label className="font-semibold text-xs text-slate-700 block">Nuevo PER a cargo</label>
+                      <select
+                        name="newPerId"
+                        required
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
                       >
-                        Validar propuesta de dupla
-                      </button>
-                    </form>
-                  )}
-
-                  {selectedCaseDetails.matchStatus === "VALIDADO" && (
-                    <form action={formalizeMatchAction} className="space-y-3">
-                      <input type="hidden" name="caseId" value={selectedCaseDetails.id} />
-                      <input type="hidden" name="caseCode" value={selectedCaseDetails.code} />
-                      <div className="space-y-1">
-                        <label className="font-semibold text-xs text-slate-700 block">
-                          Acta de Primer Encuentro en Google Drive
-                        </label>
-                        <input
-                          type="text"
-                          name="actaPrimerEncuentro"
-                          placeholder="Opcional: Se creará automáticamente en Drive..."
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                        />
-                        <span className="text-[9px] text-slate-400 block mt-1">
-                          ✨ Si se deja en blanco, la plataforma creará automáticamente el documento oficial en Google Drive desde la plantilla.
-                        </span>
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs"
-                      >
-                        {isDemo
-                          ? "Formalizar en modo demostración"
-                          : "Crear carpeta e IAP reales"}
-                      </button>
-                      <p className="text-[9px] text-slate-500 leading-relaxed">
-                        La operación es idempotente: un reintento reutiliza la misma carpeta y no crea duplicados.
-                      </p>
-                    </form>
-                  )}
+                        <option value="">-- Seleccionar --</option>
+                        {availablePers.map((p) => (
+                          <option key={p.id} value={p.id}>{p.user.name}</option>
+                        ))}
+                      </select>
+                      {availablePers.length === 0 && (
+                        <p className="text-[10px] text-amber-600 mt-1">
+                          No hay otro PER disponible en la región (todos tienen un acompañamiento activo).
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-semibold text-xs text-slate-700 block">Motivo de la reasignación</label>
+                      <textarea
+                        name="reason"
+                        required
+                        rows={2}
+                        placeholder="Ej. Retiro del PER, sobrecarga, cambio de dupla acordado..."
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs resize-none"
+                      ></textarea>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={availablePers.length === 0}
+                      className="w-full py-2 px-4 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs"
+                    >
+                      Reasignar Caso
+                    </button>
+                  </form>
                 </div>
               )}
 
@@ -461,17 +457,22 @@ export default async function CoordinatorCasosPage({
               <form action={createDirectContinuityCaseAction} className="space-y-3.5 text-xs">
                 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Asignar a PER Habilitado:</label>
-                  <select 
-                    name="perId" 
-                    required 
+                  <label className="font-bold text-slate-700">Asignar a PER Disponible:</label>
+                  <select
+                    name="perId"
+                    required
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-semibold"
                   >
                     <option value="">Selecciona PER...</option>
-                    {regionalPers.map(p => (
-                      <option key={p.id} value={p.id}>{p.user.name} ({p.cases.length} / 5 acompañamientos)</option>
+                    {availablePers.map(p => (
+                      <option key={p.id} value={p.id}>{p.user.name}</option>
                     ))}
                   </select>
+                  {availablePers.length === 0 && (
+                    <p className="text-[10px] text-amber-600">
+                      No hay PER disponibles: todos tienen un acompañamiento activo o no están habilitados.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">

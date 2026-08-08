@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useEffect, useState, useTransition } from "react";
 import { validateSessionAction, returnSessionAction } from "@/app/actions/coordinator";
 import { mapEmotionToLabel } from "@/lib/nomenclatures";
 
@@ -26,12 +26,21 @@ interface SessionLog {
 
 interface SessionValidationQueueProps {
   pendingSessions: SessionLog[];
+  highlightSessionId?: string;
 }
 
-export default function SessionValidationQueue({ pendingSessions }: SessionValidationQueueProps) {
+export default function SessionValidationQueue({ pendingSessions, highlightSessionId }: SessionValidationQueueProps) {
   const [selectedSession, setSelectedSession] = useState<SessionLog | null>(null);
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Si la notificación que trajo al coordinador aquí apunta a una sesión puntual,
+  // ábrela directamente en vez de dejarlo buscarla en la grilla.
+  useEffect(() => {
+    if (!highlightSessionId) return;
+    const match = pendingSessions.find((s) => s.id === highlightSessionId);
+    if (match) setSelectedSession(match);
+  }, [highlightSessionId, pendingSessions]);
 
   const handleApprove = (sessionId: string) => {
     startTransition(async () => {
@@ -68,7 +77,9 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
                 setSelectedSession(session);
                 setFeedback("");
               }}
-              className="p-4 border border-slate-200 bg-slate-50 rounded-xl space-y-3 text-xs flex flex-col justify-between hover:border-blue-400 hover:shadow-md hover:bg-blue-50/5 cursor-pointer transition duration-200"
+              className={`p-4 border border-slate-200 bg-slate-50 rounded-xl space-y-3 text-xs flex flex-col justify-between hover:border-blue-400 hover:shadow-md hover:bg-blue-50/5 cursor-pointer transition duration-200 ${
+                session.id === highlightSessionId ? "ring-2 ring-blue-300 animate-highlight" : ""
+              }`}
             >
               <div className="space-y-2">
                 <div className="flex justify-between border-b border-slate-200 pb-2 font-semibold flex-wrap gap-2">

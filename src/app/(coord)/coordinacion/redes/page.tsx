@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { 
-  registerNetworkDeviceAction, 
-  logNetworkActivationAction, 
-  registerPhase5RecordAction 
+import {
+  registerNetworkDeviceAction,
+  logNetworkActivationAction,
+  registerPhase5RecordAction
 } from "@/app/actions/coordinator";
 
 export const dynamic = "force-dynamic";
@@ -210,7 +210,7 @@ export default async function CoordinatorRedesPage() {
 
           {/* Right Column Forms */}
           <div className="space-y-6">
-            
+
             {/* Form A: Register Actor */}
             <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
               <div className="border-b pb-2">
@@ -225,20 +225,20 @@ export default async function CoordinatorRedesPage() {
               <form action={registerNetworkDeviceAction} className="space-y-3.5 text-xs">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">Nombre del Dispositivo / Actor:</label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    required 
+                  <input
+                    type="text"
+                    name="name"
+                    required
                     placeholder="Ej. COSAM Valparaíso"
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600"
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">Tipo de Dispositivo:</label>
-                  <select 
-                    name="type" 
-                    required 
+                  <select
+                    name="type"
+                    required
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600 font-semibold"
                   >
                     <option value="Salud">Salud (COSAM/APS)</option>
@@ -251,16 +251,16 @@ export default async function CoordinatorRedesPage() {
 
                 <div className="space-y-1">
                   <label className="font-bold text-slate-700">Persona de Contacto:</label>
-                  <input 
-                    type="text" 
-                    name="contactPerson" 
+                  <input
+                    type="text"
+                    name="contactPerson"
                     placeholder="Ej. Trabajador Social encargado"
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600"
                   />
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow cursor-pointer text-center block"
                 >
                   ➕ Registrar Actor
