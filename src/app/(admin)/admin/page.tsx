@@ -55,6 +55,9 @@ async function triggerDocumentSync(formData: FormData) {
     query.set("docsyncSynced", String(outcome.synced));
     query.set("docsyncFailed", String(outcome.failed));
     query.set("docsyncRemaining", String(outcome.casesRemaining));
+    if (outcome.failures.length) {
+      query.set("docsyncFailures", JSON.stringify(outcome.failures));
+    }
   } catch (error) {
     console.error("Error al sincronizar documentos generados:", error);
     query.set("docsync", "error");
@@ -73,10 +76,19 @@ export default async function AdminDashboardPage({
     docsyncSynced?: string;
     docsyncFailed?: string;
     docsyncRemaining?: string;
+    docsyncFailures?: string;
   }>;
 }) {
   const user = await getCurrentUser();
   const params = await searchParams;
+  let docsyncFailures: { caseCode: string; docKey: string; message: string }[] = [];
+  if (params.docsyncFailures) {
+    try {
+      docsyncFailures = JSON.parse(params.docsyncFailures);
+    } catch {
+      docsyncFailures = [];
+    }
+  }
   const selectedRegion = params.regionId || null;
 
   // Enforce auth and admin access
@@ -262,10 +274,21 @@ export default async function AdminDashboardPage({
           </div>
         )}
         {params.docsync === "partial" && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Sincronizados: {params.docsyncSynced || 0}. Fallaron: {params.docsyncFailed || 0} (quedan pendientes,
-            se reintentan en el próximo click o cierre de etapa).
-            {Number(params.docsyncRemaining || 0) > 0 && ` Además quedan ${params.docsyncRemaining} casos sin procesar todavía.`}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-2">
+            <p>
+              Sincronizados: {params.docsyncSynced || 0}. Fallaron: {params.docsyncFailed || 0} (quedan pendientes,
+              se reintentan en el próximo click o cierre de etapa).
+              {Number(params.docsyncRemaining || 0) > 0 && ` Además quedan ${params.docsyncRemaining} casos sin procesar todavía.`}
+            </p>
+            {docsyncFailures.length > 0 && (
+              <ul className="text-xs space-y-1 pl-4 list-disc">
+                {docsyncFailures.map((f, i) => (
+                  <li key={i}>
+                    <span className="font-bold">{f.caseCode}</span> — {f.docKey}: {f.message}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
         {params.docsync === "error" && (

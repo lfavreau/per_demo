@@ -524,12 +524,20 @@ export async function findCasesWithPendingDocuments(isDemo: boolean): Promise<Ca
   return withPending;
 }
 
+export interface BulkSyncFailure {
+  caseCode: string;
+  docKey: string;
+  message: string;
+}
+
 export interface BulkSyncOutcome {
   casesProcessed: number;
   /** Casos con pendientes que no alcanzaron a procesarse en este llamado — re-clickear el botón los toma. */
   casesRemaining: number;
   synced: number;
   failed: number;
+  /** Detalle de cada falla: sin esto, "failed: 3" no dice nada de por qué. */
+  failures: BulkSyncFailure[];
 }
 
 // Botón de forzado del admin: por caso ya validado, syncPendingCaseDocuments hace una llamada
@@ -545,14 +553,18 @@ export async function syncAllPendingCaseDocuments(
   const toProcess = withPending.slice(0, maxCases);
 
   let synced = 0;
-  let failed = 0;
+  const failures: BulkSyncFailure[] = [];
   for (const c of toProcess) {
     try {
       const outcome = await syncPendingCaseDocuments(c.caseId, isDemo, actorId);
       synced += outcome.synced.length;
-      failed += outcome.failed.length;
+      for (const f of outcome.failed) {
+        failures.push({ caseCode: c.code, docKey: f.docKey, message: f.message });
+        console.error(`Falló la sincronización de ${f.docKey} en el caso ${c.code}: ${f.message}`);
+      }
     } catch (error) {
-      failed += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push({ caseCode: c.code, docKey: "(lote completo)", message });
       console.error(`No se pudo sincronizar documentos del caso ${c.code}:`, error);
     }
   }
@@ -561,6 +573,7 @@ export async function syncAllPendingCaseDocuments(
     casesProcessed: toProcess.length,
     casesRemaining: withPending.length - toProcess.length,
     synced,
-    failed,
+    failed: failures.length,
+    failures,
   };
 }
