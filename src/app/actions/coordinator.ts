@@ -222,7 +222,6 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const toStatus = formData.get("toStatus") as string;
   const reason = formData.get("reason") as string;
   const forceAdvance = formData.get("forceAdvance") === "on";
-  const forceDesertion = formData.get("forceDesertion") === "on";
 
   if (!caseId || !toStatus) {
     throw new Error("Faltan datos obligatorios");
@@ -236,7 +235,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseCode = paCase?.code || "";
 
   try {
-    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance, forceDesertion);
+    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${caseCode}`);

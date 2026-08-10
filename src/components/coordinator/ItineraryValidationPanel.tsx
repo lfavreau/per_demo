@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { validateItineraryStepAction, returnItineraryStepAction } from "@/app/actions/itinerary";
+import {
+  validateItineraryStepAction,
+  returnItineraryStepAction,
+  markStepNotApplicableAction,
+} from "@/app/actions/itinerary";
 import { getStepByActivityKey } from "@/lib/instrument-itinerary";
 
 export interface ItineraryStepStateView {
@@ -76,6 +80,8 @@ function renderContent(activityKey: string, contentJson?: string | null) {
 
 export default function ItineraryValidationPanel({ stageLabel, steps }: ItineraryValidationPanelProps) {
   const [feedbackByTask, setFeedbackByTask] = useState<Record<string, string>>({});
+  const [notApplicableReasonByTask, setNotApplicableReasonByTask] = useState<Record<string, string>>({});
+  const [showNotApplicableForm, setShowNotApplicableForm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const completed = steps.filter((s) => s.kind === "COMPLETED");
@@ -97,6 +103,16 @@ export default function ItineraryValidationPanel({ stageLabel, steps }: Itinerar
       formData.append("feedback", feedback);
       await returnItineraryStepAction(formData);
       setFeedbackByTask({ ...feedbackByTask, [taskId]: "" });
+    });
+  };
+
+  const handleMarkNotApplicable = (taskId: string) => {
+    const reason = notApplicableReasonByTask[taskId];
+    if (!reason?.trim()) return;
+    startTransition(async () => {
+      await markStepNotApplicableAction(taskId, reason);
+      setNotApplicableReasonByTask({ ...notApplicableReasonByTask, [taskId]: "" });
+      setShowNotApplicableForm(false);
     });
   };
 
@@ -176,6 +192,53 @@ export default function ItineraryValidationPanel({ stageLabel, steps }: Itinerar
                 : "El PER aún no ha enviado este instrumento."}
             </p>
           )}
+
+          <div className="pt-2 border-t border-blue-100">
+            {showNotApplicableForm ? (
+              <div className="space-y-1.5">
+                <label className="block text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                  Motivo (por qué no aplica para este caso)
+                </label>
+                <textarea
+                  value={notApplicableReasonByTask[current.taskId!] || ""}
+                  onChange={(e) =>
+                    setNotApplicableReasonByTask({ ...notApplicableReasonByTask, [current.taskId!]: e.target.value })
+                  }
+                  placeholder="Ej. persona acompañada ya cubrió este contenido en el proceso anterior..."
+                  rows={2}
+                  disabled={isPending}
+                  className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-xs resize-none"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotApplicableForm(false)}
+                    disabled={isPending}
+                    className="px-3 py-1.5 text-slate-500 font-bold rounded-lg text-[11px] cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMarkNotApplicable(current.taskId!)}
+                    disabled={isPending || !notApplicableReasonByTask[current.taskId!]?.trim()}
+                    className="px-3 py-1.5 text-amber-800 font-bold rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-[11px] cursor-pointer"
+                  >
+                    Confirmar: Marcar como resuelto (No Aplica)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNotApplicableForm(true)}
+                disabled={isPending}
+                className="text-[10px] text-slate-400 hover:text-amber-700 font-semibold underline decoration-dotted cursor-pointer"
+              >
+                Marcar como resuelto (no aplica)…
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <p className="text-[10px] text-slate-400">No hay instrumentos pendientes de acción en esta etapa.</p>

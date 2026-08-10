@@ -143,15 +143,6 @@ export default function WithdrawalGate({ caseId, withdrawalStep }: WithdrawalGat
         ></textarea>
       </div>
 
-      {toStatus === "DESERCION" && (
-        <label className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-700 cursor-pointer">
-          <input type="checkbox" name="forceDesertion" className="mt-0.5" />
-          <span>
-            Forzar deserción sin los 3 intentos de contacto registrados (requiere motivo arriba). Queda auditado.
-          </span>
-        </label>
-      )}
-
       <button
         type="submit"
         className="w-full py-2 px-3 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl transition duration-150 text-[10px] cursor-pointer text-center block"

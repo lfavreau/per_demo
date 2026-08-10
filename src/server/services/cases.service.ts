@@ -348,40 +348,13 @@ export async function reassignCase(
   });
 }
 
-export async function updateIntensityLevel(caseId: string, intensityLevel: "BASICO" | "INTERMEDIO" | "INTENSIVO", actorId: string) {
-  return await prisma.$transaction(async (tx) => {
-    const paCase = await tx.pACase.findUnique({ where: { id: caseId } });
-    if (!paCase) throw new Error("Caso no encontrado");
-
-    const updated = await tx.pACase.update({
-      where: { id: caseId },
-      data: { intensityLevel },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        userId: actorId,
-        role: "COORDINATOR",
-        action: "UPDATE_INTENSITY",
-        entityType: "PACase",
-        entityId: caseId,
-        previousValue: paCase.intensityLevel,
-        newValue: intensityLevel,
-      },
-    });
-
-    return updated;
-  });
-}
-
 export async function transitionCaseStatus(
   caseId: string,
   toStatus: string,
   reason: string,
   actorId: string,
   isDemo: boolean,
-  forceAdvance = false,
-  forceDesertion = false
+  forceAdvance = false
 ) {
   // Etapa que se deja al avanzar (o al pasar a EGRESO), si corresponde. Se lee dentro de la
   // transacción pero el flush de documentos corre después de que commitea: es una llamada de
@@ -453,34 +426,6 @@ export async function transitionCaseStatus(
       // Formularios de Abandono están catalogados bajo FINALIZACION: sin esto, esos dos
       // documentos quedarían pendientes para siempre — nada más los vuelve a intentar.
       exitedStage = "FINALIZACION";
-    }
-
-    // Deserción validations (requires contact attempts log verification or reason)
-    if (toStatus === "DESERCION") {
-      const attempts = await tx.contactAttempt.count({ where: { paCaseId: caseId } });
-      if (attempts < 3) {
-        if (!forceDesertion) {
-          throw new Error(
-            `No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos (hay ${attempts}). Puedes forzarlo indicando un motivo.`
-          );
-        }
-        if (!reason || !reason.trim()) {
-          throw new Error("Forzar una deserción con menos de 3 intentos de contacto requiere un motivo.");
-        }
-        await tx.auditLog.create({
-          data: {
-            userId: actorId,
-            role: actor.role,
-            action: "FORCE_DESERTION",
-            entityType: "PACase",
-            entityId: caseId,
-            previousValue: paCase.status,
-            newValue: JSON.stringify({ toStatus, contactAttempts: attempts }),
-            reason,
-            isDemo,
-          },
-        });
-      }
     }
 
     // Manage stage transition logic
@@ -607,18 +552,6 @@ export async function transitionCaseStatus(
   }
 
   return updated;
-}
-
-export async function logContactAttempt(caseId: string, perId: string, channel: string, outcome: string, note?: string) {
-  return await prisma.contactAttempt.create({
-    data: {
-      paCaseId: caseId,
-      perId,
-      channel,
-      outcome,
-      note,
-    },
-  });
 }
 
 export async function createDirectContinuityCase(
