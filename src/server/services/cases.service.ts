@@ -2,15 +2,11 @@ import { prisma } from "@/lib/db";
 import {
   commitCaseFolder,
   commitIapDocument,
-  commitValidatedCopy,
-  copyActaPrimerEncuentro,
   createCaseFolder,
   createIapDocument,
   rollbackCaseFolder,
   rollbackIapDocument,
-  rollbackValidatedCopy,
   type GoogleDocResult,
-  type ValidatedCopyResult,
 } from "../google/workspace";
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/services/itinerary.service";
@@ -80,31 +76,27 @@ interface ProvisionCaseInput {
   ageRange: string | null;
   educationLevel: string | null;
   employmentStatus: string | null;
-  actaPrimerEncuentroDriveId: string;
   actorId: string;
   isDemo: boolean;
   auditAction: string;
 }
 
-// Aprovisiona la carpeta de Drive, el IAP y la copia del Acta de Primer Encuentro, y
-// persiste el caso ya FORMALIZADO en un solo paso — sin estados intermedios PROPUESTO/
-// VALIDADO que nadie decide de forma independiente. Si el aprovisionamiento en Drive
-// falla, no se escribe nada en la base de datos: el coordinador simplemente reintenta.
+// Aprovisiona la carpeta de Drive y el IAP, y persiste el caso ya FORMALIZADO en un solo
+// paso — sin estados intermedios PROPUESTO/VALIDADO que nadie decide de forma independiente.
+// Si el aprovisionamiento en Drive falla, no se escribe nada en la base de datos: el
+// coordinador simplemente reintenta.
+//
+// No exige Acta de Primer Encuentro: la validez del match es responsabilidad de Dirección/
+// Coordinación al conformar la dupla, no un archivo externo que la app deba verificar. El
+// registro real del primer encuentro es la Reflexión del PER, que se genera sola en Drive
+// una vez validada (ver document-sync.service.ts).
 async function provisionAndPersistCase(input: ProvisionCaseInput) {
   const folders = await createCaseFolder(input.code, input.regionId, input.perId, input.isDemo);
 
   let iap: GoogleDocResult | null = null;
-  let actaCopy: ValidatedCopyResult | null = null;
   try {
     const createdIap = await createIapDocument(input.code, folders.vinculacionFolderId, input.isDemo);
     iap = createdIap;
-    const createdActa = await copyActaPrimerEncuentro(
-      input.actaPrimerEncuentroDriveId,
-      folders.vinculacionFolderId,
-      input.code,
-      input.isDemo
-    );
-    actaCopy = createdActa;
 
     const paCase = await prisma.$transaction(async (tx) => {
       const created = await tx.pACase.create({
@@ -118,7 +110,6 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
           status: "VINCULACION",
           matchStatus: "FORMALIZADO",
           matchRationale: input.matchRationale,
-          actaPrimerEncuentroDriveId: createdActa.newFileId,
           genderSelfId: input.genderSelfId,
           birthDate: input.birthDate,
           ageRange: input.ageRange,
@@ -160,7 +151,7 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
           paCaseId: created.id,
           fromStatus: "PRESELECCION",
           toStatus: "VINCULACION",
-          reason: "Dupla conformada y formalizada mediante Acta de Primer Encuentro y aprovisionamiento de Drive",
+          reason: "Dupla conformada y formalizada; carpeta e IAP aprovisionados en Drive",
           byUserId: input.actorId,
         },
       });
@@ -177,7 +168,6 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
             perId: input.perId,
             folders,
             iap: createdIap,
-            acta: createdActa,
           }),
           isDemo: input.isDemo,
         },
@@ -202,16 +192,8 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
     await commitIapDocument(createdIap, input.isDemo).catch((error) => {
       console.error("No se pudo marcar el IAP como confirmado:", error);
     });
-    await commitValidatedCopy(createdActa, input.isDemo).catch((error) => {
-      console.error("No se pudo marcar el Acta como confirmada:", error);
-    });
     return paCase;
   } catch (error) {
-    if (actaCopy) {
-      await rollbackValidatedCopy(actaCopy, input.isDemo).catch((rollbackError) => {
-        console.error("No se pudo revertir la copia del Acta:", rollbackError);
-      });
-    }
     if (iap) {
       await rollbackIapDocument(iap, input.isDemo).catch((rollbackError) => {
         console.error("No se pudo revertir el IAP creado:", rollbackError);
@@ -230,8 +212,7 @@ export async function createCaseFromCandidate(
   matchRationale: string,
   type: "NUEVO" | "CONTINUIDAD",
   actorId: string,
-  isDemo: boolean,
-  actaPrimerEncuentroDriveId: string
+  isDemo: boolean
 ) {
   const candidate = await prisma.pACandidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error("Candidata no encontrada");
@@ -266,7 +247,6 @@ export async function createCaseFromCandidate(
     ageRange: candidate.ageRange,
     educationLevel: candidate.educationLevel,
     employmentStatus: candidate.employmentStatus,
-    actaPrimerEncuentroDriveId,
     actorId,
     isDemo,
     auditAction: "CREATE_CASE",
@@ -650,8 +630,7 @@ export async function createDirectContinuityCase(
   educationLevel: string,
   employmentStatus: string,
   actorId: string,
-  isDemo: boolean,
-  actaPrimerEncuentroDriveId: string
+  isDemo: boolean
 ) {
   const actor = await prisma.user.findUnique({ where: { id: actorId } });
   if (!actor || (actor.role !== "ADMIN" && actor.regionId !== regionId)) {
@@ -694,7 +673,6 @@ export async function createDirectContinuityCase(
     ageRange,
     educationLevel,
     employmentStatus,
-    actaPrimerEncuentroDriveId,
     actorId,
     isDemo,
     auditAction: "CREATE_CONTINUITY_CASE",

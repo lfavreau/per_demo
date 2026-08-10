@@ -523,21 +523,7 @@ export default async function CoordinatorCasosPage({
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Acta de Primer Encuentro:</label>
-                  <input
-                    type="url"
-                    name="actaPrimerEncuentro"
-                    required={!isDemo}
-                    placeholder="https://drive.google.com/file/d/..."
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-                  />
-                  <p className="text-[9px] text-slate-400">
-                    Se copiará con nombre normalizado dentro de 01_Vinculacion.
-                  </p>
-                </div>
-
-                <button 
+                <button
                   type="submit" 
                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow cursor-pointer text-center block"
                 >

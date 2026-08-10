@@ -435,33 +435,9 @@ export async function verifyDriveFile(
   return result;
 }
 
-export async function copyActaPrimerEncuentro(
-  fileId: string,
-  destinationFolderId: string,
-  caseCode: string,
-  isDemo: boolean
-): Promise<ValidatedCopyResult> {
-  const requestId = createRequestId("acta_copy");
-  if (isDemo) {
-    return {
-      newFileId: `demo_acta_${caseCode}`,
-      newRevisionId: "demo",
-      fileName: `${caseCode}_Acta_Primer_Encuentro`,
-      fileUrl: `https://drive.google.com/open?id=mock_demo_acta_${caseCode}`,
-      createdCopy: false,
-      requestId,
-    };
-  }
-
-  const result = await callGoogleAppsScript<ValidatedCopyResult>(
-    "copyActaPrimerEncuentro",
-    { fileId, destinationFolderId, caseCode },
-    requestId
-  );
-  assertGoogleId(result.newFileId, "ID del Acta");
-  assertGoogleUrl(result.fileUrl, ["drive.google.com", "docs.google.com"], "Acta");
-  return { ...result, requestId };
-}
+// Nota: la Apps Script del lado servidor conserva la acción "copyActaPrimerEncuentro" (no
+// requiere redespliegue para removerla), pero ya no queda ningún llamador en la app: formalizar
+// una dupla dejó de exigir un Acta externa — ver provisionAndPersistCase en cases.service.ts.
 
 export async function copyToValidadosFolder(
   fileId: string,

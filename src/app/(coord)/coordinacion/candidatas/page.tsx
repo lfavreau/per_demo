@@ -255,19 +255,9 @@ export default async function CoordinatorCandidatasPage({
                 ></textarea>
               </div>
 
-              <div>
-                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acta de Primer Encuentro</label>
-                <input
-                  type="url"
-                  name="actaPrimerEncuentro"
-                  required={!isDemo}
-                  placeholder="https://drive.google.com/file/d/..."
-                  className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
-                />
-                <p className="text-[9px] text-slate-400 mt-1">
-                  Se copiará con nombre normalizado dentro de 01_Vinculación. La dupla queda formalizada y con carpeta e IAP creados al enviar este formulario.
-                </p>
-              </div>
+              <p className="text-[9px] text-slate-400">
+                La dupla queda formalizada y con carpeta e IAP creados en Drive al enviar este formulario.
+              </p>
 
               <button
                 type="submit"

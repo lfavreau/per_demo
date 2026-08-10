@@ -11,7 +11,6 @@ import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
-import { extractGoogleDriveFileId } from "@/lib/google-resource";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -26,24 +25,19 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   const perId = formData.get("perId") as string;
   const matchRationale = formData.get("matchRationale") as string;
   const type = formData.get("type") as "NUEVO" | "CONTINUIDAD";
-  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
 
   if (!candidateId || !perId || !matchRationale || !type) {
     return;
   }
 
   try {
-    const actaFileId = user.isDemo
-      ? actaInput.trim() || `demo_acta_${Date.now()}`
-      : extractGoogleDriveFileId(actaInput) || `auto_acta_${Date.now()}`;
     const newCase = await createCaseFromCandidate(
       candidateId,
       perId,
       matchRationale,
       type,
       user.id,
-      user.isDemo,
-      actaFileId
+      user.isDemo
     );
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
@@ -288,7 +282,6 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   const ageRange = formData.get("ageRange") as string;
   const educationLevel = formData.get("educationLevel") as string;
   const employmentStatus = formData.get("employmentStatus") as string;
-  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
 
   if (!perId || !matchRationale || !gender || !ageRange || !educationLevel || !employmentStatus) {
     throw new Error("Faltan campos obligatorios para el ingreso directo");
@@ -300,9 +293,6 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   }
 
   try {
-    const actaFileId = user.isDemo
-      ? actaInput.trim() || "demo_acta_continuidad"
-      : extractGoogleDriveFileId(actaInput) || "auto_acta_continuidad";
     const { createDirectContinuityCase } = await import("@/server/services/cases.service");
     const paCase = await createDirectContinuityCase(
       perId,
@@ -313,8 +303,7 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
       educationLevel,
       employmentStatus,
       user.id,
-      user.isDemo,
-      actaFileId
+      user.isDemo
     );
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");

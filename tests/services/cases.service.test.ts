@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+﻿import { describe, it, expect, vi } from "vitest";
 import { prisma } from "@/lib/db";
 import {
   createCaseFromCandidate,
@@ -8,18 +8,16 @@ import {
 import { createAdmin, createCoordinator, createPer, createCandidate, testRegion } from "../helpers/fixtures";
 
 // Los mocks de Drive en modo demo (isDemo: true) son deterministas y no hacen red — se dejan
-// pasar tal cual (importOriginal). Solo se sobreescribe copyActaPrimerEncuentro puntualmente
-// en el test de rollback (CASE-09), para simular una falla real de Google Workspace.
+// pasar tal cual (importOriginal). Solo se sobreescribe createIapDocument puntualmente en el
+// test de rollback (CASE-09), para simular una falla real de Google Workspace.
 vi.mock("@/server/google/workspace", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/google/workspace")>();
   return {
     ...actual,
     createCaseFolder: vi.fn(actual.createCaseFolder),
     createIapDocument: vi.fn(actual.createIapDocument),
-    copyActaPrimerEncuentro: vi.fn(actual.copyActaPrimerEncuentro),
     rollbackCaseFolder: vi.fn(actual.rollbackCaseFolder),
     rollbackIapDocument: vi.fn(actual.rollbackIapDocument),
-    rollbackValidatedCopy: vi.fn(actual.rollbackValidatedCopy),
   };
 });
 
@@ -32,7 +30,7 @@ describe("cases.service — createCaseFromCandidate", () => {
     const { profile: per } = await createPer(regionA);
 
     await expect(
-      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true, "acta-demo")
+      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true)
     ).rejects.toThrow(/No autorizado para operar casos de esta región/);
   });
 
@@ -48,8 +46,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       admin.id,
-      true,
-      "acta-demo"
+      true
     );
     expect(paCase.regionId).toBe(region);
   });
@@ -61,7 +58,7 @@ describe("cases.service — createCaseFromCandidate", () => {
     const { profile: per } = await createPer(region, { certificationStatus: "NO_HABILITADO" });
 
     await expect(
-      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true, "acta-demo")
+      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true)
     ).rejects.toThrow(/no habilitado/);
   });
 
@@ -78,13 +75,12 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     // Segundo intento con el mismo PER, que ya tiene un caso activo (VINCULACION) → bloqueado.
     await expect(
-      createCaseFromCandidate(candidate2.id, per.id, "motivo", "NUEVO", coord.id, true, "acta-demo")
+      createCaseFromCandidate(candidate2.id, per.id, "motivo", "NUEVO", coord.id, true)
     ).rejects.toThrow(/ya tiene un acompañamiento activo/);
 
     // Cerrar el primer caso libera el cupo.
@@ -96,8 +92,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
     expect(secondCase.perId).toBe(per.id);
   });
@@ -116,8 +111,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
     const case2 = await createCaseFromCandidate(
       candidate2.id,
@@ -125,8 +119,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     // No se asume "-001" en duro: otros tests comparten la misma región de reserva ("GEN",
@@ -151,8 +144,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "fundamentación de prueba",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     const updatedCandidate = await prisma.pACandidate.findUnique({ where: { id: candidate.id } });
@@ -182,8 +174,7 @@ describe("cases.service — createCaseFromCandidate", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     // No existe un estado PROPUESTO/VALIDADO intermedio: nace formalizado de una.
@@ -200,20 +191,22 @@ describe("cases.service — createCaseFromCandidate", () => {
     expect(firstTask?.status).toBe("PENDIENTE");
   });
 
-  it("CASE-09: si falla la copia del Acta, no se persiste nada (nada a medias)", async () => {
+  it("CASE-09: si falla la creación del IAP, no se persiste nada (nada a medias)", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: per } = await createPer(region);
     const candidate = await createCandidate(region);
 
     const workspace = await import("@/server/google/workspace");
-    (workspace.copyActaPrimerEncuentro as any).mockRejectedValueOnce(new Error("mock: falla de Drive"));
+    (workspace.createIapDocument as any).mockRejectedValueOnce(new Error("mock: falla de Drive"));
 
     await expect(
-      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true, "acta-demo")
+      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true)
     ).rejects.toThrow(/mock: falla de Drive/);
 
     expect(workspace.rollbackCaseFolder).toHaveBeenCalled();
+    // El IAP nunca llegó a crearse (falló antes): no hay nada que revertir de ese lado.
+    expect(workspace.rollbackIapDocument).not.toHaveBeenCalled();
 
     const orphanCase = await prisma.pACase.findFirst({ where: { candidateId: candidate.id } });
     expect(orphanCase).toBeNull();
@@ -237,8 +230,7 @@ describe("cases.service — reassignCase", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     const updated = await reassignCase(paCase.id, perB.id, "PER anterior dejó el programa", coord.id, true);
@@ -257,8 +249,7 @@ describe("cases.service — reassignCase", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
     expect(newCase.perId).toBe(perA.id);
   });
@@ -277,10 +268,9 @@ describe("cases.service — reassignCase", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
-    await createCaseFromCandidate(candidate2.id, perB.id, "motivo", "NUEVO", coord.id, true, "acta-demo");
+    await createCaseFromCandidate(candidate2.id, perB.id, "motivo", "NUEVO", coord.id, true);
 
     await expect(reassignCase(caseA.id, perB.id, "motivo", coord.id, true)).rejects.toThrow(
       /ya tiene un acompañamiento activo/
@@ -300,8 +290,7 @@ describe("cases.service — reassignCase", () => {
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     await expect(reassignCase(paCase.id, perB.id, "", coord.id, true)).rejects.toThrow(/motivo/);
@@ -321,8 +310,7 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     await expect(
@@ -342,8 +330,7 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
 
     await expect(
@@ -378,8 +365,7 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
     expect(paCase.driveFolderVinculacionId).toBeTruthy();
 
@@ -436,8 +422,7 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
       "motivo",
       "NUEVO",
       coord.id,
-      true,
-      "acta-demo"
+      true
     );
     expect(paCase.driveFolderFinalizacionId).toBeTruthy();
 
