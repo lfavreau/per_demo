@@ -175,10 +175,13 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
 
       await ensureCurrentStageTasks(created.id, input.actorId, input.isDemo, tx);
 
+      // Sin mención a Drive/carpeta/IAP: el PER no tiene acceso a esa capa, la administran
+      // Coordinación y Dirección. Para el PER, lo único relevante es que el acompañamiento
+      // ya está formalizado y puede empezar a trabajar el itinerario.
       await createNotificationWithPush({
         userId: input.perUserId,
         title: "Acompañamiento Formalizado",
-        message: `Se ha formalizado el caso ${input.code} y se habilitaron su carpeta e IAP en Google Drive.`,
+        message: `Se ha formalizado el caso ${input.code}. Ya puedes comenzar el itinerario de acompañamiento.`,
         link: `/per?highlightCaseId=${created.id}`,
         isDemo: input.isDemo,
       }, tx);

@@ -275,13 +275,13 @@ Casos protagonistas del video:
 **Acciones**:
 1. En *Registrar Dupla & Proponer Match*: seleccionar una persona **Admisible**.
 2. Abrir el selector de PER → señalar que **solo aparecen PER disponibles de la región** (habilitados y sin un acompañamiento activo — un PER lleva como máximo uno a la vez).
-3. Tipo: `Nuevo`. Fundamentación: *«Afinidad territorial y experiencia previa del acompañante en vinculación comunitaria»*. Pegar el enlace del Acta de Primer Encuentro en el mismo formulario.
+3. Tipo: `Nuevo`. Fundamentación: *«Afinidad territorial y experiencia previa del acompañante en vinculación comunitaria»*.
 4. **Conformar Dupla** → un solo envío: la aplicación aprovisiona las carpetas de Drive del caso (Vinculación / Conexión / Finalización / Validados), crea el documento IAP y redirige a la ficha del caso ya `FORMALIZADO`, con el nuevo código correlativo resaltado.
 5. En la ficha, mostrar la tarjeta **Reasignar Acompañante**: es la única operación de excepción disponible después de formalizar — cambia el PER a cargo, libera el cupo del anterior y notifica a ambos.
 
 **Locución**:
 > «Conformar una dupla es un acto técnico que queda fundamentado. Se elige a la persona, se elige al acompañante —y aquí la plataforma solo ofrece PER disponibles de la región: habilitados y sin otro acompañamiento activo, porque un PER lleva un caso a la vez— y se escribe **por qué** se eligió a esa dupla.
-> Todo eso, más el Acta de Primer Encuentro, va en el mismo formulario: no hay una propuesta que alguien tenga que volver a abrir y validar por separado. Al enviarlo, la plataforma crea en Google Drive toda la estructura de carpetas del caso y su documento IAP, y avisa al acompañante. Si algo falla a mitad de camino, no se escribe nada: no quedan casos a medio formalizar ni carpetas huérfanas. Y si más adelante hay que cambiar de acompañante, está la opción de reasignar, con motivo y notificación a ambos.»
+> Eso va en el mismo formulario: no hay una propuesta que alguien tenga que volver a abrir y validar por separado, y no se le pide a coordinación que suba un acta externa — esa validez es su responsabilidad, no algo que la app deba verificar con un archivo. Al enviarlo, la plataforma crea en Google Drive toda la estructura de carpetas del caso y su documento IAP, y avisa al acompañante. Si algo falla a mitad de camino, no se escribe nada: no quedan casos a medio formalizar ni carpetas huérfanas. Y si más adelante hay que cambiar de acompañante, está la opción de reasignar, con motivo y notificación a ambos.»
 
 **🧪 Respaldo**: `CASE-03`, `CASE-04`, `CASE-05`, `CASE-06`, `CASE-07`
 
@@ -495,14 +495,14 @@ Casos protagonistas del video:
 
 ---
 
-## E28 · Deserción y los 3 intentos de contacto (24:15 – 24:45)
+## E28 · Un instrumento que no aplica, sin forzar toda la etapa (24:15 – 24:45)
 
-**Acciones**: intentar marcar **Deserción** en un caso sin intentos de contacto registrados → error: *«No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos.»*
+**Acciones**: en un caso con un instrumento pendiente que no corresponde para esta persona, abrir el paso actual del itinerario y usar el enlace **"Marcar como resuelto (no aplica)…"** → escribir el motivo → confirmar. El instrumento pasa a `NO_APLICA` y el avance de etapa deja de estar bloqueado por él, sin pasar por "Forzar avance de etapa".
 
 **Locución**:
-> «Y la deserción exige algo más: al menos tres intentos de contacto registrados. Una persona no queda marcada como desertora porque no contestó una vez. Es una protección para la persona acompañada, escrita en el sistema.»
+> «No todos los casos necesitan cada instrumento del itinerario. Cuando uno puntual no aplica —por ejemplo, contenido ya cubierto en un proceso anterior— no hace falta forzar toda la etapa: se marca ese paso como resuelto, con motivo, y queda igual de auditado que una validación. El avance de etapa sigue exigiendo que todo esté resuelto, solo que "resuelto" ahora tiene dos caminos: validado, o no aplicable.»
 
-**🧪 Respaldo**: `CASE-15`
+**🧪 Respaldo**: ninguno todavía — `markStepNotApplicable` (`itinerary.service.ts`) no tiene test automatizado propio, solo se verificó manualmente contra el navegador local.
 
 ---
 

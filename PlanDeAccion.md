@@ -310,6 +310,13 @@ Si aparece en `src/components/per/*`, quitar el control de la UI del PER; si est
 
 ## F07 · La barrera de deserción se elude escribiendo "forzada"
 
+> **Retirado (agosto 2026)**: el requisito completo de "3 intentos de contacto" se quitó de
+> `transitionCaseStatus` — nunca hubo forma de registrar un intento real (`logContactAttempt`
+> no tenía ningún llamador), así que el camino normal era inalcanzable y Deserción siempre
+> terminaba forzada. No es un requisito de las métricas del convenio SENDA (Manual.md §19).
+> Deserción y Retiro Voluntario ahora exigen solo el Formulario de Abandono validado. Esta
+> sección queda como registro histórico de por qué existía el `forceDesertion` que se sacó.
+
 **Archivo**: [src/server/services/cases.service.ts:416-421](src/server/services/cases.service.ts:416)
 
 **Problema**: basta incluir la palabra "forzada" en el motivo para saltarse el requisito de 3 intentos de contacto — y, a diferencia del forzado de etapa, no deja auditoría específica.

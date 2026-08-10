@@ -268,7 +268,7 @@ Como coordinador/a regional, tu rol es supervisar el trabajo de los PER de tu re
 
 **Ubicación en el menú**: 📊 Casos
 
-Selecciona un caso en el buscador de arriba para ver su ficha completa: código, PER asignado, fase actual y una línea de tiempo con todo el historial (sesiones, cambios de fase, intentos de contacto).
+Selecciona un caso en el buscador de arriba para ver su ficha completa: código, PER asignado, fase actual y una línea de tiempo con todo el historial (sesiones, cambios de fase, eventos de tareas).
 
 #### Validar el itinerario del caso
 
@@ -276,7 +276,9 @@ Debajo del historial aparece el panel **"Itinerario de Instrumentos"**: te muest
 
 #### Avanzar de fase un caso
 
-El botón para avanzar de etapa (Vinculación → Conexión → Finalización → Egreso) solo se habilita cuando **ya validaste todos los instrumentos obligatorios de la etapa actual**. Si falta alguno, en su lugar ves la lista de lo que falta y un botón **"Forzar avance de etapa"** que te pide escribir un motivo antes de confirmar (queda registrado en la auditoría).
+El botón para avanzar de etapa (Vinculación → Conexión → Finalización → Egreso) solo se habilita cuando **ya validaste (o marcaste como no aplicable) todos los instrumentos obligatorios de la etapa actual**. Si falta alguno, en su lugar ves la lista de lo que falta y un botón **"Forzar avance de etapa"** que te pide escribir un motivo antes de confirmar (queda registrado en la auditoría).
+
+> Si un instrumento puntual no aplica para este caso, no hace falta forzar toda la etapa: en el paso actual hay un enlace **"Marcar como resuelto (no aplica)…"** que pide motivo y resuelve solo ese instrumento.
 
 > **⚠️ Requisito para el Egreso**: no vas a poder egresar un caso si no se han validado la *Evaluación Ex-Post* (Actividad 5 Final), la Actividad 6 y la *Encuesta de Satisfacción*.
 
@@ -286,8 +288,7 @@ Si una persona acompañada abandona el programa:
 
 1. Abre el caso correspondiente.
 2. Usa el botón **"Retiro Voluntario"** o **"Deserción"**.
-3. El sistema pedirá que existan al menos **3 intentos de contacto** registrados antes de permitir marcar una deserción.
-4. Se habilita un Formulario de Abandono que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar el caso.
+3. Se habilita un Formulario de Abandono que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar el caso — es el único requisito para cualquiera de las dos salidas.
 
 ---
 
@@ -311,8 +312,7 @@ Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo
    - *Nuevo*: Primera vez que esta persona entra al programa.
    - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esta persona (afinidad territorial, experiencia, disponibilidad, etc.).
-5. **Acta de Primer Encuentro**: pega el enlace del acta en Drive (en modo demo puedes dejarlo en blanco).
-6. Presiona **"Conformar Dupla"**.
+5. Presiona **"Conformar Dupla"**.
 
 Al enviar, la plataforma crea de una vez la carpeta del caso en Drive, el documento IAP y deja el caso formalizado — no existe un paso intermedio de "proponer" que alguien tenga que volver a abrir y aprobar por separado. Si algo falla al aprovisionar Drive, no se crea nada: vuelves a intentar con el mismo formulario.
 

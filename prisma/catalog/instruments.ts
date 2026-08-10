@@ -248,6 +248,35 @@ export function buildInstrumentCatalog(createdByUserId: string) {
 
     // Itinerario CONEXION
     {
+      // Fila de catálogo puramente administrativa: el contenido real de cada registro vive en
+      // SessionLog, no en Task (ver instrument-itinerary.ts, sourceModel: "SESSION_LOG"). Existe
+      // acá solo para que DocumentRecord tenga un instrumentId al que anclar el documento
+      // generado (document-sync.service.ts) — la app nunca crea una Task con este instrumento.
+      name: "Registro de Acompañamiento",
+      description: "Registro semanal de cada contacto para implementar el plan de trabajo",
+      type: "MANUAL_TASK",
+      googleUrl: null,
+      phaseId: "FASE_4",
+      stageId: "CONEXION",
+      order: 0,
+      activityKey: "REGISTRO_ACOMPANAMIENTO",
+      submissionMode: "NATIVE_FORM",
+      optional: false,
+      triggerCondition: "CONTINUOUS",
+      targetRole: "PER",
+      scope: "NACIONAL",
+      version: "1.0",
+      status: "VIGENTE",
+      mandatory: true,
+      blocksProgress: false,
+      criticalTask: false,
+      validationRequired: true,
+      createdByUserId,
+      effectiveFrom: EFFECTIVE_FROM,
+      templateFileId: "mock_template_registro_acompanamiento",
+      defaultDueDays: 7,
+    },
+    {
       name: "Actividad 5: Evaluación conjunta del proceso (Intermedia)",
       description: "Evaluación intermedia del proceso de acompañamiento",
       type: "MANUAL_TASK",

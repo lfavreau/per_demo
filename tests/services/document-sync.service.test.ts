@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import {
   listPendingDocuments,
   syncPendingCaseDocuments,
+  findCasesWithPendingDocuments,
+  syncAllPendingCaseDocuments,
   hashDocumentPayload,
   type DocumentPayload,
 } from "@/server/services/document-sync.service";
@@ -391,7 +393,11 @@ describe("document-sync.service — syncPendingCaseDocuments (modo demo)", () =>
     expect(record?.revisionId).toBeTruthy();
   });
 
-  it("DOC-13: un instrumento fuera del alcance actual (Registro de Acompañamiento, fase 5) no se escribe aunque esté validado y haya carpeta", async () => {
+  it("DOC-13: un instrumento validado sin la carpeta de SU etapa provisionada queda pendiente, no se inventa una carpeta", async () => {
+    // baseCaseWithFolder() solo aprovisiona driveFolderVinculacionId. El Registro de
+    // Acompañamiento es de etapa Conexión: aunque su instrumento esté validado, no hay
+    // carpeta destino todavía — tiene que quedar "skipped", nunca escribirse en la carpeta
+    // equivocada ni inventar una.
     const actors = await baseCaseWithFolder();
     await prisma.sessionLog.create({
       data: {
@@ -408,8 +414,10 @@ describe("document-sync.service — syncPendingCaseDocuments (modo demo)", () =>
       },
     });
 
-    const outcome = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id);
-    expect(outcome).toEqual({ synced: [], failed: [], skipped: 0 });
+    const outcome = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id, {
+      stage: "CONEXION",
+    });
+    expect(outcome).toEqual({ synced: [], failed: [], skipped: 1 });
 
     const record = await prisma.documentRecord.findFirst({ where: { caseId: actors.paCase.id } });
     expect(record).toBeNull();
@@ -547,5 +555,141 @@ describe("document-sync.service — fase 3: instrumentos narrativos habilitados"
     expect(records.map((r) => r.fileName).sort()).toEqual(
       [`${actors.paCase.code}_Formulario_Abandono_PA`, `${actors.paCase.code}_Formulario_Abandono_PER`].sort()
     );
+  });
+});
+
+describe("document-sync.service — fase 4-5: IAP con tablas y Registro de Acompañamiento", () => {
+  it("DOC-19: el IAP reescribe el archivo ya provisionado al formalizar, no crea uno nuevo", async () => {
+    const actors = await baseCaseWithAllFolders();
+    await createTask(actors, "ACTIVIDAD_3_MAPA_RECURSOS", "VALIDADA");
+    await createTask(actors, "ACTIVIDAD_4_PLANIFICACION", "VALIDADA");
+
+    // Simula lo que createIapDocument() ya hizo al formalizar: el archivo existe en Drive
+    // desde antes de que este pipeline exista, registrado en IAPRecord, no en DocumentRecord.
+    await prisma.iAPRecord.create({
+      data: { paCaseId: actors.paCase.id, status: "EN_DESARROLLO", driveDocId: "iap_provisionado_al_formalizar" },
+    });
+
+    const pending = await listPendingDocuments(actors.paCase.id, true);
+    const iapPending = pending.find((p) => p.payload.docKey === "IAP");
+    expect(iapPending?.existingFileId).toBe("iap_provisionado_al_formalizar");
+    expect(iapPending?.reason).toBe("DESACTUALIZADO");
+
+    const outcome = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id);
+    expect(outcome.synced).toEqual(["ACTIVIDAD_4_PLANIFICACION"]);
+
+    const record = await prisma.documentRecord.findFirstOrThrow({
+      where: { caseId: actors.paCase.id, origin: "GENERATED" },
+    });
+    expect(record.fileId).toBe("iap_provisionado_al_formalizar");
+  });
+
+  it("DOC-20: reformular en Conexión resincroniza el IAP aunque el flush filtre por esa etapa", async () => {
+    const actors = await baseCaseWithAllFolders();
+    await createTask(actors, "ACTIVIDAD_3_MAPA_RECURSOS", "VALIDADA");
+    await createTask(actors, "ACTIVIDAD_4_PLANIFICACION", "VALIDADA");
+    await prisma.iAPRecord.create({
+      data: { paCaseId: actors.paCase.id, status: "EN_DESARROLLO", driveDocId: "iap_original" },
+    });
+
+    // Primera sincronización, al cerrar Vinculación.
+    const first = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id, {
+      stage: "VINCULACION",
+    });
+    expect(first.synced).toEqual(["ACTIVIDAD_4_PLANIFICACION"]);
+    const before = await prisma.documentRecord.findFirstOrThrow({
+      where: { caseId: actors.paCase.id, origin: "GENERATED" },
+    });
+
+    // Ya en Conexión, se reformula: cambia fields.REFORMULADO de "No" a "Sí" en el payload.
+    await createTask(actors, "REFORMULAR_ACTIVIDAD_4", "VALIDADA");
+
+    // El flush real ocurriría al salir de CONEXION, no de VINCULACION (el IAP es de Vinculación).
+    const second = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id, {
+      stage: "CONEXION",
+    });
+    expect(second.synced).toEqual(["ACTIVIDAD_4_PLANIFICACION"]);
+
+    const after = await prisma.documentRecord.findFirstOrThrow({
+      where: { caseId: actors.paCase.id, origin: "GENERATED" },
+    });
+    expect(after.fileId).toBe(before.fileId);
+    expect(after.contentHash).not.toBe(before.contentHash);
+  });
+
+  it("DOC-21: el Registro de Acompañamiento ya habilitado sincroniza con las sesiones validadas", async () => {
+    const actors = await baseCaseWithAllFolders();
+    await prisma.sessionLog.create({
+      data: {
+        paCaseId: actors.paCase.id,
+        perId: actors.per.id,
+        regionId: actors.paCase.regionId,
+        sessionNumber: 1,
+        date: new Date("2026-07-15"),
+        modality: "PRESENCIAL",
+        summary: "Primer contacto semanal",
+        attendance: "REALIZADA",
+        status: "VALIDADA",
+        isDemo: true,
+      },
+    });
+
+    const outcome = await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id, {
+      stage: "CONEXION",
+    });
+    expect(outcome.synced).toEqual(["REGISTRO_ACOMPANAMIENTO"]);
+
+    const record = await prisma.documentRecord.findFirstOrThrow({
+      where: { caseId: actors.paCase.id, origin: "GENERATED" },
+    });
+    expect(record.fileName).toBe(`${actors.paCase.code}_Registro_Acompanamiento`);
+  });
+});
+
+describe("document-sync.service — botón de forzado del admin", () => {
+  // El resto de la batería crea casos demo=true en el mismo test.db compartido, así que estas
+  // pruebas nunca asumen que la lista devuelta tiene exactamente N elementos — solo que el caso
+  // propio aparece (o no) con el conteo correcto, entre lo que haya de otros tests.
+
+  it("DOC-22: findCasesWithPendingDocuments encuentra el caso con pendientes y lo omite una vez sincronizado", async () => {
+    const actors = await baseCaseWithFolder();
+    await createTask(actors, "ACTIVIDAD_1_MOTIVACIONES", "VALIDADA", {
+      date: "2026-08-01",
+      motivations: "Retomar estudios",
+      expectations: "Sentirme acompañada",
+    });
+
+    const before = await findCasesWithPendingDocuments(true);
+    const ours = before.find((c) => c.caseId === actors.paCase.id);
+    expect(ours).toBeDefined();
+    expect(ours!.pendingCount).toBe(1);
+
+    await syncPendingCaseDocuments(actors.paCase.id, true, actors.coord.id);
+
+    const after = await findCasesWithPendingDocuments(true);
+    expect(after.find((c) => c.caseId === actors.paCase.id)).toBeUndefined();
+  });
+
+  it("DOC-23: syncAllPendingCaseDocuments respeta el tope maxCases y deja el resto pendiente para el próximo click", async () => {
+    const actors = await baseCaseWithFolder();
+    await createTask(actors, "ACTIVIDAD_1_MOTIVACIONES", "VALIDADA", {
+      date: "2026-08-01",
+      motivations: "Retomar estudios",
+      expectations: "Sentirme acompañada",
+    });
+
+    const capped = await syncAllPendingCaseDocuments(true, actors.coord.id, 0);
+    expect(capped.casesProcessed).toBe(0);
+    expect(capped.synced).toBe(0);
+    expect(capped.casesRemaining).toBeGreaterThanOrEqual(1);
+
+    const record = await prisma.documentRecord.findFirst({ where: { caseId: actors.paCase.id } });
+    expect(record).toBeNull(); // con maxCases=0 no se tocó nada todavía
+
+    const full = await syncAllPendingCaseDocuments(true, actors.coord.id, 50);
+    expect(full.synced).toBeGreaterThanOrEqual(1);
+
+    const recordAfter = await prisma.documentRecord.findFirst({ where: { caseId: actors.paCase.id } });
+    expect(recordAfter).not.toBeNull();
   });
 });

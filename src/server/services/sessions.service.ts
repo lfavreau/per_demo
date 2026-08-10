@@ -214,10 +214,3 @@ export async function returnSession(
     return updated;
   });
 }
-
-export async function getSessionsByCase(caseId: string) {
-  return prisma.sessionLog.findMany({
-    where: { paCaseId: caseId },
-    orderBy: { sessionNumber: "asc" },
-  });
-}

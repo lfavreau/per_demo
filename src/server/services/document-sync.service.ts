@@ -326,8 +326,12 @@ export async function listPendingDocuments(
 ): Promise<PendingDocument[]> {
   const paCase = await loadCaseContext(caseId, isDemo);
 
+  // El IAP se sale del filtro de etapa a propósito: su carpeta destino es siempre la de
+  // Vinculación, pero su contenido puede cambiar en Conexión (Reformular Actividad 4). Si
+  // solo se revisara al salir de Vinculación, una reformulación posterior nunca dispararía
+  // una reescritura — por eso se evalúa en cualquier flush, sin importar qué etapa lo gatilló.
   const definitions = options.stage
-    ? GENERATED_DOCUMENTS.filter((def) => def.stage === options.stage)
+    ? GENERATED_DOCUMENTS.filter((def) => def.stage === options.stage || def.docKey === "IAP")
     : GENERATED_DOCUMENTS;
 
   const records = await prisma.documentRecord.findMany({
@@ -344,14 +348,20 @@ export async function listPendingDocuments(
     const existing = records.find(
       (record) => record.instrument.activityKey === def.anchorActivityKey
     );
+    // El IAP ya existe en Drive desde que se formalizó el caso (createIapDocument, fuera de
+    // este pipeline) — su primer DocumentRecord todavía no existe la primera vez que se
+    // sincroniza, pero el archivo sí. Sin este fallback, la primera sincronización crearía una
+    // copia nueva de la plantilla en vez de rellenar la que ya está en la carpeta del caso.
+    const existingFileId =
+      existing?.fileId ?? (def.docKey === "IAP" ? paCase.iapRecords[0]?.driveDocId ?? null : null);
     if (existing?.contentHash === contentHash) continue;
 
     pending.push({
       payload,
       contentHash,
       existingRecordId: existing?.id ?? null,
-      existingFileId: existing?.fileId ?? null,
-      reason: existing ? "DESACTUALIZADO" : "NUEVO",
+      existingFileId,
+      reason: existingFileId ? "DESACTUALIZADO" : "NUEVO",
     });
   }
 
@@ -367,15 +377,15 @@ const STAGE_FOLDER_FIELD: Record<
   FINALIZACION: "driveFolderFinalizacionId",
 };
 
-// Documentos que la app ya sabe materializar en Drive. El piloto (fase 2) validó el mecanismo
-// de reconstrucción en sitio contra Drive real con un solo instrumento; esta lista suma los 7
-// instrumentos narrativos restantes del catálogo (campos planos, sin tablas) — repetición
-// mecánica, ver GENERATED_DOCUMENTS arriba. Quedan afuera a propósito: IAP (tablas, fase 4) y
-// Registro de Acompañamiento (tabla acumulativa, fase 5).
+// Documentos que la app ya sabe materializar en Drive. Los 7 narrativos (fase 3) más el IAP con
+// tablas y el Registro de Acompañamiento acumulativo (fase 4-5). Requieren cada uno su propia
+// Script Property TEMPLATE_DOC_{activityKey} en Apps Script — ver GoogleAppsScript.gs.
 export const ENABLED_GENERATED_DOCUMENT_KEYS: readonly string[] = [
   "PRIMER_ENCUENTRO_REFLEXION",
   "ACTIVIDAD_1_MOTIVACIONES",
   "ACTIVIDAD_2_ANTECEDENTES",
+  "IAP", // anchorActivityKey real es ACTIVIDAD_4_PLANIFICACION — ver GENERATED_DOCUMENTS
+  "REGISTRO_ACOMPANAMIENTO",
   "ACTIVIDAD_5_INTERMEDIA",
   "ACTIVIDAD_5_FINAL",
   "ACTIVIDAD_6_REFLEXION_FINAL",
@@ -485,5 +495,72 @@ export async function syncPendingCaseDocuments(
     synced: response.results.map((r) => r.activityKey),
     failed: response.errors.map((e) => ({ docKey: e.activityKey, message: e.message })),
     skipped: pending.length - items.length,
+  };
+}
+
+export interface CaseWithPendingDocuments {
+  caseId: string;
+  code: string;
+  pendingCount: number;
+}
+
+// Barre todos los casos del modo actual buscando documentos pendientes. Cara a cara con Drive
+// solo a través de listPendingDocuments (lectura + hash, sin red) — nunca llama a Apps Script
+// acá, así que es seguro correrla solo para mostrar el contador en el panel de admin.
+export async function findCasesWithPendingDocuments(isDemo: boolean): Promise<CaseWithPendingDocuments[]> {
+  const cases = await prisma.pACase.findMany({
+    where: { isDemo },
+    select: { id: true, code: true },
+    orderBy: { code: "asc" },
+  });
+
+  const withPending: CaseWithPendingDocuments[] = [];
+  for (const c of cases) {
+    const pending = (await listPendingDocuments(c.id, isDemo)).filter((doc) =>
+      ENABLED_GENERATED_DOCUMENT_KEYS.includes(doc.payload.docKey)
+    );
+    if (pending.length) withPending.push({ caseId: c.id, code: c.code, pendingCount: pending.length });
+  }
+  return withPending;
+}
+
+export interface BulkSyncOutcome {
+  casesProcessed: number;
+  /** Casos con pendientes que no alcanzaron a procesarse en este llamado — re-clickear el botón los toma. */
+  casesRemaining: number;
+  synced: number;
+  failed: number;
+}
+
+// Botón de forzado del admin: por caso ya validado, syncPendingCaseDocuments hace una llamada
+// de red a Apps Script — con muchos casos pendientes, un solo click podría exceder el límite de
+// ejecución de la función serverless. Se acota a maxCases por invocación; lo que no alcanza a
+// procesarse queda igual de pendiente (nada se pierde) para el próximo click.
+export async function syncAllPendingCaseDocuments(
+  isDemo: boolean,
+  actorId: string,
+  maxCases = 10
+): Promise<BulkSyncOutcome> {
+  const withPending = await findCasesWithPendingDocuments(isDemo);
+  const toProcess = withPending.slice(0, maxCases);
+
+  let synced = 0;
+  let failed = 0;
+  for (const c of toProcess) {
+    try {
+      const outcome = await syncPendingCaseDocuments(c.caseId, isDemo, actorId);
+      synced += outcome.synced.length;
+      failed += outcome.failed.length;
+    } catch (error) {
+      failed += 1;
+      console.error(`No se pudo sincronizar documentos del caso ${c.code}:`, error);
+    }
+  }
+
+  return {
+    casesProcessed: toProcess.length,
+    casesRemaining: withPending.length - toProcess.length,
+    synced,
+    failed,
   };
 }
