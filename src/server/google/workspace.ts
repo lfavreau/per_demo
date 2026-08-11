@@ -9,6 +9,9 @@ const REQUEST_TIMEOUT_MS = 20_000;
 // reemplazar campos + insertar tablas por documento): 20s alcanza para una llamada simple pero
 // no para un lote de hasta ~10 documentos.
 const DOCUMENT_SYNC_TIMEOUT_MS = 60_000;
+// createCaseFolderHierarchy espera hasta 30s por el lock global del script antes de crear
+// carpetas; el timeout del cliente debe quedar por encima de eso o siempre se rendirá primero.
+const FOLDER_PROVISION_TIMEOUT_MS = 45_000;
 
 type WorkspaceMode = "demo" | "real";
 
@@ -229,7 +232,8 @@ export async function createCaseFolder(
   const result = await callGoogleAppsScript<CaseFoldersResult>(
     "createCaseFolderHierarchy",
     { caseCode, regionId, perId, perFolderName: await buildPerFolderName(perId) },
-    requestId
+    requestId,
+    FOLDER_PROVISION_TIMEOUT_MS
   );
 
   for (const [label, id] of Object.entries({
