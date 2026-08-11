@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isNextRedirect } from "@/lib/next-errors";
-import { createCaseFromCandidate, validateMatch, formalizeMatch, transitionCaseStatus } from "@/server/services/cases.service";
+import { createCaseFromCandidate, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
 import { updateTaskStatus } from "@/server/services/tasks.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
-import { resolveAlert, checkAllAlertRules } from "@/server/services/alerts.service";
+import { resolveAlert } from "@/server/services/alerts.service";
 import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
-import { extractGoogleDriveFileId } from "@/lib/google-resource";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -32,13 +31,20 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   }
 
   try {
-    const newCase = await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo);
+    const newCase = await createCaseFromCandidate(
+      candidateId,
+      perId,
+      matchRationale,
+      type,
+      user.id,
+      user.isDemo
+    );
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
     revalidatePath("/coordinacion/candidatas");
     revalidatePath("/per");
     revalidatePath("/admin");
-    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(newCase.code)}&highlightCaseId=${newCase.id}`);
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(newCase.code)}&highlightCaseId=${newCase.id}&workspace=created`);
   } catch (err: any) {
     if (isNextRedirect(err)) throw err;
     console.error("Error creating case:", err);
@@ -46,7 +52,7 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   }
 }
 
-export async function validateMatchAction(formData: FormData): Promise<void> {
+export async function reassignCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
     throw new Error("No autorizado");
@@ -54,39 +60,19 @@ export async function validateMatchAction(formData: FormData): Promise<void> {
 
   const caseId = String(formData.get("caseId") || "");
   const caseCode = String(formData.get("caseCode") || "");
-  try {
-    await validateMatch(caseId, user.id, user.isDemo);
-    revalidatePath("/coordinacion/casos");
-    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}`);
-  } catch (error) {
-    if (isNextRedirect(error)) throw error;
-    const message = error instanceof Error ? error.message : "No se pudo validar la dupla";
-    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&error=${encodeURIComponent(message)}`);
-  }
-}
-
-export async function formalizeMatchAction(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
-    throw new Error("No autorizado");
-  }
-
-  const caseId = String(formData.get("caseId") || "");
-  const caseCode = String(formData.get("caseCode") || "");
-  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
+  const newPerId = String(formData.get("newPerId") || "");
+  const reason = String(formData.get("reason") || "");
 
   try {
-    const extracted = extractGoogleDriveFileId(actaInput);
-    const actaFileId = user.isDemo
-      ? actaInput || `demo_acta_${caseCode}`
-      : extracted || `auto_acta_${caseCode}`;
-    await formalizeMatch(caseId, actaFileId, user.id, user.isDemo);
+    await reassignCase(caseId, newPerId, reason, user.id, user.isDemo);
     revalidatePath("/coordinacion/casos");
-    revalidatePath("/per");
-    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&workspace=created`);
+    revalidatePath("/coordinacion/candidatas");
+    revalidatePath("/coordinacion/supervisiones");
+    revalidatePath("/per", "layout");
+    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&highlightCaseId=${encodeURIComponent(caseId)}`);
   } catch (error) {
     if (isNextRedirect(error)) throw error;
-    const message = error instanceof Error ? error.message : "No se pudo formalizar la dupla";
+    const message = error instanceof Error ? error.message : "No se pudo reasignar el caso";
     redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(caseCode)}&error=${encodeURIComponent(message)}`);
   }
 }
@@ -107,7 +93,7 @@ export async function validateSessionAction(sessionId: string): Promise<void> {
   } catch (err) {
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo validar el Registro de Acompañamiento";
-    redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
+    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -134,7 +120,7 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
   } catch (err) {
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo devolver el Registro de Acompañamiento";
-    redirect(`/coordinacion/sesiones?error=${encodeURIComponent(message)}`);
+    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
   }
 }
 
@@ -219,26 +205,6 @@ export async function resolveAlertAction(formData: FormData): Promise<void> {
   } catch (err) {
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo resolver la alerta";
-    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
-  }
-}
-
-export async function triggerAlertRulesAction(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
-    throw new Error("No autorizado");
-  }
-
-  try {
-    await checkAllAlertRules(user.isDemo);
-    revalidatePath("/coordinacion");
-    revalidatePath("/admin");
-  } catch (err) {
-    if (isNextRedirect(err)) throw err;
-    const message = err instanceof Error ? err.message : "No se pudieron ejecutar las reglas de alerta";
     redirect(`/coordinacion?error=${encodeURIComponent(message)}`);
   }
 }
@@ -256,7 +222,6 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const toStatus = formData.get("toStatus") as string;
   const reason = formData.get("reason") as string;
   const forceAdvance = formData.get("forceAdvance") === "on";
-  const forceDesertion = formData.get("forceDesertion") === "on";
 
   if (!caseId || !toStatus) {
     throw new Error("Faltan datos obligatorios");
@@ -270,7 +235,7 @@ export async function transitionCaseStatusAction(formData: FormData): Promise<vo
   const caseCode = paCase?.code || "";
 
   try {
-    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance, forceDesertion);
+    await transitionCaseStatus(caseId, toStatus, reason, user.id, user.isDemo, forceAdvance);
     revalidatePath("/coordinacion");
     revalidatePath("/admin");
     redirect(`/coordinacion/casos?caseCode=${caseCode}`);
@@ -316,7 +281,6 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   const ageRange = formData.get("ageRange") as string;
   const educationLevel = formData.get("educationLevel") as string;
   const employmentStatus = formData.get("employmentStatus") as string;
-  const actaInput = String(formData.get("actaPrimerEncuentro") || "");
 
   if (!perId || !matchRationale || !gender || !ageRange || !educationLevel || !employmentStatus) {
     throw new Error("Faltan campos obligatorios para el ingreso directo");
@@ -328,10 +292,6 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   }
 
   try {
-    const extracted = extractGoogleDriveFileId(actaInput);
-    const actaFileId = user.isDemo
-      ? actaInput || "demo_acta_continuidad"
-      : extracted || "auto_acta_continuidad";
     const { createDirectContinuityCase } = await import("@/server/services/cases.service");
     const paCase = await createDirectContinuityCase(
       perId,
@@ -342,8 +302,7 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
       educationLevel,
       employmentStatus,
       user.id,
-      user.isDemo,
-      actaFileId
+      user.isDemo
     );
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
@@ -503,7 +462,7 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
     userId: per.userId,
     title: "Nueva Reunión de Supervisión",
     message: `Tu coordinador técnico regional agendó una reunión de supervisión: "${topic}" para el ${date.toLocaleDateString("es-CL")}.`,
-    link: `/per?highlightSupervisionId=${supervision.id}`,
+    link: `/per/avisos?highlightSupervisionId=${supervision.id}`,
     isDemo: user.isDemo,
   });
 
@@ -519,7 +478,7 @@ export async function registerNetworkDeviceAction(formData: FormData): Promise<v
     throw new Error("No autorizado");
   }
 
-  const name = formData.get("name") as string;
+  const name = (formData.get("name") as string)?.trim();
   const type = formData.get("type") as string;
   const contactPerson = formData.get("contactPerson") as string;
 
@@ -543,6 +502,7 @@ export async function registerNetworkDeviceAction(formData: FormData): Promise<v
   });
 
   revalidatePath("/coordinacion/redes");
+  revalidatePath("/admin/redes");
 }
 
 export async function logNetworkActivationAction(formData: FormData): Promise<void> {
@@ -629,70 +589,6 @@ export async function registerPhase5RecordAction(formData: FormData): Promise<vo
   revalidatePath("/coordinacion/redes");
 }
 
-export async function updatePerStatusAction(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
-    throw new Error("No autorizado");
-  }
-
-  const perId = formData.get("perId") as string;
-  const toStatus = formData.get("status") as string;
-
-  if (!perId || !toStatus) {
-    throw new Error("Faltan datos obligatorios");
-  }
-  if (!["HABILITADO", "PENDIENTE", "NO_HABILITADO"].includes(toStatus)) {
-    throw new Error("Estado de certificación inválido");
-  }
-
-  const profile = await prisma.pERProfile.findUnique({
-    where: { id: perId },
-    include: { user: true },
-  });
-  if (!profile) throw new Error("PER no encontrado");
-
-  // Mismo control regional que el resto de operaciones de coordinación
-  if (user.role !== "ADMIN" && user.regionId !== profile.regionId) {
-    throw new Error("No autorizado para operar acompañantes de esta región");
-  }
-  // La habilitación no puede cruzar modos: un coordinador en sesión demo no
-  // debe alterar el estado de un PER real, ni al revés.
-  if (Boolean(profile.user.isDemo) !== Boolean(user.isDemo)) {
-    throw new Error("El acompañante no pertenece al modo de trabajo actual");
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.pERProfile.update({
-      where: { id: perId },
-      data: {
-        certificationStatus: toStatus,
-        certifiedByUserId: user.id,
-        certifiedAt: toStatus === "HABILITADO" ? new Date() : null,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        userId: user.id,
-        role: user.role,
-        action: toStatus === "HABILITADO" ? "HABILITACION_PER" : "SUSPENSION_PER",
-        entityType: "PERProfile",
-        entityId: perId,
-        previousValue: profile.certificationStatus,
-        newValue: toStatus,
-        isDemo: Boolean(user.isDemo),
-      },
-    });
-  });
-
-  revalidatePath("/coordinacion/supervisiones");
-  revalidatePath("/coordinacion/candidatas");
-  revalidatePath("/admin");
-}
-
 export async function createCandidateAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
@@ -720,6 +616,63 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
       ageRange,
       isDemo: Boolean(user.isDemo),
     },
+  });
+
+  revalidatePath("/coordinacion/candidatas");
+  revalidatePath("/coordinacion");
+}
+
+const CANDIDATE_STATUSES = [
+  "DERIVADA",
+  "CONTACTADA",
+  "PREINSCRITA",
+  "ENTREVISTADA",
+  "ADMISIBLE",
+  "NO_ADMISIBLE",
+  "SELECCIONADA",
+  "EN_ESPERA",
+  "DESCARTADA",
+];
+
+export async function updateCandidateStatusAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    throw new Error("No autorizado");
+  }
+
+  const candidateId = String(formData.get("candidateId") || "");
+  const status = String(formData.get("status") || "");
+
+  if (!candidateId || !CANDIDATE_STATUSES.includes(status)) {
+    throw new Error("Estado de nómina inválido");
+  }
+
+  const candidate = await prisma.pACandidate.findUnique({ where: { id: candidateId } });
+  if (!candidate) throw new Error("Persona no encontrada en la nómina");
+  if (user.role !== "ADMIN" && candidate.regionId !== user.regionId) {
+    throw new Error("No autorizado para operar la nómina de esta región");
+  }
+  if (Boolean(candidate.isDemo) !== Boolean(user.isDemo)) {
+    throw new Error("La persona no pertenece al modo de trabajo actual");
+  }
+  if (candidate.convertedToCaseId) {
+    throw new Error("Ya fue convertida a un acompañamiento; el estado se administra desde el caso");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.pACandidate.update({ where: { id: candidateId }, data: { status } });
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        role: user.role,
+        action: "UPDATE_CANDIDATE_STATUS",
+        entityType: "PACandidate",
+        entityId: candidateId,
+        previousValue: candidate.status,
+        newValue: status,
+        isDemo: Boolean(user.isDemo),
+      },
+    });
   });
 
   revalidatePath("/coordinacion/candidatas");

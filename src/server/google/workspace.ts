@@ -1,10 +1,14 @@
-import "server-only";
+﻿import "server-only";
 
 import { prisma } from "@/lib/db";
 
 const GOOGLE_APPS_SCRIPT_URL = process.env.GOOGLE_APPS_SCRIPT_URL?.trim();
 const GOOGLE_APPS_SCRIPT_SECRET = process.env.GOOGLE_APPS_SCRIPT_SECRET?.trim();
 const REQUEST_TIMEOUT_MS = 20_000;
+// syncCaseDocuments reconstruye varios Docs en un solo request (copiar/limpiar plantilla +
+// reemplazar campos + insertar tablas por documento): 20s alcanza para una llamada simple pero
+// no para un lote de hasta ~10 documentos.
+const DOCUMENT_SYNC_TIMEOUT_MS = 60_000;
 
 type WorkspaceMode = "demo" | "real";
 
@@ -46,12 +50,13 @@ function assertRealConfiguration() {
 async function callGoogleAppsScript<T>(
   action: string,
   payload: Record<string, unknown>,
-  requestId = createRequestId(action)
+  requestId = createRequestId(action),
+  timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<T> {
   assertRealConfiguration();
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(GOOGLE_APPS_SCRIPT_URL!, {
@@ -86,7 +91,7 @@ async function callGoogleAppsScript<T>(
     return body.data;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Google Workspace no respondió dentro de ${REQUEST_TIMEOUT_MS / 1000} segundos.`);
+      throw new Error(`Google Workspace no respondió dentro de ${timeoutMs / 1000} segundos.`);
     }
     throw error;
   } finally {
@@ -169,11 +174,31 @@ export interface VerifiedDriveFile {
 
 export interface ValidatedCopyResult {
   newFileId: string;
-  newRevisionId: string;
+  /** Revisión real de Drive. null si el servicio avanzado Drive no está habilitado. */
+  newRevisionId: string | null;
   fileName: string;
   fileUrl: string;
   createdCopy: boolean;
   requestId: string;
+}
+
+// Las carpetas de PER se nombraban con el cuid interno, ilegible al navegar Drive. El sufijo
+// mantiene única la carpeta cuando dos PER comparten nombre: sin él, dos personas distintas
+// terminarían compartiendo expediente.
+async function buildPerFolderName(perId: string): Promise<string> {
+  const per = await prisma.pERProfile.findUnique({
+    where: { id: perId },
+    select: { user: { select: { name: true } } },
+  });
+
+  const slug = (per?.user.name ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+
+  return slug ? `PER_${slug}_${perId.slice(-6)}` : `PER_${perId}`;
 }
 
 export async function createCaseFolder(
@@ -203,7 +228,7 @@ export async function createCaseFolder(
 
   const result = await callGoogleAppsScript<CaseFoldersResult>(
     "createCaseFolderHierarchy",
-    { caseCode, regionId, perId },
+    { caseCode, regionId, perId, perFolderName: await buildPerFolderName(perId) },
     requestId
   );
 
@@ -410,33 +435,9 @@ export async function verifyDriveFile(
   return result;
 }
 
-export async function copyActaPrimerEncuentro(
-  fileId: string,
-  destinationFolderId: string,
-  caseCode: string,
-  isDemo: boolean
-): Promise<ValidatedCopyResult> {
-  const requestId = createRequestId("acta_copy");
-  if (isDemo) {
-    return {
-      newFileId: `demo_acta_${caseCode}`,
-      newRevisionId: "demo",
-      fileName: `${caseCode}_Acta_Primer_Encuentro`,
-      fileUrl: `https://drive.google.com/open?id=mock_demo_acta_${caseCode}`,
-      createdCopy: false,
-      requestId,
-    };
-  }
-
-  const result = await callGoogleAppsScript<ValidatedCopyResult>(
-    "copyActaPrimerEncuentro",
-    { fileId, destinationFolderId, caseCode },
-    requestId
-  );
-  assertGoogleId(result.newFileId, "ID del Acta");
-  assertGoogleUrl(result.fileUrl, ["drive.google.com", "docs.google.com"], "Acta");
-  return { ...result, requestId };
-}
+// Nota: la Apps Script del lado servidor conserva la acción "copyActaPrimerEncuentro" (no
+// requiere redespliegue para removerla), pero ya no queda ningún llamador en la app: formalizar
+// una dupla dejó de exigir un Acta externa — ver provisionAndPersistCase en cases.service.ts.
 
 export async function copyToValidadosFolder(
   fileId: string,
@@ -484,4 +485,82 @@ export async function rollbackValidatedCopy(result: ValidatedCopyResult, isDemo:
     fileId: result.newFileId,
     copyRequestId: result.requestId,
   });
+}
+
+export interface DocumentSyncTable {
+  placeholder: string;
+  header: string[];
+  rows: string[][];
+}
+
+export interface DocumentSyncItem {
+  activityKey: string;
+  fileSuffix: string;
+  targetFolderId: string;
+  /** Archivo ya existente si es una corrección; null la primera vez. */
+  existingFileId: string | null;
+  fields: Record<string, string>;
+  tables: DocumentSyncTable[];
+}
+
+export interface DocumentSyncResult {
+  activityKey: string;
+  fileId: string;
+  revisionId: string | null;
+  fileUrl: string;
+  created: boolean;
+}
+
+export interface DocumentSyncError {
+  activityKey: string;
+  message: string;
+}
+
+export interface DocumentSyncResponse {
+  results: DocumentSyncResult[];
+  errors: DocumentSyncError[];
+  requestId: string;
+}
+
+// Lote por caso, tolerante a fallas parciales: un documento con plantilla mal configurada no
+// debe tumbar los demás. Los fallidos vuelven en "errors" y el llamador los deja pendientes
+// para el próximo intento en vez de reintentar dentro de esta misma llamada.
+export async function syncCaseDocuments(
+  caseCode: string,
+  documents: DocumentSyncItem[],
+  isDemo: boolean
+): Promise<DocumentSyncResponse> {
+  const requestId = createRequestId("doc_sync");
+
+  if (isDemo) {
+    return {
+      results: documents.map((doc) => {
+        const base = caseCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+        const fileId = doc.existingFileId || `demo_doc_${base}_${doc.activityKey.toLowerCase()}`;
+        return {
+          activityKey: doc.activityKey,
+          fileId,
+          revisionId: `demo_revision_${Date.now()}`,
+          fileUrl: `https://docs.google.com/document/d/mock_${fileId}/edit`,
+          created: !doc.existingFileId,
+        };
+      }),
+      errors: [],
+      requestId,
+    };
+  }
+
+  const result = await callGoogleAppsScript<DocumentSyncResponse>(
+    "syncCaseDocuments",
+    { caseCode, documents },
+    requestId,
+    DOCUMENT_SYNC_TIMEOUT_MS
+  );
+
+  for (const item of result.results) {
+    assertGoogleId(item.fileId, "ID de documento generado");
+    assertGoogleUrl(item.fileUrl, ["docs.google.com", "drive.google.com"], "documento generado");
+  }
+
+  return { ...result, requestId };
 }

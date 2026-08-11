@@ -434,7 +434,7 @@ model DocumentRecord {
   instrument         Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
   instrumentVersion  String
   fileId             String
-  revisionId         String
+  revisionId         String?    // revisión real de Drive; null si el servicio avanzado Drive no la entregó
   fileName           String
   fileUrl            String?
   uploadedByUserId   String
@@ -443,9 +443,17 @@ model DocumentRecord {
   status             String     // "ENVIADA", "VALIDADA", "DEVUELTA"
   isFinalVigente     Boolean    @default(false)
   driveFolderId      String?
+  // Documentos generados por la app (submissionMode NATIVE_FORM): el hash del payload
+  // renderizado decide si el archivo en Drive quedó desactualizado respecto de la base.
+  // Nulos en documentos subidos por fuera (Encuesta, Acta), que la app no regenera.
+  origin             String     @default("EXTERNAL") // "EXTERNAL" | "GENERATED"
+  contentHash        String?
+  lastSyncedAt       DateTime?
   isDemo             Boolean    @default(false)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
+
+  @@index([caseId, instrumentId, isDemo])
 }
 
 model ReportSnapshot {

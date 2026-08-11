@@ -171,6 +171,7 @@ export default function AppShell({ children, user }: AppShellProps) {
       { name: "Resumen", path: "/admin", icon: "📊" },
       { name: "Gestión de Usuarios", path: "/admin/usuarios", icon: "👥" },
       { name: "Instrumentos", path: "/admin/instrumentos", icon: "📋" },
+      { name: "Catálogo de Redes", path: "/admin/redes", icon: "🌐" },
       { name: "Reportes SENDA", path: "/admin/reportes", icon: "📥" },
       { name: "Auditoría", path: "/admin/auditoria", icon: "🛡️" },
     ],
@@ -178,14 +179,12 @@ export default function AppShell({ children, user }: AppShellProps) {
       { name: "Resumen Regional", path: "/coordinacion", icon: "📊" },
       { name: "Nómina / Fase 2", path: "/coordinacion/candidatas", icon: "👥" },
       { name: "Acompañamientos", path: "/coordinacion/casos", icon: "🤝" },
-      { name: "Validación Sesiones", path: "/coordinacion/sesiones", icon: "✓" },
+      { name: "Validación", path: "/coordinacion/alertas", icon: "✓" },
       { name: "Supervisiones", path: "/coordinacion/supervisiones", icon: "🗓️" },
       { name: "Gestión de Redes", path: "/coordinacion/redes", icon: "🌐" },
-      { name: "Alertas y Tareas", path: "/coordinacion/alertas", icon: "⚠️" },
     ],
     PER: [
       { name: "Mi Agenda", path: "/per", icon: "📅" },
-      { name: "Casos Activos", path: "/per/casos", icon: "👥" },
       { name: "Avisos", path: "/per/avisos", icon: "🔔" },
     ],
   };

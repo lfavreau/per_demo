@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/tests/.tmp/
 
 # next.js
 /.next/
@@ -41,6 +42,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code: config local, worktrees y permisos con posibles secretos
+.claude/settings.local.json
+.claude/worktrees/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*

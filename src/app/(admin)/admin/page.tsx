@@ -5,7 +5,9 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import { syncMirrorSheet } from "@/server/google/workspace";
+import { findCasesWithPendingDocuments, syncAllPendingCaseDocuments } from "@/server/services/document-sync.service";
 import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
+import { REGIONS } from "@/lib/program-config";
 
 // Server action for manual Sheets Mirror sync from the dashboard
 async function triggerSheetsSync(formData: FormData) {
@@ -34,13 +36,59 @@ async function triggerSheetsSync(formData: FormData) {
   redirect(`/admin?${query.toString()}`);
 }
 
+// Server action para forzar la sincronización de documentos generados pendientes (fase 5): el
+// flush automático solo corre al cerrar etapa, así que documentos de instrumentos CONTINUOUS
+// (Registro de Acompañamiento) o que quedaron sin sincronizar por una falla anterior necesitan
+// este botón para no esperar al próximo cierre de etapa.
+async function triggerDocumentSync(formData: FormData) {
+  "use server";
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") throw new Error("No autorizado");
+
+  const regionId = String(formData.get("regionId") || "").trim();
+  const query = new URLSearchParams();
+  if (regionId) query.set("regionId", regionId);
+
+  try {
+    const outcome = await syncAllPendingCaseDocuments(user.isDemo, user.id);
+    query.set("docsync", outcome.failed > 0 ? "partial" : "success");
+    query.set("docsyncSynced", String(outcome.synced));
+    query.set("docsyncFailed", String(outcome.failed));
+    query.set("docsyncRemaining", String(outcome.casesRemaining));
+    if (outcome.failures.length) {
+      query.set("docsyncFailures", JSON.stringify(outcome.failures));
+    }
+  } catch (error) {
+    console.error("Error al sincronizar documentos generados:", error);
+    query.set("docsync", "error");
+  }
+
+  redirect(`/admin?${query.toString()}`);
+}
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ regionId?: string; sync?: string }>;
+  searchParams: Promise<{
+    regionId?: string;
+    sync?: string;
+    docsync?: string;
+    docsyncSynced?: string;
+    docsyncFailed?: string;
+    docsyncRemaining?: string;
+    docsyncFailures?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   const params = await searchParams;
+  let docsyncFailures: { caseCode: string; docKey: string; message: string }[] = [];
+  if (params.docsyncFailures) {
+    try {
+      docsyncFailures = JSON.parse(params.docsyncFailures);
+    } catch {
+      docsyncFailures = [];
+    }
+  }
   const selectedRegion = params.regionId || null;
 
   // Enforce auth and admin access
@@ -49,6 +97,8 @@ export default async function AdminDashboardPage({
   }
 
   const isDemo = Boolean(user.isDemo);
+  const pendingDocumentCases = await findCasesWithPendingDocuments(isDemo);
+  const pendingDocumentCount = pendingDocumentCases.reduce((sum, c) => sum + c.pendingCount, 0);
 
   // 1. Fetch case statistics for KPIs (filtered by region if selected and isDemo)
   const caseWhere: any = { isDemo };
@@ -167,16 +217,8 @@ export default async function AdminDashboardPage({
   const totalInstrumentsCount = await prisma.instrument.count();
 
   // 2. Fetch Regional summary
-  const regions = [
-    { name: "Metropolitana", quota: 20 },
-    { name: "Valparaíso", quota: 8 },
-    { name: "Tarapacá", quota: 6 },
-    { name: "Biobío", quota: 4 },
-    { name: "Los Ríos", quota: 11 },
-  ];
-
   const regionalData = await Promise.all(
-    regions.map(async (reg) => {
+    REGIONS.map(async (reg) => {
       const activeCount = await prisma.pACase.count({
         where: { regionId: reg.name, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
       });
@@ -224,6 +266,36 @@ export default async function AdminDashboardPage({
             de Apps Script y vuelve a intentarlo.
           </div>
         )}
+        {params.docsync === "success" && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            Documentos sincronizados: {params.docsyncSynced || 0}.
+            {Number(params.docsyncRemaining || 0) > 0 &&
+              ` Quedan ${params.docsyncRemaining} casos con pendientes — volvé a hacer click para seguir.`}
+          </div>
+        )}
+        {params.docsync === "partial" && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 space-y-2">
+            <p>
+              Sincronizados: {params.docsyncSynced || 0}. Fallaron: {params.docsyncFailed || 0} (quedan pendientes,
+              se reintentan en el próximo click o cierre de etapa).
+              {Number(params.docsyncRemaining || 0) > 0 && ` Además quedan ${params.docsyncRemaining} casos sin procesar todavía.`}
+            </p>
+            {docsyncFailures.length > 0 && (
+              <ul className="text-xs space-y-1 pl-4 list-disc">
+                {docsyncFailures.map((f, i) => (
+                  <li key={i}>
+                    <span className="font-bold">{f.caseCode}</span> — {f.docKey}: {f.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        {params.docsync === "error" && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            No fue posible sincronizar documentos generados. Revisa el despliegue de Apps Script y las plantillas configuradas.
+          </div>
+        )}
 
         {/* Banner with sync controls */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-6 bg-white border border-slate-200 rounded-2xl shadow-sm gap-4">
@@ -246,6 +318,17 @@ export default async function AdminDashboardPage({
                 🔄 Sincronizar Google Workspace
               </button>
             </form>
+            {pendingDocumentCount > 0 && (
+              <form action={triggerDocumentSync}>
+                <input type="hidden" name="regionId" value={selectedRegion || ""} />
+                <button
+                  type="submit"
+                  className="py-1.5 px-4 bg-slate-100 hover:bg-slate-200 border border-slate-350 text-slate-700 text-xs font-semibold rounded-xl shadow-sm transition active:scale-[0.98] cursor-pointer"
+                >
+                  📄 Subir documentos pendientes ({pendingDocumentCount})
+                </button>
+              </form>
+            )}
           </div>
         </div>
 
@@ -261,7 +344,7 @@ export default async function AdminDashboardPage({
           >
             🌐 Todo el País (Nacional)
           </a>
-          {regions.map((reg) => {
+          {REGIONS.map((reg) => {
             const isActive = selectedRegion === reg.name;
             return (
               <a

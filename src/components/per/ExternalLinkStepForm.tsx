@@ -47,7 +47,7 @@ export default function ExternalLinkStepForm({ taskId, title }: ExternalLinkStep
           required
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Pegar enlace del formulario de Google Drive..."
+          placeholder="Pegar enlace del formulario de Google..."
           className="flex-1 p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
         />
         <button

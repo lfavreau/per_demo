@@ -142,10 +142,10 @@ El programa PER se organiza en **5 fases secuenciales** que estructuran todo el 
 
 **Objetivo**: Identificar y seleccionar a las personas que serán acompañadas.
 
-El flujo de ingreso sigue un *funnel* de **7 estados**:
+El flujo de ingreso sigue un *funnel* de **9 estados**:
 
 ```
-Derivada → Contactada → Preinscrita → Entrevistada → Admisible → Seleccionada → En espera
+Derivada → Contactada → Preinscrita → Entrevistada → Admisible → No Admisible → Seleccionada → En espera → Descartada
 ```
 
 Cada persona pasa por estas etapas antes de ser asignada a un PER. Las personas no admisibles o descartadas también se registran para control estadístico.
@@ -476,7 +476,7 @@ Es como una **libreta de trabajo digital** que te ayuda a:
 
 ### ¿Qué NO es esta aplicación?
 
-> **Importante**: La app **no reemplaza** los documentos oficiales del programa. Los documentos, formularios, carpetas, actas, IAP, evaluaciones y evidencias siguen residiendo en **Google Drive, Google Forms, Google Docs y Google Calendar**. La app los organiza, vincula al pipeline del proyecto, los transforma en tareas, notifica a los responsables y genera indicadores.
+> **Importante**: La app **no reemplaza** los documentos oficiales del programa. Los documentos, formularios, carpetas, actas, IAP, evaluaciones y evidencias siguen residiendo en **Google Drive, Google Forms, Google Docs y Google Calendar**. La app los organiza, vincula al pipeline del proyecto, los transforma en tareas, notifica a los responsables y genera indicadores. Para los instrumentos que el PER completa dentro de la app (reflexiones, actividades, evaluaciones, IAP), la plataforma además **genera automáticamente el documento oficial en Drive** apenas se valida — ver §16.3.
 
 ### Principio operativo
 
@@ -603,6 +603,7 @@ Un botón de **tres líneas (☰)** abre el panel lateral con las secciones disp
 | 📊 | Resumen | `/admin` |
 | 👥 | Gestión de Usuarios | `/admin/usuarios` |
 | 📋 | Instrumentos | `/admin/instrumentos` |
+| 🌐 | Catálogo de Redes | `/admin/redes` |
 | 📥 | Reportes SENDA | `/admin/reportes` |
 | 🛡️ | Auditoría | `/admin/auditoria` |
 
@@ -612,10 +613,11 @@ Un botón de **tres líneas (☰)** abre el panel lateral con las secciones disp
 | 📊 | Resumen Regional | `/coordinacion` |
 | 👥 | Nómina / Fase 2 | `/coordinacion/candidatas` |
 | 🤝 | Acompañamientos | `/coordinacion/casos` |
-| ✓ | Validación Sesiones | `/coordinacion/sesiones` |
+| ✓ | Validación | `/coordinacion/alertas` |
 | 🗓️ | Supervisiones | `/coordinacion/supervisiones` |
 | 🌐 | Gestión de Redes | `/coordinacion/redes` |
-| ⚠️ | Alertas y Tareas | `/coordinacion/alertas` |
+
+> El menú del coordinador bajó de 7 a 6 secciones: "Validación Sesiones" y "Alertas y Tareas" se fusionaron en una sola bandeja de validación (ver [§16.3](#163-bandeja-de-validación-registros-de-acompañamiento-e-hitos)); las alertas de atraso/inactividad se movieron al Resumen Regional y ya no tienen ítem propio de menú.
 
 ### Vista PER
 
@@ -663,15 +665,14 @@ Esta es la sección más importante si eres un Par Especialista en Recuperación
 
 ### 15.1 Tu pantalla principal (`/per`)
 
-Tu vista se organiza en 3 pestañas fijas abajo de la pantalla:
+Tu vista se organiza en **2 pestañas fijas** abajo de la pantalla — un PER lleva como máximo un acompañamiento activo a la vez, así que ya no existe una pestaña ni ruta "Casos Activos":
 
 | Pestaña | Ruta | ¿Para qué sirve? |
 |---|---|---|
-| 📅 **Mi Agenda** | `/per` | Pantalla de entrada. Lista tus acompañamientos activos; si solo tienes uno, te lleva directo a su etapa |
-| 👥 **Casos Activos** | `/per/casos` | Listado completo de tus acompañamientos, con código, alias (si existe), tipo y estado |
+| 📅 **Mi Agenda** | `/per` | Pantalla de entrada. Redirige directo a la etapa de tu acompañamiento activo, o muestra el estado vacío si no tienes ninguno |
 | 🔔 **Avisos** | `/per/avisos` | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
-Al entrar a un caso llegas a su **pantalla de etapa** (`/per/casos/[id]/etapa`), que es donde realmente se trabaja: ahí ves el itinerario de la etapa actual y el formulario del paso pendiente. Ver la [sección 5](#5-el-itinerario-de-acompañamiento-personalizado-iap) para entender cómo funciona ese itinerario.
+`/per` resuelve directo a tu **pantalla de etapa** (`/per/casos/[id]/etapa`), que es donde realmente se trabaja: ahí ves el itinerario de la etapa actual y el formulario del paso pendiente, con el código y alias del caso en el encabezado. Ver la [sección 5](#5-el-itinerario-de-acompañamiento-personalizado-iap) para entender cómo funciona ese itinerario.
 
 #### Si ves "Estado: No Habilitado para Terreno"
 
@@ -716,9 +717,9 @@ A diferencia de las Actividades, el Registro de Acompañamiento **no es un paso 
 
 ---
 
-### 15.3 Tus acompañamientos activos
+### 15.3 Tu acompañamiento activo
 
-Cada caso muestra:
+Llevas como máximo un caso activo a la vez, así que no hay una lista que recorrer: lo que ves es directamente el encabezado de tu único caso, con:
 - **Código del caso**: Ej: `PA-MET-001` (por privacidad, no se usan nombres). Si la persona tiene un alias registrado en la Actividad 2, aparece junto al código: `PA-MET-001 (Fer)`.
 - **Tipo**: *Nuevo* o *Continuidad*.
 - **Estado**: En qué etapa del acompañamiento está:
@@ -749,35 +750,43 @@ Si estás en terreno **sin señal**:
 Tu panel de resumen regional muestra:
 
 - **Estadísticas de tareas**: Pendientes, en revisión, completadas, atrasadas.
-- **Funnel de Fase 2**: Estado de las candidatas en el pipeline de ingreso.
+- **Funnel de Fase 2**: Estado de las candidatas en el pipeline de ingreso (9 estados, ver §16.2).
 - **Casos activos**: Distribución por etapa (Vinculación, Conexión, Finalización, Egreso).
-- **Botón "Evaluar Alertas"**: Ejecuta las reglas de inactividad automáticas.
+- **Casos que Requieren Apoyo Metodológico**: las alertas de atraso/inactividad ya no dependen de un botón — se recalculan solas cada vez que entras a este panel. Desde aquí mismo escribes la nota y las cierras.
 
 ---
 
 ### 16.2 Nómina e ingreso de personas — Fase 2 (`/coordinacion/candidatas`)
 
-Aquí gestionas el ingreso de nuevas personas al programa.
+Aquí gestionas el ingreso de nuevas personas al programa. La tabla lista **a toda la nómina**, no solo a quienes están listas para match.
 
-#### Funnel de preselección (7 estados)
+#### Funnel de preselección (9 estados)
 
 ```
-Derivada → Contactada → Preinscrita → Entrevistada → Admisible → Seleccionada → En espera
+Derivada → Contactada → Preinscrita → Entrevistada → Admisible → No Admisible → Seleccionada → En espera → Descartada
 ```
 
-#### Conformar una dupla
+Cada fila tiene un selector de estado editable con un clic — se guarda solo, y el embudo del Resumen Regional (§16.1) refleja el cambio de inmediato. Una vez que la persona se convierte en caso, el estado queda fijo ("Convertida a caso").
 
-1. **Persona Acompañada Apta**: Selecciona a la persona de la lista.
-2. **Acompañante PER (Habilitado)**: Solo aparecen PER habilitados de tu región.
+#### Conformar una dupla — en un solo paso
+
+1. **Persona Acompañada Apta**: Selecciona a la persona de la lista (solo aparecen *Admisible* o *Seleccionada*).
+2. **Acompañante PER Disponible**: Solo aparecen los PER habilitados de tu región que **no tengan ya un acompañamiento activo** — cada PER lleva como máximo uno a la vez.
 3. **Tipo de Acompañamiento**: *Nuevo* o *Continuidad*.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esa persona.
 5. Presiona **"Conformar Dupla"**.
+
+Al enviar el formulario, la plataforma aprovisiona de una vez la carpeta de Drive, el IAP, y deja el caso formalizado — no hay un paso de "propuesta" que alguien deba abrir y validar por separado más tarde. Si el aprovisionamiento en Drive falla, no se crea nada: se reintenta con el mismo formulario.
+
+> La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación), que se materializa sola en Drive apenas se valida (ver §22).
+
+> **¿Te equivocaste de PER o necesitas cambiarlo?** En la ficha del caso (§16.3) hay una tarjeta **"Reasignar Acompañante"** — es la operación de excepción para corregir una dupla ya formalizada.
 
 ---
 
 ### 16.3 Acompañamientos y validación del itinerario (`/coordinacion/casos`)
 
-Selecciona un caso desde el buscador superior para ver su ficha completa: código, tipo, PER asignado, fase, enlaces a Google Workspace (carpeta del caso, IAP, Acta de Primer Encuentro) y el **historial cronológico** de todos sus hitos (cambios de fase, intentos de contacto, registros de acompañamiento y eventos de tareas).
+Selecciona un caso desde el buscador superior para ver su ficha completa: código, tipo, PER asignado, fase, enlaces a Google Workspace (carpeta del caso, IAP, y el Acta de Primer Encuentro si el caso tiene una registrada) y el **historial cronológico** de todos sus hitos (cambios de fase, registros de acompañamiento y eventos de tareas).
 
 #### Panel de itinerario
 
@@ -788,7 +797,9 @@ Debajo del historial aparece el **Itinerario de Instrumentos** de la etapa actua
 
 #### Avanzar de fase
 
-El botón para avanzar de etapa (Vinculación → Conexión → Finalización → Egreso) solo aparece habilitado cuando **todos los instrumentos obligatorios de la etapa actual están validados**. Si falta alguno, en su lugar ves la lista de lo que falta y un botón **"Forzar avance de etapa"**, que exige escribir un motivo obligatorio antes de confirmar — esa acción queda registrada en la auditoría.
+El botón para avanzar de etapa (Vinculación → Conexión → Finalización → Egreso) solo aparece habilitado cuando **todos los instrumentos obligatorios de la etapa actual están validados o marcados como no aplicables**. Si falta alguno, en su lugar ves la lista de lo que falta y un botón **"Forzar avance de etapa"**, que exige escribir un motivo obligatorio antes de confirmar — esa acción queda registrada en la auditoría.
+
+> Si un instrumento puntual no aplica para este caso (por ejemplo, contenido ya cubierto en un proceso anterior), no hace falta forzar toda la etapa: en el paso actual del panel de itinerario hay un enlace **"Marcar como resuelto (no aplica)…"** que pide un motivo y resuelve ese instrumento sin tocar el resto — el avance de etapa deja de estar bloqueado por él, sin pasar por "Forzar".
 
 > **Requisito para el Egreso**: Actividad 5 (Final), Actividad 6 y la Encuesta de Satisfacción deben estar validadas antes de poder egresar el caso.
 
@@ -796,19 +807,35 @@ El botón para avanzar de etapa (Vinculación → Conexión → Finalización �
 
 Al pie de las acciones de fase hay un bloque para registrar el abandono del caso. Al activarlo se habilita el **Formulario de Abandono** correspondiente (persona acompañada o PER), que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar definitivamente el caso.
 
+#### Reasignar Acompañante
+
+Tarjeta visible en cualquier caso que no esté cerrado. Cambia el PER a cargo del caso: libera el cupo del PER anterior, exige un motivo, audita el cambio y notifica a ambos acompañantes. Es la única forma de corregir una dupla después de que quedó formalizada — ver §16.2.
+
+#### Documentos generados automáticamente en Drive
+
+Cuando validás un instrumento nativo (reflexiones, actividades, evaluaciones, formularios de abandono, IAP con sus tablas de ámbitos y objetivos, Registro de Acompañamiento), la plataforma arma el documento oficial en la carpeta de Drive correspondiente a la etapa del caso, usando la plantilla institucional de ese instrumento. No es instantáneo por instrumento: se dispara al cerrar la etapa (o al forzar el avance), para no hacer una llamada a Drive por cada validación suelta.
+
+- **Correcciones**: si un instrumento devuelto se corrige y se vuelve a validar, el documento se reescribe en el **mismo archivo** de Drive (mismo enlace de siempre) — el historial de versiones queda en las revisiones nativas del propio Doc, no como archivos `_v1`, `_v2` sueltos.
+- **PER no ve nada de esto**: el PER no tiene acceso a Drive — solo completa el formulario dentro de la app. La carpeta y los documentos son visibles para Coordinación y Dirección/Administración.
+- **Si algo no se generó a tiempo**: el Administrador Nacional tiene un botón para forzar la sincronización manualmente — ver §17.
+
 ---
 
-### 16.4 Validación de Registros de Acompañamiento (`/coordinacion/sesiones`)
+### 16.4 Bandeja de Validación (`/coordinacion/alertas`)
 
-Bandeja de los Registros de Acompañamiento (los encuentros recurrentes de la etapa Conexión) enviados por los PER — es una bandeja aparte del panel de itinerario de la sección anterior, específica para este tipo de registro.
+Bandeja única para todo lo que los PER de tu región enviaron y espera tu revisión — antes eran dos secciones de menú separadas ("Validación Sesiones" y la mitad de "Alertas y Tareas"); ahora es un solo lugar.
 
-#### Flujo de revisión
+#### Registros de Acompañamiento
 
 1. **Bandeja**: Tarjetas de vista previa con código del caso, número de sesión, emoji emocional y resumen.
-2. **Modal de detalle**: Al hacer clic, se abre el registro completo con todos los campos, incluido el objetivo de la Actividad 4 al que quedó asociado.
+2. **Modal de detalle**: Al hacer clic, se abre el registro completo con todos los campos, incluido el objetivo de la Actividad 4 al que quedó asociado. Si llegaste desde una notificación de un registro puntual, este modal se abre solo.
 3. **Acciones**:
    - **"✅ Aprobar y Validar"**: Si todo está en orden.
    - **"❌ Devolver"**: Escribe observaciones en el campo dedicado y devuelve al PER.
+
+#### Hitos y Entregables en Espera de Validación
+
+Más abajo, en la misma página: instrumentos del itinerario (IAP, evaluaciones, etc.) enviados por los PER y pendientes de tu aprobación, con el mismo par de acciones (Aprobar / Devolver con observación).
 
 ---
 
@@ -818,16 +845,15 @@ Bandeja de los Registros de Acompañamiento (los encuentros recurrentes de la et
 
 | Campo | Descripción |
 |---|---|
-| Estado | *Habilitado* o *Pendiente* |
-| Casos activos | Cuántos tiene asignados (máx. 5) |
+| Habilitación | *Habilitado* / *Pendiente* / *No Habilitado* — de solo lectura |
+| Acompañamiento | *Disponible* o *Asignado* — cada PER lleva como máximo uno a la vez |
 | Horas de supervisión | Acumuladas |
 | Última supervisión | Fecha |
 | Cumplimiento | 💚 Al día / ⚠️ Alerta (>15 días) / 🔴 Crítico (>30 días) |
 
-#### Cambiar habilitación
+#### Sobre la habilitación
 
-- **"⚙️ Habilitar"**: Activa al PER para trabajo en terreno.
-- **"⚙️ Suspender"**: Lo suspende temporalmente. No puede recibir nuevos casos.
+Esta pantalla ya no tiene botones para habilitar o suspender a un PER — el estado se muestra de solo lectura, con una nota que apunta a `/admin/usuarios`. Un PER nace habilitado por defecto (la decisión de contratación y habilitación se resuelve en la reunión de coordinación, fuera de la app); el selector en Administración queda como excepción, para suspender a alguien puntualmente.
 
 #### Registrar supervisión
 
@@ -846,22 +872,27 @@ Tres componentes:
 
 | Sección | Función |
 |---|---|
-| **Dispositivos Territoriales** | Directorio de instituciones de apoyo (CESFAM, OMIL, ONG, etc.) |
+| **Dispositivos Territoriales** | Directorio de instituciones de apoyo (CESFAM, OMIL, ONG, etc.), con alta desde este mismo panel |
 | **Activaciones de Red** | Registro de derivaciones de un caso a una institución |
 | **Actividades Fase 5** | Registro de encuentros grupales (focus groups, open spaces) |
 
+> El Administrador Nacional tiene una vista de solo lectura del catálogo de **todas** las regiones en `/admin/redes` (§17), para reportes SENDA y dirección — el alta sigue haciéndose aquí.
+
 ---
 
-### 16.7 Alertas y hitos (`/coordinacion/alertas`)
+### 16.7 Alertas automáticas (`/coordinacion`, panel "Casos que Requieren Apoyo Metodológico")
+
+Ya no existe un botón para evaluar alertas ni un ítem de menú propio: las reglas se recalculan solas cada vez que abres tu Resumen Regional (§16.1), y se resuelven desde el mismo panel.
 
 | Tipo de alerta | Descripción |
 |---|---|
-| **Hitos pendientes** | Documentos enviados por PER que esperan validación |
-| **Alertas de inactividad** | Dupla con >14 días sin Registros de Acompañamiento |
+| **Alertas de inactividad** | Caso sin Registros de Acompañamiento por 10-14 días según su etapa |
 | **Instrumento pendiente de validación** | Un paso del itinerario lleva varios días enviado sin revisión de coordinación |
 | **Etapa estancada** | El caso tiene todo validado pero no avanza de etapa |
 | **Alertas de supervisión** | PER con >15 días sin supervisión |
 | **Alertas documentales** | Tareas atrasadas o PER no habilitado |
+
+Los hitos pendientes de validación se revisan en la bandeja de §16.4, no aquí.
 
 ---
 
@@ -877,6 +908,11 @@ Dashboard con las métricas clave del convenio SENDA, filtrable por región:
 - Estadísticas de tareas y sesiones.
 - Resumen por región con porcentaje de cobertura.
 
+#### Botones de sincronización
+
+- **🔄 Sincronizar Google Workspace**: vuelca la tabla de casos al Sheet espejo. No toca documentos.
+- **📄 Subir documentos pendientes (N)**: solo aparece si hay documentos generados sin sincronizar (por ejemplo, si el cierre automático de etapa falló, o si el Registro de Acompañamiento acumuló sesiones nuevas sin que el caso haya cambiado de etapa todavía). Procesa hasta 10 casos por click; si quedan más, el contador se actualiza y hay que volver a hacer clic.
+
 ---
 
 ### 17.2 Gestión de Usuarios (`/admin/usuarios`)
@@ -889,14 +925,17 @@ Módulo para **crear y administrar cuentas de usuarios PER**.
 2. Ingresa el **nombre completo** (ej: *María Fernández*).
 3. Ingresa el **nombre de usuario** (ej: `per.maria`).
 4. Selecciona la **Coordinación Regional** a la que se asigna.
-5. Define el **estado de certificación** (Habilitado, En Capacitación, Pendiente).
-6. Presiona **"Crear Usuario"**.
+5. Presiona **"Guardar Acompañante"**.
 
-> El nuevo PER aparecerá inmediatamente en la nómina y podrá iniciar sesión.
+> El nuevo PER nace con habilitación **"Habilitado"** — se asume que la contratación y la habilitación ya se resolvieron en la reunión de coordinación, fuera de la app — y aparece de inmediato en la nómina, pudiendo iniciar sesión.
+
+#### Habilitación
+
+Cada PER tiene un selector de estado (Habilitado / Pendiente / No Habilitado) en la misma fila. Cámbialo con un clic para suspender a alguien puntualmente — es la única pantalla donde este estado se edita; el coordinador solo lo ve, de solo lectura, en `/coordinacion/supervisiones`.
 
 #### Activar / Desactivar usuarios
 
-Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivado no puede iniciar sesión.
+Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivado no puede iniciar sesión — esto es distinto de la habilitación: un PER puede estar activo (puede loguearse) y a la vez no habilitado (no puede recibir casos ni tareas críticas).
 
 > ⚠️ La cuenta `admin@per2026.cl` no puede ser desactivada.
 
@@ -976,6 +1015,12 @@ Registro **inmutable** de todas las acciones realizadas en la plataforma:
 | Valores | Datos previos y nuevos |
 
 > Este registro **no se puede borrar ni modificar**. El botón **"📥 Exportar a CSV"** permite descargarlo para análisis en Excel.
+
+---
+
+### 17.6 Catálogo Nacional de Redes (`/admin/redes`)
+
+Vista de solo lectura, consolidada a nivel país, del catálogo de dispositivos territoriales que cada Coordinación Regional carga desde su propio `/coordinacion/redes`. Tiene filtro por región y muestra el número de activaciones de cada dispositivo. Sirve como referencia para reportes SENDA y dirección — el alta de un dispositivo se sigue haciendo desde la región, no desde acá.
 
 ---
 
@@ -1093,7 +1138,7 @@ Sí. La base de datos está alojada en la nube con conexiones cifradas. Cada acc
 ### Sobre el programa PER
 
 **¿Cuántas personas puedo acompañar a la vez?**
-El máximo recomendado es de **5 casos activos** por PER.
+**Un acompañamiento activo por PER.** No es una recomendación: la plataforma no permite asignarte un segundo caso mientras tengas uno activo. Cuando ese caso cierra (egreso, retiro o deserción), tu cupo queda libre para el siguiente.
 
 **¿Cuánto dura un acompañamiento completo?**
 Aproximadamente **9 meses**: 1 mes de vinculación + 6 meses de conexión + 2 meses de finalización.

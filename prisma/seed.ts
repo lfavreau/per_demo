@@ -316,12 +316,19 @@ async function main() {
     }
 
     // 4. Create Cases for region
+    // Un PER lleva como máximo un acompañamiento activo a la vez: las primeras
+    // dbPerProfiles.length iteraciones reparten un caso activo distinto por PER;
+    // el resto (si sobran casos que PERs en la región) queda en estado terminal
+    // reusando PERs, ya que un caso cerrado no ocupa cupo.
     const casesCount = 4;
+    const activeStatuses = ["VINCULACION", "CONEXION", "FINALIZACION"];
+    const terminalStatuses = ["EGRESO", "RETIRO_VOLUNTARIO"];
     for (let k = 0; k < casesCount; k++) {
-      const perProfile = dbPerProfiles[k % dbPerProfiles.length];
+      const perProfile = k < dbPerProfiles.length ? dbPerProfiles[k] : dbPerProfiles[k % dbPerProfiles.length];
       const candidate = dbCandidates[k % dbCandidates.length];
-      const statuses = ["VINCULACION", "EGRESO", "CONEXION", "FINALIZACION"];
-      const status = statuses[k % statuses.length];
+      const status = k < dbPerProfiles.length
+        ? activeStatuses[k % activeStatuses.length]
+        : terminalStatuses[(k - dbPerProfiles.length) % terminalStatuses.length];
       const codeStr = `PA-${reg.key}-${String(caseCodeIndex).padStart(3, "0")}`;
       caseCodeIndex++;
 
