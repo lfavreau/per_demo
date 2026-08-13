@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isNextRedirect } from "@/lib/next-errors";
 import { createCaseFromCandidate, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
-import { updateTaskStatus } from "@/server/services/tasks.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert } from "@/server/services/alerts.service";
 import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
@@ -124,63 +123,9 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
   }
 }
 
-export async function validateTaskAction(taskId: string): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
-    throw new Error("No autorizado");
-  }
-
-  try {
-    await updateTaskStatus({
-      taskId,
-      toStatus: "VALIDADA",
-      actorId: user.id,
-      isDemo: user.isDemo,
-    });
-    revalidatePath("/coordinacion");
-    revalidatePath("/admin");
-  } catch (err) {
-    if (isNextRedirect(err)) throw err;
-    const message = err instanceof Error ? err.message : "No se pudo validar la tarea";
-    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
-  }
-}
-
-export async function returnTaskAction(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
-    throw new Error("No autorizado");
-  }
-
-  const taskId = formData.get("taskId") as string;
-  const feedback = formData.get("feedback") as string;
-
-  if (!taskId || !feedback) {
-    return;
-  }
-
-  try {
-    await updateTaskStatus({
-      taskId,
-      toStatus: "DEVUELTA",
-      note: feedback,
-      actorId: user.id,
-      isDemo: user.isDemo,
-    });
-    revalidatePath("/coordinacion");
-    revalidatePath("/admin");
-  } catch (err) {
-    if (isNextRedirect(err)) throw err;
-    const message = err instanceof Error ? err.message : "No se pudo devolver la tarea";
-    redirect(`/coordinacion/alertas?error=${encodeURIComponent(message)}`);
-  }
-}
+// La validación/devolución de hitos del itinerario se hace vía validateItineraryStepAction /
+// returnItineraryStepAction (src/app/actions/itinerary.ts) — esas además desbloquean el
+// siguiente paso del itinerario (ensureCurrentStageTasks), cosa que estas dos no hacían.
 
 export async function resolveAlertAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
