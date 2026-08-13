@@ -86,6 +86,7 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
   const [feedbackByTask, setFeedbackByTask] = useState<Record<string, string>>({});
   const [notApplicableReasonByTask, setNotApplicableReasonByTask] = useState<Record<string, string>>({});
   const [showNotApplicableForm, setShowNotApplicableForm] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const completed = steps.filter((s) => s.kind === "COMPLETED");
@@ -103,6 +104,7 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
   const handleValidate = (taskId: string) => {
     startTransition(async () => {
       await validateItineraryStepAction(taskId);
+      setShowDetailModal(false);
     });
   };
 
@@ -115,6 +117,7 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
       formData.append("feedback", feedback);
       await returnItineraryStepAction(formData);
       setFeedbackByTask({ ...feedbackByTask, [taskId]: "" });
+      setShowDetailModal(false);
     });
   };
 
@@ -150,53 +153,13 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
           </div>
 
           {current.status === "ENVIADA" ? (
-            <>
-              {current.submissionMode === "EXTERNAL_LINK" && current.googleUrl ? (
-                <a
-                  href={current.googleUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-700 hover:underline font-bold text-[11px]"
-                >
-                  Abrir enlace enviado ↗
-                </a>
-              ) : (
-                renderContent(current.activityKey, current.contentJson)
-              )}
-
-              <div className="space-y-1.5 pt-2 border-t border-blue-100">
-                <label className="block text-slate-500 font-bold uppercase tracking-wider text-[9px]">
-                  Observaciones de Devolución
-                </label>
-                <textarea
-                  value={feedbackByTask[current.taskId!] || ""}
-                  onChange={(e) => setFeedbackByTask({ ...feedbackByTask, [current.taskId!]: e.target.value })}
-                  placeholder="Motivo si vas a devolver..."
-                  rows={2}
-                  disabled={isPending}
-                  className="w-full p-2 bg-white border border-slate-300 rounded-lg outline-none text-xs resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleReturn(current.taskId!)}
-                  disabled={isPending || !feedbackByTask[current.taskId!]?.trim()}
-                  className="px-3 py-1.5 text-red-700 font-bold rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-[11px] cursor-pointer"
-                >
-                  ❌ Devolver
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleValidate(current.taskId!)}
-                  disabled={isPending}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-[11px] cursor-pointer"
-                >
-                  ✅ Validar
-                </button>
-              </div>
-            </>
+            <div
+              onClick={() => setShowDetailModal(true)}
+              className="p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-blue-400 hover:shadow-sm transition flex justify-between items-center"
+            >
+              <span className="text-[10px] text-slate-500">El PER envió este instrumento — revisá el detalle antes de validar.</span>
+              <span className="font-semibold text-blue-600 text-[10px] whitespace-nowrap ml-3">Ver detalle 🔍</span>
+            </div>
           ) : (
             <p className="text-[10px] text-slate-400">
               {current.status === "DEVUELTA"
@@ -277,6 +240,91 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
           >
             Habilitar Evaluación Intermedia ahora
           </button>
+        </div>
+      )}
+
+      {showDetailModal && current && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+          onClick={() => setShowDetailModal(false)}
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                  <span>📝</span> {current.title}
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-0.5">Etapa {stageLabel}</p>
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="p-1 px-2.5 rounded-lg bg-slate-200/60 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-3 text-xs text-slate-700">
+              {current.submissionMode === "EXTERNAL_LINK" && current.googleUrl ? (
+                <a
+                  href={current.googleUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-700 hover:underline font-bold text-[11px]"
+                >
+                  Abrir enlace enviado ↗
+                </a>
+              ) : (
+                renderContent(current.activityKey, current.contentJson)
+              )}
+            </div>
+
+            <div className="p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                  Observaciones de Devolución
+                </label>
+                <textarea
+                  value={feedbackByTask[current.taskId!] || ""}
+                  onChange={(e) => setFeedbackByTask({ ...feedbackByTask, [current.taskId!]: e.target.value })}
+                  placeholder="Motivo si vas a devolver..."
+                  rows={2}
+                  disabled={isPending}
+                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl outline-none text-xs resize-none"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  disabled={isPending}
+                  className="w-full sm:w-auto px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition text-xs cursor-pointer text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReturn(current.taskId!)}
+                  disabled={isPending || !feedbackByTask[current.taskId!]?.trim()}
+                  className="w-full sm:w-auto px-4 py-2 text-red-700 font-bold rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 disabled:opacity-50 transition text-xs cursor-pointer text-center"
+                >
+                  ❌ Devolver
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleValidate(current.taskId!)}
+                  disabled={isPending}
+                  className="w-full sm:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-xs cursor-pointer text-center shadow-md shadow-blue-500/10"
+                >
+                  ✅ Validar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
