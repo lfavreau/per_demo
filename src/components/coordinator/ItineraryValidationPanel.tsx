@@ -5,8 +5,10 @@ import {
   validateItineraryStepAction,
   returnItineraryStepAction,
   markStepNotApplicableAction,
+  triggerIntermediateEvaluationAction,
 } from "@/app/actions/itinerary";
 import { getStepByActivityKey } from "@/lib/instrument-itinerary";
+import { MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION } from "@/lib/program-config";
 
 export interface ItineraryStepStateView {
   activityKey: string;
@@ -21,8 +23,10 @@ export interface ItineraryStepStateView {
 }
 
 interface ItineraryValidationPanelProps {
+  caseId: string;
   stageLabel: string;
   steps: ItineraryStepStateView[];
+  continuousStep?: { activityKey: string; title: string; validatedSessionLogCount?: number } | null;
 }
 
 function renderContent(activityKey: string, contentJson?: string | null) {
@@ -78,7 +82,7 @@ function renderContent(activityKey: string, contentJson?: string | null) {
   );
 }
 
-export default function ItineraryValidationPanel({ stageLabel, steps }: ItineraryValidationPanelProps) {
+export default function ItineraryValidationPanel({ caseId, stageLabel, steps, continuousStep }: ItineraryValidationPanelProps) {
   const [feedbackByTask, setFeedbackByTask] = useState<Record<string, string>>({});
   const [notApplicableReasonByTask, setNotApplicableReasonByTask] = useState<Record<string, string>>({});
   const [showNotApplicableForm, setShowNotApplicableForm] = useState(false);
@@ -87,6 +91,14 @@ export default function ItineraryValidationPanel({ stageLabel, steps }: Itinerar
   const completed = steps.filter((s) => s.kind === "COMPLETED");
   const current = steps.find((s) => s.kind === "CURRENT");
   const upcoming = steps.filter((s) => s.kind === "UPCOMING");
+  const pendingIntermediateEval = upcoming.find((s) => s.activityKey === "ACTIVIDAD_5_INTERMEDIA");
+  const validatedSessions = continuousStep?.validatedSessionLogCount ?? 0;
+
+  const handleTriggerIntermediateEvaluation = () => {
+    startTransition(async () => {
+      await triggerIntermediateEvaluationAction(caseId);
+    });
+  };
 
   const handleValidate = (taskId: string) => {
     startTransition(async () => {
@@ -247,6 +259,24 @@ export default function ItineraryValidationPanel({ stageLabel, steps }: Itinerar
       {upcoming.length > 0 && (
         <div className="text-[10px] text-slate-400">
           Próximos: {upcoming.map((s) => s.title).join(", ")}
+        </div>
+      )}
+
+      {pendingIntermediateEval && (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-[10px] text-slate-500">
+          <p>
+            Se habilita sola al validar {MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION} sesiones de Registro de
+            Acompañamiento ({validatedSessions}/{MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION} validadas). Si a tu
+            criterio ya corresponde antes, podés habilitarla ahora.
+          </p>
+          <button
+            type="button"
+            onClick={handleTriggerIntermediateEvaluation}
+            disabled={isPending}
+            className="px-3 py-1.5 text-slate-700 font-bold rounded-lg border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-50 text-[11px] cursor-pointer"
+          >
+            Habilitar Evaluación Intermedia ahora
+          </button>
         </div>
       )}
     </div>

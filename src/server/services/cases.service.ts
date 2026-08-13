@@ -548,7 +548,12 @@ export async function transitionCaseStatus(
 
   if (exitedStage) {
     try {
-      await syncPendingCaseDocuments(caseId, isDemo, actorId, { stage: exitedStage });
+      const outcome = await syncPendingCaseDocuments(caseId, isDemo, actorId, { stage: exitedStage });
+      for (const failure of outcome.failed) {
+        console.error(
+          `Falló la sincronización de ${failure.docKey} en el caso ${caseId} (cierre de ${exitedStage}): ${failure.message}`
+        );
+      }
     } catch (error) {
       console.error(`No se pudieron sincronizar documentos de ${exitedStage} para el caso ${caseId}:`, error);
     }

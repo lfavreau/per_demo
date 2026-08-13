@@ -9,6 +9,7 @@ import {
   validateItineraryStep,
   returnItineraryStep,
   markStepNotApplicable,
+  triggerIntermediateEvaluation,
 } from "@/server/services/itinerary.service";
 
 function revalidateItineraryPaths() {
@@ -90,6 +91,25 @@ export async function validateItineraryStepAction(taskId: string): Promise<void>
   } catch (err) {
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo validar el instrumento";
+    redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
+  }
+}
+
+export async function triggerIntermediateEvaluationAction(caseId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  // Adelantar la Evaluación Intermedia antes de las sesiones mínimas es una decisión de
+  // coordinación, no algo que el PER deba poder autoactivarse.
+  if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
+    throw new Error("No autorizado");
+  }
+
+  try {
+    await triggerIntermediateEvaluation(caseId, user.id, user.isDemo);
+    revalidateItineraryPaths();
+  } catch (err) {
+    if (isNextRedirect(err)) throw err;
+    const message = err instanceof Error ? err.message : "No se pudo habilitar la Evaluación Intermedia";
     redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
   }
 }

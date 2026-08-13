@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { prisma } from "@/lib/db";
 import { logSession, validateSession, returnSession } from "@/server/services/sessions.service";
+import { triggerIntermediateEvaluation } from "@/server/services/itinerary.service";
+import { MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION } from "@/lib/program-config";
 import { createCoordinator, createPer, uid, testRegion } from "../helpers/fixtures";
 
 // `CreateSessionLogInput.perId` está tipado como requerido pero logSession() lo ignora en tiempo
@@ -192,5 +194,84 @@ describe("sessions.service — validateSession / returnSession", () => {
       where: { userId: perUser.id, link: { contains: session.id } },
     });
     expect(notification?.title).toBe("Registro de Acompañamiento devuelto");
+  });
+});
+
+describe("sessions.service / itinerary.service — desbloqueo de Evaluación Intermedia", () => {
+  async function validateNSessions(paCaseId: string, perUserId: string, coordId: string, n: number) {
+    for (let i = 0; i < n; i++) {
+      const session = await logSession(
+        { paCaseId, perId: "unused", date: new Date(), modality: "PRESENCIAL", summary: `Encuentro ${i + 1}`, attendance: "REALIZADA", status: "ENVIADA" },
+        perUserId,
+        true
+      );
+      await validateSession(session.id, coordId, true);
+    }
+  }
+
+  it("SESS-10: no se desbloquea antes del mínimo de sesiones validadas", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { user: perUser, profile: per } = await createPer(region);
+    const paCase = await createRawCase(region, per.id, coord.id);
+
+    await validateNSessions(paCase.id, perUser.id, coord.id, MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION - 1);
+
+    const task = await prisma.task.findFirst({
+      where: { paCaseId: paCase.id, instrument: { activityKey: "ACTIVIDAD_5_INTERMEDIA" } },
+    });
+    expect(task).toBeNull();
+  });
+
+  it("SESS-11: se desbloquea sola al validar la sesión número mínima", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { user: perUser, profile: per } = await createPer(region);
+    const paCase = await createRawCase(region, per.id, coord.id);
+
+    await validateNSessions(paCase.id, perUser.id, coord.id, MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION);
+
+    const task = await prisma.task.findFirst({
+      where: { paCaseId: paCase.id, instrument: { activityKey: "ACTIVIDAD_5_INTERMEDIA" } },
+    });
+    expect(task?.status).toBe("PENDIENTE");
+  });
+
+  it("SESS-12: el coordinador puede habilitarla antes a mano", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: per } = await createPer(region);
+    const paCase = await createRawCase(region, per.id, coord.id);
+
+    await triggerIntermediateEvaluation(paCase.id, coord.id, true);
+
+    const task = await prisma.task.findFirst({
+      where: { paCaseId: paCase.id, instrument: { activityKey: "ACTIVIDAD_5_INTERMEDIA" } },
+    });
+    expect(task?.status).toBe("PENDIENTE");
+  });
+
+  it("SESS-13: el habilitado manual falla si ya está habilitada o fuera de Conexión", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: per } = await createPer(region);
+    const paCase = await createRawCase(region, per.id, coord.id);
+
+    await triggerIntermediateEvaluation(paCase.id, coord.id, true);
+    await expect(triggerIntermediateEvaluation(paCase.id, coord.id, true)).rejects.toThrow(/ya está habilitada/);
+
+    const otherCase = await prisma.pACase.create({
+      data: {
+        code: uid("PA-TST"),
+        type: "NUEVO",
+        regionId: region,
+        perId: per.id,
+        coordinatorId: coord.id,
+        status: "VINCULACION",
+        stage: "VINCULACION",
+        isDemo: true,
+      },
+    });
+    await expect(triggerIntermediateEvaluation(otherCase.id, coord.id, true)).rejects.toThrow(/solo se puede habilitar durante la etapa Conexión/);
   });
 });

@@ -7,6 +7,7 @@ import {
   type CaseStage,
   type ItineraryStepDef,
 } from "@/lib/instrument-itinerary";
+import { MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION } from "@/lib/program-config";
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -27,6 +28,58 @@ async function findTaskForStep(tx: TxClient, paCaseId: string, activityKey: stri
     where: { paCaseId, instrument: { activityKey } },
     orderBy: { createdAt: "desc" },
   });
+}
+
+interface UnlockablePACase {
+  id: string;
+  regionId: string;
+  per: { userId: string };
+}
+
+async function unlockStep(
+  client: TxClient,
+  paCase: UnlockablePACase,
+  step: ItineraryStepDef,
+  actorId: string,
+  isDemo: boolean
+) {
+  const instrument = await client.instrument.findFirst({
+    where: { activityKey: step.activityKey, status: "VIGENTE" },
+  });
+  if (!instrument) {
+    throw new Error(`No se encontró el instrumento vigente para ${step.activityKey}`);
+  }
+
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + (instrument.defaultDueDays || 15));
+
+  const created = await client.task.create({
+    data: {
+      paCaseId: paCase.id,
+      instrumentId: instrument.id,
+      title: step.title,
+      description: instrument.description,
+      status: "PENDIENTE",
+      priority: instrument.mandatory ? "CRITICA" : "MEDIA",
+      dueDate,
+      regionId: paCase.regionId,
+      assignedToUserId: paCase.per.userId,
+      assignedByUserId: actorId,
+      isDemo,
+    },
+  });
+
+  await client.taskEvent.create({
+    data: {
+      taskId: created.id,
+      fromStatus: "NONE",
+      toStatus: "PENDIENTE",
+      byUserId: actorId,
+      note: `Paso de itinerario desbloqueado: ${step.activityKey}`,
+    },
+  });
+
+  return created;
 }
 
 /**
@@ -58,48 +111,51 @@ export async function ensureCurrentStageTasks(
         return existing; // ya hay una task en curso para este paso, no crear otra
       }
 
-      const instrument = await client.instrument.findFirst({
-        where: { activityKey: step.activityKey, status: "VIGENTE" },
-      });
-      if (!instrument) {
-        throw new Error(`No se encontró el instrumento vigente para ${step.activityKey}`);
+      // La Evaluación Intermedia no se desbloquea sola al entrar a Conexión: recién tiene
+      // sentido evaluar avances después de varias sesiones. El coordinador puede adelantarla
+      // a mano si corresponde (ver triggerIntermediateEvaluation); sin eso ni sesiones
+      // suficientes, la secuencia se detiene acá — Reformular Actividad 4 tampoco debería
+      // aparecer antes que la evaluación que lo justifica.
+      if (step.activityKey === "ACTIVIDAD_5_INTERMEDIA") {
+        const validatedSessions = await client.sessionLog.count({
+          where: { paCaseId, isDemo, status: "VALIDADA" },
+        });
+        if (validatedSessions < MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION) {
+          return null;
+        }
       }
 
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + (instrument.defaultDueDays || 15));
-
-      const created = await client.task.create({
-        data: {
-          paCaseId,
-          instrumentId: instrument.id,
-          title: step.title,
-          description: instrument.description,
-          status: "PENDIENTE",
-          priority: instrument.mandatory ? "CRITICA" : "MEDIA",
-          dueDate,
-          regionId: paCase.regionId,
-          assignedToUserId: paCase.per.userId,
-          assignedByUserId: actorId,
-          isDemo,
-        },
-      });
-
-      await client.taskEvent.create({
-        data: {
-          taskId: created.id,
-          fromStatus: "NONE",
-          toStatus: "PENDIENTE",
-          byUserId: actorId,
-          note: `Paso de itinerario desbloqueado: ${step.activityKey}`,
-        },
-      });
-
-      return created; // solo materializamos un paso por llamada
+      return unlockStep(client, paCase, step, actorId, isDemo); // solo materializamos un paso por llamada
     }
     return null; // toda la etapa ya está resuelta
   };
 
   return tx ? run(tx) : prisma.$transaction(run);
+}
+
+/**
+ * Override manual del coordinador: habilita la Evaluación Intermedia antes de llegar a las
+ * MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION sesiones, cuando a su criterio ya corresponde.
+ */
+export async function triggerIntermediateEvaluation(paCaseId: string, actorId: string, isDemo: boolean) {
+  return prisma.$transaction(async (tx) => {
+    const paCase = await tx.pACase.findUnique({ where: { id: paCaseId }, include: { per: true } });
+    if (!paCase) throw new Error("Caso no encontrado");
+    if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+    if (paCase.stage !== "CONEXION") {
+      throw new Error("La Evaluación Intermedia solo se puede habilitar durante la etapa Conexión");
+    }
+
+    const existing = await findTaskForStep(tx, paCaseId, "ACTIVIDAD_5_INTERMEDIA");
+    if (existing) {
+      throw new Error("La Evaluación Intermedia ya está habilitada para este caso");
+    }
+
+    const step = getStepByActivityKey("ACTIVIDAD_5_INTERMEDIA");
+    if (!step) throw new Error("Paso de itinerario no encontrado en el catálogo");
+
+    return unlockStep(tx, paCase, step, actorId, isDemo);
+  });
 }
 
 export async function getItineraryState(paCaseId: string, isDemo: boolean) {
@@ -140,9 +196,16 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
 
   const continuousStep = steps.find((s) => s.triggerCondition === "CONTINUOUS");
   let sessionLogCount: number | undefined;
+  let validatedSessionLogCount: number | undefined;
   if (continuousStep) {
     sessionLogCount = await prisma.sessionLog.count({
       where: { paCaseId, isDemo, status: { in: ["ENVIADA", "VALIDADA"] } },
+    });
+    // Solo las validadas cuentan para el umbral de desbloqueo automático de la Evaluación
+    // Intermedia (ver MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION) — distinto del contador de
+    // "sesiones registradas" de arriba, que incluye las enviadas sin validar todavía.
+    validatedSessionLogCount = await prisma.sessionLog.count({
+      where: { paCaseId, isDemo, status: "VALIDADA" },
     });
   }
 
@@ -165,7 +228,9 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
   return {
     stage,
     steps: stepStates,
-    continuousStep: continuousStep ? { activityKey: continuousStep.activityKey, title: continuousStep.title, sessionLogCount } : null,
+    continuousStep: continuousStep
+      ? { activityKey: continuousStep.activityKey, title: continuousStep.title, sessionLogCount, validatedSessionLogCount }
+      : null,
     pendingWithdrawalStep,
     gate,
   };

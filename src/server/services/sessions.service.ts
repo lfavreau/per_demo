@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
+import { ensureCurrentStageTasks } from "@/server/services/itinerary.service";
 
 export interface CreateSessionLogInput {
   paCaseId: string;
@@ -120,6 +121,10 @@ export async function validateSession(sessionId: string, actorId: string, isDemo
         });
       }
     }
+
+    // Si esta validación es la que completa el mínimo de sesiones, desbloquea la Evaluación
+    // Intermedia en el mismo momento en vez de esperar al próximo cierre de etapa.
+    await ensureCurrentStageTasks(session.paCaseId, actorId, isDemo, tx);
 
     await tx.auditLog.create({
       data: {

@@ -373,8 +373,10 @@ export default async function CoordinatorCasosPage({
               {/* Itinerary Validation Panel */}
               {itineraryState && (
                 <ItineraryValidationPanel
+                  caseId={selectedCaseDetails.id}
                   stageLabel={mapStageToLabel(itineraryState.stage)}
                   steps={itineraryState.steps}
+                  continuousStep={itineraryState.continuousStep}
                 />
               )}
 
