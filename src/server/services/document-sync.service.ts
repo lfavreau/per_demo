@@ -9,6 +9,7 @@ import {
   type CaseStage,
 } from "@/lib/instrument-itinerary";
 import { syncCaseDocuments as syncCaseDocumentsRemote, type DocumentSyncItem } from "@/server/google/workspace";
+import { mapEmotionToLabel } from "@/lib/nomenclatures";
 
 // Construye el payload canónico de cada documento que la app materializa en Drive y decide
 // cuáles quedaron desactualizados. No habla con Google: eso lo hace quien consuma esto.
@@ -262,7 +263,17 @@ function buildSessionTable(paCase: CaseContext): DocumentTablePayload {
   const validated = paCase.sessionLogs.filter((log) => log.status === "VALIDADA");
   return {
     placeholder: "TABLA_SESIONES",
-    header: ["N°", "Fecha", "Modalidad", "Asistencia", "Resumen", "Acuerdos", "Próxima acción"],
+    header: [
+      "N°",
+      "Fecha",
+      "Modalidad",
+      "Asistencia",
+      "Resumen",
+      "Acuerdos",
+      "Próxima acción",
+      "Estado Emocional (PER)",
+      "Reflexión Personal (PER)",
+    ],
     rows: validated.map((log) => [
       String(log.sessionNumber),
       formatDate(log.date),
@@ -271,6 +282,8 @@ function buildSessionTable(paCase: CaseContext): DocumentTablePayload {
       asText(log.summary),
       asText(log.agreements),
       asText(log.nextAction),
+      log.perEmotion ? mapEmotionToLabel(log.perEmotion) : "",
+      asText(log.perReflection),
     ]),
   };
 }
