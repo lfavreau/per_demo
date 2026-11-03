@@ -72,6 +72,8 @@ export default async function CoordinatorCasosPage({
   }> = [];
 
   let selectedCaseDetails = null;
+  // "Al día" o "Atrasado" del caso, según tareas vencidas sin entregar y alertas abiertas de atraso.
+  let isUpToDate = true;
   let itineraryState: Awaited<ReturnType<typeof getItineraryState>> | null = null;
 
   const targetCode = params.caseCode || (regionalCases.length > 0 ? regionalCases[0].code : null);
@@ -99,6 +101,20 @@ export default async function CoordinatorCasosPage({
 
     if (selectedCase) {
       selectedCaseDetails = selectedCase;
+
+      const now = new Date();
+      const hasOverdueTask = selectedCase.tasks.some(
+        (t) => t.dueDate && t.dueDate < now && ["PENDIENTE", "EN_CURSO", "DEVUELTA", "ATRASADA"].includes(t.status)
+      );
+      const openDelayAlerts = await prisma.alert.count({
+        where: {
+          paCaseId: selectedCase.id,
+          status: "ABIERTA",
+          isDemo,
+          type: { in: ["CASO_SIN_SESION", "TAREA_ATRASADA", "CASO_ETAPA_ESTANCADA"] },
+        },
+      });
+      isUpToDate = !hasOverdueTask && openDelayAlerts === 0;
 
       if (["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCase.status)) {
         itineraryState = await getItineraryState(selectedCase.id, isDemo);
@@ -261,20 +277,27 @@ export default async function CoordinatorCasosPage({
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Tipo</span>
-                    <span className="font-semibold text-slate-800">{selectedCaseDetails.type}</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                     <span className="text-slate-400 block text-[9px] uppercase font-bold">Acompañante PER</span>
                     <span className="font-semibold text-slate-800">{selectedCaseDetails.per.user.name}</span>
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                     <span className="text-slate-400 block text-[9px] uppercase font-bold">Fase Metodológica</span>
-                    <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[10px] inline-block">
-                      {mapCaseStatusToLabel(selectedCaseDetails.status)}
-                    </span>
+                    {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) ? (
+                      <span
+                        className={`px-2 py-0.5 rounded border font-bold text-[10px] inline-block ${
+                          isUpToDate
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {isUpToDate ? "Al día" : "Atrasado"} ({mapStageToLabel(selectedCaseDetails.status)})
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[10px] inline-block">
+                        {mapCaseStatusToLabel(selectedCaseDetails.status)}
+                      </span>
+                    )}
                   </div>
 
                 </div>

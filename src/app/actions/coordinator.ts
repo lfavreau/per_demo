@@ -37,6 +37,17 @@ export async function assignPerAction(_prev: ActionResult, formData: FormData): 
     return { status: "error", message: "Selecciona la persona y el PER." };
   }
 
+  const candidate = await prisma.pACandidate.findUnique({
+    where: { id: candidateId },
+    select: { status: true, convertedToCaseId: true },
+  });
+  if (candidate?.convertedToCaseId) {
+    return { status: "error", message: "Esta persona ya tiene un PER asignado." };
+  }
+  if (candidate && candidate.status !== "SELECCIONADA") {
+    return { status: "error", message: "Solo se puede asignar PER a personas en estado Seleccionada." };
+  }
+
   try {
     // El tipo (nuevo / continuidad) y la fundamentación no se piden: el caso queda como NUEVO.
     const newCase = await createCaseFromCandidate(candidateId, perId, "", "NUEVO", user.id, user.isDemo);

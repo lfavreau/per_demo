@@ -338,6 +338,54 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
   });
 });
 
+describe("cases.service — una persona, un solo caso", () => {
+  it("CASE-21: asignar dos veces a la misma persona (también en paralelo) crea un solo caso", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: per } = await createPer(region);
+    const candidate = await createCandidate(region);
+
+    const results = await Promise.allSettled([
+      createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true),
+      createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true),
+      createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await prisma.pACase.count({ where: { candidateId: candidate.id } })).toBe(1);
+
+    // Un intento posterior también se rechaza, y no deja la persona bloqueada a medias.
+    await expect(
+      createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true)
+    ).rejects.toThrow(/ya tiene un PER asignado/);
+    const after = await prisma.pACandidate.findUnique({ where: { id: candidate.id } });
+    expect(after?.convertedToCaseId).not.toMatch(/^reserva:/);
+  });
+
+  it("CASE-22: si falla la creación, la reserva se libera y se puede reintentar", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: goodPer } = await createPer(region);
+    const candidate = await createCandidate(region);
+
+    // Falla forzada DESPUÉS de reservar a la persona: sin instrumentos vigentes no se puede
+    // desbloquear el primer paso del itinerario y la creación del caso revierte.
+    const vigentes = await prisma.instrument.findMany({ where: { status: "VIGENTE" }, select: { id: true } });
+    await prisma.instrument.updateMany({ where: { id: { in: vigentes.map((i) => i.id) } }, data: { status: "BORRADOR" } });
+    try {
+      await expect(
+        createCaseFromCandidate(candidate.id, goodPer.id, "", "NUEVO", coord.id, true)
+      ).rejects.toThrow(/instrumento vigente/);
+    } finally {
+      await prisma.instrument.updateMany({ where: { id: { in: vigentes.map((i) => i.id) } }, data: { status: "VIGENTE" } });
+    }
+    const released = await prisma.pACandidate.findUnique({ where: { id: candidate.id } });
+    expect(released?.convertedToCaseId).toBeNull();
+
+    const ok = await createCaseFromCandidate(candidate.id, goodPer.id, "", "NUEVO", coord.id, true);
+    expect(ok.candidateId).toBe(candidate.id);
+  });
+});
+
 describe("cases.service — nombre o alias de la persona", () => {
   it("CASE-19: el caso toma como alias el nombre o alias con que se registró a la persona", async () => {
     const region = testRegion();

@@ -160,35 +160,55 @@ export async function createCaseFromCandidate(
   if (!per.user.active) {
     throw new Error("No se puede asignar acompañamiento a un PER inactivo");
   }
-  const code = await generatePaCode(candidate.regionId, isDemo);
 
-  const paCase = await createCaseRecord({
-    code,
-    type,
-    regionId: candidate.regionId,
-    perId,
-    coordinatorId: per.coordinatorId || actorId,
-    candidateId,
-    perUserId: per.userId,
-    matchRationale,
-    // El nombre o alias con que se registró a la persona pasa a ser el alias del caso.
-    alias: normalizeCaseAlias(candidate.sourceCenter),
-    genderSelfId: candidate.gender,
-    birthDate: candidate.birthDate,
-    ageRange: candidate.ageRange,
-    educationLevel: candidate.educationLevel,
-    employmentStatus: candidate.employmentStatus,
-    actorId,
-    isDemo,
-    auditAction: "CREATE_CASE",
+  // Reserva atómica: una persona solo puede convertirse en caso una vez. Sin esto, dos clics (o dos
+  // pestañas) sobre "Asignar PER" creaban un caso por cada solicitud para la misma persona.
+  const reservation = `reserva:${crypto.randomUUID()}`;
+  const claim = await prisma.pACandidate.updateMany({
+    where: { id: candidateId, convertedToCaseId: null },
+    data: { convertedToCaseId: reservation },
   });
+  if (claim.count === 0) {
+    throw new Error("Esta persona ya tiene un PER asignado.");
+  }
 
-  await prisma.pACandidate.update({
-    where: { id: candidateId },
-    data: { status: "SELECCIONADA", convertedToCaseId: paCase.id },
-  });
+  try {
+    const code = await generatePaCode(candidate.regionId, isDemo);
 
-  return paCase;
+    const paCase = await createCaseRecord({
+      code,
+      type,
+      regionId: candidate.regionId,
+      perId,
+      coordinatorId: per.coordinatorId || actorId,
+      candidateId,
+      perUserId: per.userId,
+      matchRationale,
+      // El nombre o alias con que se registró a la persona pasa a ser el alias del caso.
+      alias: normalizeCaseAlias(candidate.sourceCenter),
+      genderSelfId: candidate.gender,
+      birthDate: candidate.birthDate,
+      ageRange: candidate.ageRange,
+      educationLevel: candidate.educationLevel,
+      employmentStatus: candidate.employmentStatus,
+      actorId,
+      isDemo,
+      auditAction: "CREATE_CASE",
+    });
+
+    await prisma.pACandidate.update({
+      where: { id: candidateId },
+      data: { status: "SELECCIONADA", convertedToCaseId: paCase.id },
+    });
+
+    return paCase;
+  } catch (error) {
+    // Si algo falló, se libera la reserva para poder reintentar.
+    await prisma.pACandidate
+      .updateMany({ where: { id: candidateId, convertedToCaseId: reservation }, data: { convertedToCaseId: null } })
+      .catch(() => {});
+    throw error;
+  }
 }
 
 export async function reassignCase(
