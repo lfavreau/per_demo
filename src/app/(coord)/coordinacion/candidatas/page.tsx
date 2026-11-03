@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { createCandidateAction, retryCaseDriveAction } from "@/app/actions/coordinator";
+import { createCandidateAction } from "@/app/actions/coordinator";
 import AssignPerForm from "@/components/coordinator/AssignPerForm";
 import PersonaEditModal from "@/components/coordinator/PersonaEditModal";
 import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
@@ -11,8 +11,6 @@ import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
-// Asignar un PER en modo real completa Drive (carpetas + IAP) en segundo plano: darle margen.
-export const maxDuration = 60;
 
 export default async function CoordinatorCandidatasPage({
   searchParams,
@@ -232,20 +230,6 @@ export default async function CoordinatorCandidatasPage({
                           >
                             👁️ Ver e Iniciar
                           </a>
-                        )}
-                        {m && !isDemo && !m.driveFolderCaseId && (
-                          <form action={retryCaseDriveAction} className="inline-flex items-center gap-1">
-                            <input type="hidden" name="caseId" value={m.id} />
-                            <span className="text-[10px] text-amber-600 font-semibold" title="Las carpetas de Drive se están preparando">
-                              ⏳ Drive pendiente
-                            </span>
-                            <button
-                              type="submit"
-                              className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-[10px] cursor-pointer"
-                            >
-                              Reintentar
-                            </button>
-                          </form>
                         )}
                       </div>
                     </td>

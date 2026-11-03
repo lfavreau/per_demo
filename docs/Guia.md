@@ -46,7 +46,7 @@ Esta aplicación es una **herramienta digital de apoyo** al programa PER (Pares 
 - ✅ **Recibir** avisos de tu coordinador cuando revisa tu trabajo.
 - ✅ **Organizar** toda la documentación del acompañamiento en un solo lugar.
 
-> **Importante**: La app **no reemplaza** los documentos oficiales del programa (Google Docs, Google Forms, Google Drive). Lo que hace es **organizar** esos documentos, avisarte qué falta y ayudar a que nada se pierda.
+> **Importante**: La app **no reemplaza** los documentos oficiales del programa (formularios, actas, evaluaciones). Lo que hace es **organizar** el trabajo, avisarte qué falta y ayudar a que nada se pierda.
 
 ---
 
@@ -307,11 +307,11 @@ Lista a **todas** las personas, con o sin PER: su nombre o alias, el PER (o *Sin
 
 Cada fila tiene un botón **✏️ Editar** que abre una ventana para cambiar el nombre o alias, las notas y, si aún no tiene PER, el estado de ingreso. **No pide contraseña.** Si la persona ya tiene PER, también tiene el botón **👁️ Ver e Iniciar**, que abre su ficha de caso.
 
-Al presionar el botón la asignación es inmediata: el caso queda formalizado, el PER ya ve su itinerario, y **te quedas en la misma pantalla** con un aviso de confirmación. La carpeta de Drive y el documento IAP se terminan de crear en segundo plano; mientras tanto la fila muestra "⏳ Drive pendiente". Si no se completan, aparece el botón **Reintentar**.
+Al presionar el botón la asignación es inmediata: el caso queda formalizado, el PER ya ve su itinerario, y **te quedas en la misma pantalla** con un aviso de confirmación.
 
 > **¿Y si me equivoqué de PER, o el acompañante ya no puede seguir?** En la ficha del caso (sección 7.1) hay una tarjeta **"Reasignar Acompañante"** — cambia el PER a cargo, libera el cupo del anterior y notifica a ambos.
 
-> **Alias (opcional)**: Con **✏️ Asignar alias** (en la ficha del caso) puedes ponerle un apodo de referencia a la persona acompañada, por ejemplo "Don Pato". Si tiene alias, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No uses nombre completo ni RUT. El alias solo se ve dentro de la app: Drive, notificaciones y reportes siguen usando el código.
+> **Alias (opcional)**: Con **✏️ Asignar alias** (en la ficha del caso) puedes ponerle un apodo de referencia a la persona acompañada, por ejemplo "Don Pato". Si tiene alias, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No uses nombre completo ni RUT. El alias solo se ve dentro de la app: las notificaciones y los reportes siguen usando el código.
 
 ---
 

@@ -235,7 +235,6 @@ async function main() {
           ethicsCodeStatus: i === 0 ? "VALIDADO" : "PENDIENTE",
           gender: i % 2 === 0 ? "Femenino" : "Masculino",
           inductionCompleted: i === 0,
-          driveFolderId: `drive_folder_${reg.key.toLowerCase()}_per_${i}`,
         },
       });
 
@@ -356,7 +355,6 @@ async function main() {
           status: status,
           matchStatus: "FORMALIZADO",
           matchRationale: "Experiencia previa de dupla del profesional con perfiles similares.",
-          actaPrimerEncuentroDriveId: `drive_acta_${codeStr.toLowerCase()}`,
           intensityLevel: k % 3 === 0 ? "BASICO" : k % 3 === 1 ? "INTERMEDIO" : "INTENSIVO",
           genderSelfId: candidate.gender,
           birthDate: candidate.birthDate,
@@ -367,14 +365,6 @@ async function main() {
           startDate: startDate,
           lastSessionDate: lastSessionDate,
           stageEnteredAt: startDate,
-          driveFolderRegionId: `gfolder_region_${reg.key.toLowerCase()}`,
-          driveFolderPerId: perProfile.driveFolderId,
-          driveFolderCaseId: `gfolder_case_${codeStr.toLowerCase()}`,
-          driveFolderVinculacionId: `gfolder_case_${codeStr.toLowerCase()}_vinc`,
-          driveFolderConexionId: `gfolder_case_${codeStr.toLowerCase()}_conex`,
-          driveFolderFinalizacionId: `gfolder_case_${codeStr.toLowerCase()}_final`,
-          driveFolderValidadosId: `gfolder_case_${codeStr.toLowerCase()}_validados`,
-          driveFolderId: `drive_folder_case_${codeStr.toLowerCase()}`,
           notes: "Acompañamiento en desarrollo conforme a los ámbitos prioritarios.",
           isDemo: true,
         },
@@ -447,8 +437,6 @@ async function main() {
           perFirstReflection: "El participante muestra interés por fortalecer su red de apoyo.",
           motivations: "Lograr mayor independencia laboral.",
           expectations: "Obtener herramientas de capacitación.",
-          backgroundNotesDriveId: `drive_bg_${paCase.id}`,
-          driveDocId: `drive_iap_${paCase.id}`,
         },
       });
 
@@ -610,7 +598,6 @@ async function main() {
           networkDeviceId: device1.id,
           caseId: cases[0].id,
           description: "Derivación para evaluación psiquiátrica complementaria",
-          driveDocId: "drive_ref_cosam_act",
           isDemo: true,
         },
       });
@@ -621,7 +608,6 @@ async function main() {
             networkDeviceId: device2.id,
             caseId: cases[1].id,
             description: "Vinculación a programa de intermediación laboral",
-            driveDocId: "drive_ref_omil_act",
             isDemo: true,
           },
         });
@@ -634,7 +620,7 @@ async function main() {
         type: "FOCUS_GROUP",
         date: new Date("2026-06-10"),
         participantsCount: 8,
-        driveUrl: "https://drive.google.com/open?id=focus_group_transcription_1",
+        driveUrl: "https://ejemplo.cl/actas/focus-group-1",
         notes: "Evaluación final de pilotaje PER con la participación de 8 usuarios del programa.",
         isDemo: true,
       },
@@ -646,7 +632,7 @@ async function main() {
         type: "REUNION_EQUIPO",
         date: new Date("2026-06-12"),
         participantsCount: 4,
-        driveUrl: "https://drive.google.com/open?id=reunion_equipo_acta_1",
+        driveUrl: "https://ejemplo.cl/actas/reunion-equipo-1",
         notes: "Reunión de balance del equipo y planificación de egresos del período.",
         isDemo: true,
       },
@@ -680,7 +666,6 @@ async function main() {
           casesReviewedSerialized: JSON.stringify(["PA-MET-001", "PA-MET-002"]),
           agreements: "Seguir fortaleciendo la vinculación comunitaria del caso 1.",
           observations: "PER demuestra buen manejo de los límites terapéuticos y apego al encuadre.",
-          driveActaId: "drive_acta_supervision_mock",
           isDemo: true,
         },
       });

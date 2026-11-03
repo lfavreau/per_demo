@@ -1,8 +1,8 @@
 # Resumen de Operación y Funcionalidad: PWA de Coordinación PER
 
-Esta plataforma actúa como una capa de coordinación, seguimiento operativo y trazabilidad sobre Google Workspace para el Pilotaje de Recuperación Basada en Pares PER 2026-2027. Su objetivo es apoyar el cumplimiento del acompañamiento no clínico, la integración social, la supervisión técnica, el registro documental y la sistematización de información requerida por el proyecto.
+Esta plataforma actúa como una capa de coordinación, seguimiento operativo y trazabilidad para el Pilotaje de Recuperación Basada en Pares PER 2026-2027. Su objetivo es apoyar el cumplimiento del acompañamiento no clínico, la integración social, la supervisión técnica, el registro documental y la sistematización de información requerida por el proyecto.
 
-La app no reemplaza el registro oficial ni los documentos institucionales del proyecto. Los documentos, formularios, carpetas, actas, IAP, bitácoras, evaluaciones y evidencias siguen residiendo en Google Drive, Google Forms, Google Docs, Google Sheets y Google Calendar. La app organiza esos recursos, los vincula al pipeline del proyecto, los transforma en tareas, notifica responsables, registra estados, permite validación de coordinación y genera indicadores de seguimiento.
+La app no reemplaza el registro oficial ni los documentos institucionales del proyecto. Los documentos, formularios, carpetas, actas, IAP, bitácoras, evaluaciones y evidencias siguen gestionándose fuera de la app (por ejemplo, en formularios de Google). La app organiza esos recursos, los vincula al pipeline del proyecto, los transforma en tareas, notifica responsables, registra estados, permite validación de coordinación y genera indicadores de seguimiento.
 
 ---
 
@@ -164,7 +164,7 @@ Ordenar aprendizajes, resultados, dificultades, adherencia, brechas territoriale
 *   Gestión de instrumentos.
 *   Revisión de indicadores.
 *   Auditoría.
-*   Sincronización con Google Workspace.
+
 *   Reportes consolidados.
 
 ### Coordinador Regional
@@ -184,7 +184,7 @@ Ordenar aprendizajes, resultados, dificultades, adherencia, brechas territoriale
 *   Registro de sesiones.
 *   Bitácoras.
 *   Actualización de IAP.
-*   Carga de enlaces o evidencias en Google Drive.
+*   Carga de enlaces o evidencias.
 *   Respuesta a formularios.
 *   Registro de asistencia, ausencia o reagendamiento.
 *   Revisión de retroalimentación.
@@ -243,7 +243,6 @@ Para asegurar la robustez digital en terreno y el control de auditoría exigido 
 *   **Soporte Desconectado (Offline)**: Los PER pueden registrar bitácoras sin acceso a internet en terreno. Las fichas se almacenan localmente y se sincronizan con un solo toque al recuperar conectividad.
 *   **Estado de PER en un Toque**: el Administrador Nacional activa o desactiva a un PER desde `/admin/usuarios` con un solo botón. El PER nace activo (la decisión de contratación ya se toma en reunión de coordinación, fuera de la app); un PER inactivo no inicia sesión ni recibe casos. El coordinador ve el estado en su panel de supervisiones, pero de solo lectura.
 *   **Un Acompañamiento Activo por PER**: cada PER lleva como máximo un caso activo a la vez. La conformación de dupla queda formalizada — carpeta e IAP incluidos — en un solo paso, sin exigir un acta externa (esa validación es responsabilidad de Dirección/Coordinación); reasignar el PER a cargo de un caso es la única operación de excepción disponible después.
-*   **Documentos que se generan solos en Drive**: al validar un instrumento (reflexiones, actividades, evaluaciones, IAP, Registro de Acompañamiento), la app arma el documento oficial en la carpeta de la etapa correspondiente. Las correcciones se reescriben en el mismo archivo — mismo enlace, nueva revisión — en vez de acumular copias.
 *   **Reglas de Egreso Metodológico**: Control de egreso que exige obligatoriamente las validaciones del instrumento Ex-Post y la Encuesta de Satisfacción, informando al usuario sobre las reglas del convenio mediante un banner especial.
 *   **Alertas de Atraso e Inactividad Automáticas**: se recalculan solas al abrir el resumen regional del coordinador — sin botón manual — y se resuelven desde el mismo tablero.
 *   **Bitácora de Auditoría Inmutable con Descarga a CSV**: Consola centralizada de acciones operativas para administradores nacionales con exportación a planillas de Excel mediante un botón dedicado en la cabecera.

@@ -150,7 +150,7 @@ export default async function CoordinatorRedesPage() {
                       </p>
                       {act.driveDocId && (
                         <p className="text-[9px] text-slate-400">
-                          ID Documento: {act.driveDocId}
+                          Ficha de derivación: {act.driveDocId}
                         </p>
                       )}
                     </div>
@@ -186,14 +186,16 @@ export default async function CoordinatorRedesPage() {
                         </span>
                       </div>
                       {rec.notes && <p className="text-[10px] text-slate-500">Notas: {rec.notes}</p>}
-                      <a 
-                        href={rec.driveUrl} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-[10px] text-blue-600 font-semibold hover:underline block"
-                      >
-                        📂 Ver acta de reunión en Drive
-                      </a>
+                      {rec.driveUrl && (
+                        <a
+                          href={rec.driveUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] text-blue-600 font-semibold hover:underline block"
+                        >
+                          🔗 Ver acta de reunión
+                        </a>
+                      )}
                     </div>
                     <span className="text-[10px] text-slate-400 font-semibold">
                       {new Date(rec.date).toLocaleDateString("es-CL")}
@@ -332,11 +334,11 @@ export default async function CoordinatorRedesPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Ficha de Derivación (ID Drive - Opcional):</label>
+                  <label className="font-bold text-slate-700">Referencia de la ficha de derivación (opcional):</label>
                   <input 
                     type="text" 
                     name="driveDocId" 
-                    placeholder="Ej. gfile_deriv_12345"
+                    placeholder="Ej. ficha 12345"
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
                   />
                 </div>
@@ -398,12 +400,12 @@ export default async function CoordinatorRedesPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Link al Acta / Grabación (Drive):</label>
+                  <label className="font-bold text-slate-700">Link al Acta / Grabación:</label>
                   <input 
                     type="url" 
                     name="driveUrl" 
                     required={REQUIRE_TEXT_FIELDS} 
-                    placeholder="https://drive.google.com/..."
+                    placeholder="https://..."
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
                   />
                 </div>

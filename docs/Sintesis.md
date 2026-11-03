@@ -8,7 +8,7 @@
 ## 1. En una frase
 
 - **Programa PER**: personas con recuperación sostenida (PER) acompañan a otras en su integración social. No clínico, horizontal, basado en experiencia compartida.
-- **App**: PWA que coordina, hace seguimiento y deja trazabilidad del pilotaje sobre Google Workspace. No reemplaza los documentos oficiales: los ordena, los vuelve tareas, avisa y mide.
+- **App**: PWA que coordina, hace seguimiento y deja trazabilidad del pilotaje. No reemplaza los documentos oficiales: los ordena, los vuelve tareas, avisa y mide.
 - **Uso en beta**: la usa sobre todo el PER para registrar sesiones, avances de etapa y actividades. Contactos, coordinaciones y derivaciones siguen siendo mayormente manuales, fuera de la app.
 - **Relación habitual**: 1 PER por persona acompañada; más de una solo en casos puntuales.
 
@@ -85,7 +85,7 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 
 ### Privacidad por diseño
 - Sin nombres ni RUT de PA: solo códigos `PA-{REG}-{NNN}` (ej. `PA-MET-001`).
-- Alias opcional (apodo) por caso: en pantalla se ve **Don Pato** (PA-MET-001); Drive, notificaciones y reportes usan solo el código.
+- Alias opcional (apodo) por caso: en pantalla se ve **Don Pato** (PA-MET-001); notificaciones y reportes usan solo el código.
 - Datos filtrados por rol y región.
 - Universo Demo y Real totalmente separados.
 
@@ -99,7 +99,7 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 | Registro de Bitácora | Caso, fecha, modalidad, duración, ámbito, asistencia, resumen, acuerdos, dificultades, próxima acción, emoción (😊😐😢😠), reflexión |
 | Mis Acompañamientos | Casos activos con etapa y tipo (Nuevo / Continuidad) |
 | Historial de Bitácoras | Últimas 5: Enviada / Validada / Devuelta |
-| Agenda de Tareas | Pegar enlace Drive → "Enviar a Revisión"; ver observaciones si fue devuelta |
+| Agenda de Tareas | Pegar el enlace de la entrega → "Enviar a Revisión"; ver observaciones si fue devuelta |
 | Notificaciones | Avisos de coordinación |
 | Mis Supervisiones | Registro hecho por coordinación |
 
@@ -112,14 +112,14 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 | Registro de Ingresos | `/candidatas` | Registrar personas (nombre o alias), asignar PER, historial con estado de ingreso editable |
 | Acompañamientos | `/casos` | Validar y formalizar dupla, timeline, avance de etapa, retiro/deserción, enlaces a carpeta/IAP/Acta |
 | Validación sesiones | `/sesiones` | Bandeja → modal completo → Aprobar o Devolver con observaciones |
-| Supervisiones | `/supervisiones` | Dotación PER (Activo/Inactivo), registrar supervisión (agenda en Calendar), semáforo 💚 / ⚠️ >15 d / 🔴 >30 d |
+| Supervisiones | `/supervisiones` | Dotación PER (Activo/Inactivo), registrar supervisión, semáforo 💚 / ⚠️ >15 d / 🔴 >30 d |
 | Redes | `/redes` | Dispositivos territoriales, activaciones (derivaciones), focus groups y reuniones de equipo (Fase 5) |
 | Alertas | `/alertas` | Hitos por validar, casos sin bitácora, tareas atrasadas |
 
 ### Administrador Nacional — `/admin`
 | Sección | Función |
 |---|---|
-| Resumen | KPIs nacionales filtrables por región; sincronizar Google Workspace |
+| Resumen | KPIs nacionales filtrables por región |
 | Usuarios | Crear cuentas PER (quedan activas), asignar región, Desactivar/Activar |
 | Instrumentos | Catálogo por fase: obligatorio, bloquea avance, requiere validación; Vigente/Borrador/Archivado |
 | Reportes SENDA | Métricas del convenio por región, período y desagregación (género, edad, educación, empleo); CSV; **Congelar Snapshot** |
@@ -132,23 +132,12 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 1. **Admin** crea cuenta PER (queda activa).
 2. **Coord** registra a la persona (nombre o alias) como *Seleccionada* o *Lista de espera*.
 3. **Coord** asigna un PER a una persona *Seleccionada* → el caso queda formalizado de inmediato.
-4. Sistema crea en Drive carpeta del caso + IAP desde plantilla + tareas por instrumento.
+4. Sistema crea el caso con su IAP y el primer paso del itinerario.
 5. **PER** registra bitácoras → **Coord** valida o devuelve.
-6. **PER** entrega documentos (enlace Drive) → **Coord** valida → copia a `99_Validados`.
+6. **PER** entrega documentos (enlace) → **Coord** valida.
 7. **Coord** avanza etapa: Vinculación → Conexión → Finalización.
 8. **Egreso** solo con Ex-Post + Encuesta de Satisfacción validadas.
 9. **Admin** congela snapshot en fecha de corte → evidencia para remesa.
-
-### Estructura Drive generada
-```
-Región/
-└── PER_{id}/
-    └── PA-REG-000/
-        ├── 01_Vinculacion/   (Acta Primer Encuentro, IAP_v01)
-        ├── 02_Conexion/
-        ├── 03_Finalizacion/
-        └── 99_Validados/
-```
 
 ---
 
@@ -205,7 +194,7 @@ Nunca se mezclan: casos, tareas, notificaciones, snapshots, dispositivos y audit
 - **Instalable sin tienda** (PWA): Android, iPhone, PC.
 - **Funciona en terreno sin señal**: borradores locales + sincronización.
 - **Avisos en tiempo real**: campana in-app (cada 15 s) + notificaciones push al celular.
-- **Google Workspace real**: Drive, Docs (IAP desde plantilla), Calendar/Meet (supervisiones), Sheets (sincronización). Sin URL configurada → simulación local segura.
+
 - **Trazabilidad total**: auditoría inmutable + snapshots congelados.
 
 ---
@@ -213,7 +202,7 @@ Nunca se mezclan: casos, tareas, notificaciones, snapshots, dispositivos y audit
 ## 10. Arquitectura (para audiencia técnica)
 
 ### Stack
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Prisma 7 (SQLite local / Turso-libSQL en producción / D1 opcional) · Web Push (VAPID) · Google Apps Script como puente a Workspace.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Prisma 7 (SQLite local / Turso-libSQL en producción / D1 opcional) · Web Push (VAPID).
 
 ### Estructura
 ```
@@ -229,8 +218,8 @@ src/app/
   api/push/        Suscripción push
 src/components/    AppShell, formularios de bitácora/tareas, cola de validación
 src/lib/           auth (cookie HMAC), db (selector de adaptador), nomenclaturas
-src/server/        services (cases, sessions, tasks, alerts, push), google/workspace.ts
-GoogleAppsScript.gs   Web App: carpetas Drive, copia IAP, Calendar, Sheets
+src/server/        services (cases, sessions, tasks, alerts, push)
+
 ```
 
 ### Modelo de datos (núcleo)
@@ -243,9 +232,7 @@ GoogleAppsScript.gs   Web App: carpetas Drive, copia IAP, Calendar, Sheets
 | **Cloudflare (OpenNext)** | Alternativa: `wrangler.json`, adaptador D1 |
 
 ### Variables de entorno
-`AUTH_SESSION_SECRET` (≥ 32) · `REAL_MODE_PASSWORD` · `TURSO_DATABASE_URL` · `TURSO_AUTH_TOKEN` · `GOOGLE_APPS_SCRIPT_URL` (termina en `/exec`) · `GOOGLE_APPS_SCRIPT_SECRET` (= `API_SHARED_SECRET` de Apps Script) · `NEXT_PUBLIC_VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT`. Opcional: `NEXT_PUBLIC_REQUIRE_TEXT_FIELDS=true` vuelve a exigir los textos obligatorios (motivos, observaciones, enlaces, descripciones); por defecto está apagado y se aplica al construir (en Vercel, redeploy).
-
-Apps Script: propiedades `ROOT_FOLDER_ID`, `TEMPLATE_DOC_ID` (IAP oficial), `SPREADSHEET_ID`, `CALENDAR_ID`, `API_SHARED_SECRET`; ejecutar `authorizeWorkspace` una vez; desplegar nueva versión.
+`AUTH_SESSION_SECRET` (≥ 32) · `REAL_MODE_PASSWORD` · `TURSO_DATABASE_URL` · `TURSO_AUTH_TOKEN` · `NEXT_PUBLIC_VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT`. Opcional: `NEXT_PUBLIC_REQUIRE_TEXT_FIELDS=true` vuelve a exigir los textos obligatorios (motivos, observaciones, enlaces, descripciones); por defecto está apagado y se aplica al construir (en Vercel, redeploy).
 
 ### Comandos
 ```bash
@@ -271,7 +258,7 @@ npx next lint               # lint
 - La recuperación es posible; los PER son su testimonio vivo.
 - La app no burocratiza el vínculo: libera tiempo del PER para acompañar.
 - Coordinación ve a tiempo qué caso se enfría y qué PER necesita supervisión.
-- SENDA recibe indicadores verificables, con trazabilidad y evidencia en Drive.
+- SENDA recibe indicadores verificables, con trazabilidad.
 
 ## Limpiar datos reales y dejar solo lo demo
 

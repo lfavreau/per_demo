@@ -1,17 +1,6 @@
 import { prisma } from "@/lib/db";
-import {
-  commitCaseFolder,
-  commitIapDocument,
-  createCaseFolder,
-  createIapDocument,
-  rollbackCaseFolder,
-  rollbackIapDocument,
-  type CaseFoldersResult,
-  type GoogleDocResult,
-} from "../google/workspace";
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/services/itinerary.service";
-import { syncPendingCaseDocuments } from "@/server/services/document-sync.service";
 import type { CaseStage } from "@/lib/instrument-itinerary";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 import { normalizeCaseAlias } from "@/lib/nomenclatures";
@@ -67,14 +56,9 @@ interface ProvisionCaseInput {
   auditAction: string;
 }
 
-// Persiste el caso ya FORMALIZADO con todo lo que cuelga de él. folders/createdIap son null cuando el
-// aprovisionamiento de Drive se difiere (ver provisionCaseDrive): el caso existe y el PER ya puede
-// trabajar, y Drive se completa en segundo plano.
-async function persistProvisionedCase(
-  input: ProvisionCaseInput,
-  folders: CaseFoldersResult | null,
-  createdIap: GoogleDocResult | null
-) {
+// Crea el caso ya FORMALIZADO con todo lo que cuelga de él: historiales, IAP, primer paso del
+// itinerario y aviso al PER. No depende de ningún servicio externo.
+async function createCaseRecord(input: ProvisionCaseInput) {
   return prisma.$transaction(async (tx) => {
     const created = await tx.pACase.create({
       data: {
@@ -96,14 +80,6 @@ async function persistProvisionedCase(
         stage: "VINCULACION",
         startDate: new Date(),
         stageEnteredAt: new Date(),
-        driveFolderRegionId: folders?.regionFolderId ?? null,
-        driveFolderPerId: folders?.perFolderId ?? null,
-        driveFolderCaseId: folders?.caseFolderId ?? null,
-        driveFolderVinculacionId: folders?.vinculacionFolderId ?? null,
-        driveFolderConexionId: folders?.conexionFolderId ?? null,
-        driveFolderFinalizacionId: folders?.finalizacionFolderId ?? null,
-        driveFolderValidadosId: folders?.validadosFolderId ?? null,
-        driveFolderId: folders?.folderUrl ?? null,
         isDemo: input.isDemo,
       },
     });
@@ -112,7 +88,6 @@ async function persistProvisionedCase(
       data: {
         paCaseId: created.id,
         status: "INICIADO",
-        driveDocId: createdIap?.docId ?? null,
       },
     });
 
@@ -129,7 +104,7 @@ async function persistProvisionedCase(
         paCaseId: created.id,
         fromStatus: "PRESELECCION",
         toStatus: "VINCULACION",
-        reason: "Dupla conformada y formalizada; carpeta e IAP aprovisionados en Drive",
+        reason: "Dupla conformada y formalizada",
         byUserId: input.actorId,
       },
     });
@@ -141,21 +116,15 @@ async function persistProvisionedCase(
         action: input.auditAction,
         entityType: "PACase",
         entityId: created.id,
-        newValue: JSON.stringify({
-          code: input.code,
-          perId: input.perId,
-          folders,
-          iap: createdIap,
-        }),
+        newValue: JSON.stringify({ code: input.code, perId: input.perId }),
         isDemo: input.isDemo,
       },
     });
 
     await ensureCurrentStageTasks(created.id, input.actorId, input.isDemo, tx);
 
-    // Sin mención a Drive/carpeta/IAP: el PER no tiene acceso a esa capa, la administran
-    // Coordinación y Dirección. Para el PER, lo único relevante es que el acompañamiento
-    // ya está formalizado y puede empezar a trabajar el itinerario.
+    // Para el PER, lo único relevante es que el acompañamiento ya está formalizado y puede
+      // empezar a trabajar el itinerario.
     await createNotificationWithPush({
       userId: input.perUserId,
       title: "Acompañamiento Formalizado",
@@ -168,56 +137,13 @@ async function persistProvisionedCase(
   });
 }
 
-// Aprovisiona la carpeta de Drive y el IAP, y persiste el caso ya FORMALIZADO en un solo
-// paso — sin estados intermedios PROPUESTO/VALIDADO que nadie decide de forma independiente.
-// Si el aprovisionamiento en Drive falla, no se escribe nada en la base de datos: el
-// coordinador simplemente reintenta.
-//
-// No exige Acta de Primer Encuentro: la validez del match es responsabilidad de Dirección/
-// Coordinación al conformar la dupla, no un archivo externo que la app deba verificar. El
-// registro real del primer encuentro es la Reflexión del PER, que se genera sola en Drive
-// una vez validada (ver document-sync.service.ts).
-async function provisionAndPersistCase(input: ProvisionCaseInput, options: { deferDrive?: boolean } = {}) {
-  // Drive diferido: se crea el caso sin tocar Google y se completa después con provisionCaseDrive.
-  if (options.deferDrive) return persistProvisionedCase(input, null, null);
-
-  const folders = await createCaseFolder(input.code, input.regionId, input.perId, input.isDemo);
-
-  let iap: GoogleDocResult | null = null;
-  try {
-    const createdIap = await createIapDocument(input.code, folders.vinculacionFolderId, input.isDemo);
-    iap = createdIap;
-
-    const paCase = await persistProvisionedCase(input, folders, createdIap);
-
-    await commitCaseFolder(folders, input.code, input.isDemo).catch((error) => {
-      console.error("No se pudo marcar la carpeta como confirmada:", error);
-    });
-    await commitIapDocument(createdIap, input.isDemo).catch((error) => {
-      console.error("No se pudo marcar el IAP como confirmado:", error);
-    });
-    return paCase;
-  } catch (error) {
-    if (iap) {
-      await rollbackIapDocument(iap, input.isDemo).catch((rollbackError) => {
-        console.error("No se pudo revertir el IAP creado:", rollbackError);
-      });
-    }
-    await rollbackCaseFolder(folders, input.code, input.isDemo).catch((rollbackError) => {
-      console.error("No se pudo revertir la carpeta creada:", rollbackError);
-    });
-    throw error;
-  }
-}
-
 export async function createCaseFromCandidate(
   candidateId: string,
   perId: string,
   matchRationale: string,
   type: "NUEVO" | "CONTINUIDAD",
   actorId: string,
-  isDemo: boolean,
-  options: { deferDrive?: boolean } = {}
+  isDemo: boolean
 ) {
   const candidate = await prisma.pACandidate.findUnique({ where: { id: candidateId } });
   if (!candidate) throw new Error("Candidata no encontrada");
@@ -236,7 +162,7 @@ export async function createCaseFromCandidate(
   }
   const code = await generatePaCode(candidate.regionId, isDemo);
 
-  const paCase = await provisionAndPersistCase({
+  const paCase = await createCaseRecord({
     code,
     type,
     regionId: candidate.regionId,
@@ -255,7 +181,7 @@ export async function createCaseFromCandidate(
     actorId,
     isDemo,
     auditAction: "CREATE_CASE",
-  }, { deferDrive: options.deferDrive });
+  });
 
   await prisma.pACandidate.update({
     where: { id: candidateId },
@@ -263,67 +189,6 @@ export async function createCaseFromCandidate(
   });
 
   return paCase;
-}
-
-/**
- * Completa en Google Drive un caso creado con deferDrive: carpetas, IAP y su confirmación.
- * Es idempotente (si el caso ya tiene carpeta no hace nada) y reintentable: si falla, revierte lo
- * que alcanzó a crear en Drive y deja el caso sin carpeta para volver a intentarlo.
- * Devuelve true si aprovisionó, false si ya estaba aprovisionado.
- */
-export async function provisionCaseDrive(caseId: string): Promise<boolean> {
-  const paCase = await prisma.pACase.findUnique({ where: { id: caseId }, include: { iapRecords: true } });
-  if (!paCase) throw new Error("Caso no encontrado");
-  if (paCase.driveFolderCaseId) return false;
-
-  const isDemo = paCase.isDemo;
-  const folders = await createCaseFolder(paCase.code, paCase.regionId, paCase.perId, isDemo);
-  let iap: GoogleDocResult | null = null;
-  try {
-    const createdIap = await createIapDocument(paCase.code, folders.vinculacionFolderId, isDemo);
-    iap = createdIap;
-
-    await prisma.$transaction(async (tx) => {
-      await tx.pACase.update({
-        where: { id: caseId },
-        data: {
-          driveFolderRegionId: folders.regionFolderId,
-          driveFolderPerId: folders.perFolderId,
-          driveFolderCaseId: folders.caseFolderId,
-          driveFolderVinculacionId: folders.vinculacionFolderId,
-          driveFolderConexionId: folders.conexionFolderId,
-          driveFolderFinalizacionId: folders.finalizacionFolderId,
-          driveFolderValidadosId: folders.validadosFolderId,
-          driveFolderId: folders.folderUrl,
-        },
-      });
-      const iapRecord = paCase.iapRecords[0];
-      if (iapRecord) {
-        await tx.iAPRecord.update({ where: { id: iapRecord.id }, data: { driveDocId: createdIap.docId } });
-      }
-    });
-
-    // Confirmaciones en paralelo: ya no bloquean a nadie, y un fallo acá no invalida el caso.
-    await Promise.all([
-      commitCaseFolder(folders, paCase.code, isDemo).catch((error) => {
-        console.error("No se pudo marcar la carpeta como confirmada:", error);
-      }),
-      commitIapDocument(createdIap, isDemo).catch((error) => {
-        console.error("No se pudo marcar el IAP como confirmado:", error);
-      }),
-    ]);
-    return true;
-  } catch (error) {
-    if (iap) {
-      await rollbackIapDocument(iap, isDemo).catch((rollbackError) => {
-        console.error("No se pudo revertir el IAP creado:", rollbackError);
-      });
-    }
-    await rollbackCaseFolder(folders, paCase.code, isDemo).catch((rollbackError) => {
-      console.error("No se pudo revertir la carpeta creada:", rollbackError);
-    });
-    throw error;
-  }
 }
 
 export async function reassignCase(
@@ -456,7 +321,6 @@ export async function transitionCaseStatus(
   // escritura de SQLite todo ese tiempo. Si el flush falla, los documentos quedan pendientes
   // para el próximo cierre de etapa o el botón de forzado — no hay nada que revertir, el cambio
   // de estado ya es válido por sí mismo.
-  let exitedStage: CaseStage | null = null;
 
   const updated = await prisma.$transaction(async (tx) => {
     const paCase = await tx.pACase.findUnique({
@@ -499,9 +363,6 @@ export async function transitionCaseStatus(
           },
         });
       }
-      // Llegar hasta acá significa que el gate se cumplió o se forzó: la etapa actual queda
-      // atrás (incluyendo FINALIZACION al pasar a EGRESO, que no abre una etapa nueva).
-      exitedStage = paCase.stage as CaseStage;
     }
 
     // Retiro / Deserción: exigen el Formulario de Abandono (Persona Acompañada) validado —
@@ -516,10 +377,6 @@ export async function transitionCaseStatus(
           "Se requiere completar y validar el Formulario de Abandono — Persona Acompañada antes de confirmar el retiro."
         );
       }
-      // El retiro no pasa por el gate de arriba (no es un avance de etapa), pero los
-      // Formularios de Abandono están catalogados bajo FINALIZACION: sin esto, esos dos
-      // documentos quedarían pendientes para siempre — nada más los vuelve a intentar.
-      exitedStage = "FINALIZACION";
     }
 
     // Manage stage transition logic
@@ -637,19 +494,6 @@ export async function transitionCaseStatus(
     return updated;
   });
 
-  if (exitedStage) {
-    try {
-      const outcome = await syncPendingCaseDocuments(caseId, isDemo, actorId, { stage: exitedStage });
-      for (const failure of outcome.failed) {
-        console.error(
-          `Falló la sincronización de ${failure.docKey} en el caso ${caseId} (cierre de ${exitedStage}): ${failure.message}`
-        );
-      }
-    } catch (error) {
-      console.error(`No se pudieron sincronizar documentos de ${exitedStage} para el caso ${caseId}:`, error);
-    }
-  }
-
   return updated;
 }
 
@@ -689,7 +533,7 @@ export async function createDirectContinuityCase(
     },
   });
 
-  return provisionAndPersistCase({
+  return createCaseRecord({
     code,
     type: "CONTINUIDAD",
     regionId,

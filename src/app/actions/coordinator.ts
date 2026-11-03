@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { after } from "next/server";
 import { isNextRedirect } from "@/lib/next-errors";
-import { createCaseFromCandidate, provisionCaseDrive, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
+import { createCaseFromCandidate, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert } from "@/server/services/alerts.service";
 import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
@@ -21,8 +20,7 @@ export interface ActionResult {
 
 /**
  * Asigna un PER a una persona acompañada. No redirige: devuelve el resultado para mostrarlo en la
- * misma pantalla. En modo real, Drive (carpetas + IAP) se completa en segundo plano para no
- * hacer esperar al coordinador; el caso y el itinerario del PER quedan listos de inmediato.
+ * misma pantalla. El caso y el itinerario del PER quedan listos de inmediato.
  */
 export async function assignPerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await getCurrentUser();
@@ -41,18 +39,7 @@ export async function assignPerAction(_prev: ActionResult, formData: FormData): 
 
   try {
     // El tipo (nuevo / continuidad) y la fundamentación no se piden: el caso queda como NUEVO.
-    const newCase = await createCaseFromCandidate(candidateId, perId, "", "NUEVO", user.id, user.isDemo, {
-      deferDrive: !user.isDemo,
-    });
-    if (!user.isDemo) {
-      after(async () => {
-        try {
-          await provisionCaseDrive(newCase.id);
-        } catch (error) {
-          console.error(`Drive pendiente para el caso ${newCase.code}:`, error);
-        }
-      });
-    }
+    const newCase = await createCaseFromCandidate(candidateId, perId, "", "NUEVO", user.id, user.isDemo);
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
     revalidatePath("/coordinacion/candidatas");
@@ -63,31 +50,6 @@ export async function assignPerAction(_prev: ActionResult, formData: FormData): 
     console.error("Error creating case:", err);
     return { status: "error", message: err.message || "No se pudo asignar el PER." };
   }
-}
-
-/** Reintenta el aprovisionamiento de Drive de un caso que quedó sin carpeta (modo real). */
-export async function retryCaseDriveAction(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
-    throw new Error("No autorizado");
-  }
-  const caseId = String(formData.get("caseId") || "");
-  const paCase = caseId ? await prisma.pACase.findUnique({ where: { id: caseId } }) : null;
-  if (!paCase || Boolean(paCase.isDemo) !== Boolean(user.isDemo)) {
-    throw new Error("Caso no encontrado en el modo de trabajo actual");
-  }
-  if (user.role !== "ADMIN" && paCase.regionId !== user.regionId) {
-    throw new Error("No autorizado para operar casos de esta región");
-  }
-  after(async () => {
-    try {
-      await provisionCaseDrive(caseId);
-      revalidatePath("/coordinacion/candidatas");
-    } catch (error) {
-      console.error(`Drive pendiente para el caso ${paCase.code}:`, error);
-    }
-  });
-  revalidatePath("/coordinacion/candidatas");
 }
 
 export async function reassignCaseAction(formData: FormData): Promise<void> {
@@ -381,7 +343,6 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
     throw new Error("Todos los campos son obligatorios");
   }
 
-  const { rollbackSupervisionEvent, scheduleSupervisionEvent } = await import("@/server/google/workspace");
   const per = await prisma.pERProfile.findUnique({
     where: { id: perId },
     include: { user: true },
@@ -393,54 +354,37 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
   if (Number.isNaN(date.getTime()) || !Number.isInteger(durationMinutes)) {
     throw new Error("Fecha o duración inválida");
   }
-  const calendarResult = await scheduleSupervisionEvent(
-    per.user.name,
-    user.name || "Coordinador",
-    date,
-    durationMinutes,
-    user.isDemo
-  );
-
   const regionId = user.regionId || per.regionId;
 
-  let supervision;
-  try {
-    supervision = await prisma.$transaction(async (tx) => {
-      const created = await tx.supervision.create({
-        data: {
-          coordinatorId: user.id,
-          perId,
-          regionId,
-          date,
-          durationMinutes,
-          observations: topic,
-          modality: "MEET",
-          status: "AGENDADA",
-          calendarEventId: calendarResult.eventId,
-          casesReviewedSerialized: "[]",
-          isDemo: user.isDemo,
-        },
-      });
+  const supervision = await prisma.$transaction(async (tx) => {
+    const created = await tx.supervision.create({
+      data: {
+        coordinatorId: user.id,
+        perId,
+        regionId,
+        date,
+        durationMinutes,
+        observations: topic,
+        modality: "MEET",
+        status: "AGENDADA",
+        casesReviewedSerialized: "[]",
+        isDemo: user.isDemo,
+      },
+    });
 
-      await tx.auditLog.create({
-        data: {
-          userId: user.id,
-          role: "COORDINATOR",
-          action: "SCHEDULE_SUPERVISION",
-          entityType: "Supervision",
-          entityId: created.id,
-          newValue: JSON.stringify({ perId, dateStr, durationMinutes, topic, calendarResult }),
-          isDemo: user.isDemo,
-        },
-      });
-      return created;
+    await tx.auditLog.create({
+      data: {
+        userId: user.id,
+        role: "COORDINATOR",
+        action: "SCHEDULE_SUPERVISION",
+        entityType: "Supervision",
+        entityId: created.id,
+        newValue: JSON.stringify({ perId, dateStr, durationMinutes }),
+        isDemo: user.isDemo,
+      },
     });
-  } catch (error) {
-    await rollbackSupervisionEvent(calendarResult, user.isDemo).catch((rollbackError) => {
-      console.error("No se pudo revertir el evento de Calendar:", rollbackError);
-    });
-    throw error;
-  }
+    return created;
+  });
 
   await createNotificationWithPush({
     userId: per.userId,

@@ -235,7 +235,7 @@ export default async function CoordinatorSupervisionesPage({
                 <span>📝</span> Registrar Reunión de Supervisión
               </h4>
               <p className="text-[10px] text-slate-400 mt-1">
-                Completa los datos para registrar la supervisión técnica y agendar automáticamente el evento en Google Calendar.
+                Completa los datos para registrar la supervisión técnica.
               </p>
             </div>
 

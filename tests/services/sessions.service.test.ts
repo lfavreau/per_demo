@@ -9,7 +9,7 @@ import { createCoordinator, createPer, uid, testRegion } from "../helpers/fixtur
 // de ejecución: el PER real se resuelve desde el actorId (segundo argumento). Se pasa "unused"
 // solo para satisfacer el tipo.
 
-/** Caso mínimo, creado directo (sin pasar por Drive) — los tests de sesiones no necesitan Workspace. */
+/** Caso mínimo, creado directo — los tests de sesiones no necesitan el flujo de asignación. */
 async function createRawCase(regionId: string, perId: string, coordinatorId: string, isDemo = true) {
   return prisma.pACase.create({
     data: {

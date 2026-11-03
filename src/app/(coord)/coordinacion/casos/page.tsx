@@ -24,14 +24,12 @@ export default async function CoordinatorCasosPage({
     caseCode?: string;
     highlightCaseId?: string;
     error?: string;
-    workspace?: string;
   }>;
 }) {
   const user = await getCurrentUser();
   const params = await searchParams;
   const highlightCaseId = params.highlightCaseId;
   const errorMsg = params.error;
-  const workspaceCreated = params.workspace === "created";
 
   // Enforce Coordinator role access
   if (!user || user.role !== "COORDINATOR" || !user.regionId) {
@@ -241,15 +239,6 @@ export default async function CoordinatorCasosPage({
                 </div>
               )}
 
-              {workspaceCreated && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-2xl">
-                  <p className="font-bold">Google Workspace aprovisionado correctamente</p>
-                  <p className="mt-1 text-[11px]">
-                    La carpeta del caso, sus subcarpetas y el IAP quedaron creados y vinculados al registro.
-                  </p>
-                </div>
-              )}
-              
               <div className={`p-6 bg-card border rounded-2xl shadow-sm space-y-4 transition duration-300 ${
                 selectedCaseDetails.id === highlightCaseId 
                   ? "border-blue-400 bg-blue-50/10 shadow-md animate-highlight" 
@@ -288,42 +277,6 @@ export default async function CoordinatorCasosPage({
                     </span>
                   </div>
 
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Google Workspace</span>
-                    <span className="font-semibold text-slate-800">
-                      {isDemo ? "Simulado — no escribe en Google" : "Real — escritura estricta"}
-                    </span>
-                    {!isDemo && selectedCaseDetails.driveFolderId && (
-                      <a
-                        href={selectedCaseDetails.driveFolderId}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 block text-blue-700 hover:underline font-bold"
-                      >
-                        Abrir carpeta del caso ↗
-                      </a>
-                    )}
-                    {!isDemo && selectedCaseDetails.iapRecords[0]?.driveDocId && (
-                      <a
-                        href={`https://docs.google.com/document/d/${selectedCaseDetails.iapRecords[0].driveDocId}/edit`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block text-blue-700 hover:underline font-bold"
-                      >
-                        Abrir IAP generado ↗
-                      </a>
-                    )}
-                    {!isDemo && selectedCaseDetails.actaPrimerEncuentroDriveId && (
-                      <a
-                        href={`https://drive.google.com/open?id=${selectedCaseDetails.actaPrimerEncuentroDriveId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block text-blue-700 hover:underline font-bold"
-                      >
-                        Abrir Acta de Primer Encuentro ↗
-                      </a>
-                    )}
-                  </div>
                 </div>
               </div>
 

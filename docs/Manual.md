@@ -455,7 +455,7 @@ El Mapa 0 trabaja 4 competencias transversales:
 
 ## 9. ¿Qué es esta aplicación y para qué sirve?
 
-La **Plataforma de Coordinación PER 2026-2027** es una aplicación web progresiva (PWA) que actúa como **capa de coordinación, seguimiento operativo y trazabilidad** sobre Google Workspace para el pilotaje PER.
+La **Plataforma de Coordinación PER 2026-2027** es una aplicación web progresiva (PWA) que actúa como **capa de coordinación, seguimiento operativo y trazabilidad** para el pilotaje PER.
 
 ### En palabras simples
 
@@ -470,7 +470,7 @@ Es como una **libreta de trabajo digital** que te ayuda a:
 
 ### ¿Qué NO es esta aplicación?
 
-> **Importante**: La app **no reemplaza** los documentos oficiales del programa. Los documentos, formularios, carpetas, actas, IAP, evaluaciones y evidencias siguen residiendo en **Google Drive, Google Forms, Google Docs y Google Calendar**. La app los organiza, vincula al pipeline del proyecto, los transforma en tareas, notifica a los responsables y genera indicadores. Para los instrumentos que el PER completa dentro de la app (reflexiones, actividades, evaluaciones, IAP), la plataforma además **genera automáticamente el documento oficial en Drive** apenas se valida — ver §16.3.
+> **Importante**: La app **no reemplaza** los documentos oficiales del programa. Los formularios externos (por ejemplo, Google Forms) se siguen completando fuera de la app; la app los vincula al pipeline del proyecto y los transforma en tareas, notificaciones, validaciones y trazabilidad. No se conecta a Google Drive ni a ninguna API de Google.
 
 ### Principio operativo
 
@@ -688,7 +688,7 @@ Paso a paso general:
 
 #### Actividades con enlace externo (Encuesta de Satisfacción, algunos instrumentos institucionales)
 
-En vez de un formulario, verás un campo para pegar el enlace de Google Drive/Forms del documento y un botón para enviarlo a revisión.
+En vez de un formulario, verás un campo para pegar el enlace del documento o formulario y un botón para enviarlo a revisión.
 
 #### Registro de Acompañamiento (etapa Conexión)
 
@@ -762,21 +762,21 @@ Primero registra a la persona con **Nombre / alias** (usa un alias, no el RUT) y
 2. **Acompañante PER**: Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
 3. Presiona **"Asignar PER"**. El caso queda como *Nuevo*; no se pide tipo ni fundamentación.
 
-Al presionar el botón la asignación es inmediata: el caso queda formalizado y el PER ya ve su itinerario, sin salir de la pantalla (aparece un aviso de confirmación). En modo real, la carpeta de Drive y el IAP se terminan de crear en segundo plano; mientras tanto la fila muestra "⏳ Drive pendiente" y, si no se completan, un botón **Reintentar**.
+Al presionar el botón la asignación es inmediata: el caso queda formalizado y el PER ya ve su itinerario, sin salir de la pantalla (aparece un aviso de confirmación).
 
 La lista **Personas acompañadas** (todas, con o sin PER) tiene en cada fila un botón **✏️ Editar** que abre una ventana para cambiar nombre o alias, notas y —si aún no tiene PER— el estado de ingreso. No pide contraseña.
 
-> La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación), que se materializa sola en Drive apenas se valida (ver §22).
+> La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación).
 
 > **¿Te equivocaste de PER o necesitas cambiarlo?** En la ficha del caso (§16.3) hay una tarjeta **"Reasignar Acompañante"** — es la operación de excepción para corregir una dupla ya formalizada.
 
-> **Alias (opcional)**: apodo de referencia que el coordinador o el PER asigna con **✏️ Asignar alias**. Si existe, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No usar nombre completo ni RUT. Drive, notificaciones, reportes y CSV siguen usando el código, y la auditoría registra el cambio sin guardar el texto.
+> **Alias (opcional)**: apodo de referencia que el coordinador o el PER asigna con **✏️ Asignar alias**. Si existe, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No usar nombre completo ni RUT. Las notificaciones, los reportes y los CSV siguen usando el código, y la auditoría registra el cambio sin guardar el texto.
 
 ---
 
 ### 16.3 Acompañamientos y validación del itinerario (`/coordinacion/casos`)
 
-Selecciona un caso desde el buscador superior para ver su ficha completa: código, tipo, PER asignado, fase, enlaces a Google Workspace (carpeta del caso, IAP, y el Acta de Primer Encuentro si el caso tiene una registrada) y el **historial cronológico** de todos sus hitos (cambios de fase, registros de acompañamiento y eventos de tareas).
+Selecciona un caso desde el buscador superior para ver su ficha completa: código, tipo, PER asignado, fase y el **historial cronológico** de todos sus hitos (cambios de fase, registros de acompañamiento y eventos de tareas).
 
 #### Panel de itinerario
 
@@ -800,14 +800,6 @@ Al pie de las acciones de fase hay un bloque para registrar el abandono del caso
 #### Reasignar Acompañante
 
 Tarjeta visible en cualquier caso que no esté cerrado. Cambia el PER a cargo del caso: libera el cupo del PER anterior, exige un motivo, audita el cambio y notifica a ambos acompañantes. Es la única forma de corregir una dupla después de que quedó formalizada — ver §16.2.
-
-#### Documentos generados automáticamente en Drive
-
-Cuando validás un instrumento nativo (reflexiones, actividades, evaluaciones, formularios de abandono, IAP con sus tablas de ámbitos y objetivos, Registro de Acompañamiento), la plataforma arma el documento oficial en la carpeta de Drive correspondiente a la etapa del caso, usando la plantilla institucional de ese instrumento. No es instantáneo por instrumento: se dispara al cerrar la etapa (o al forzar el avance), para no hacer una llamada a Drive por cada validación suelta.
-
-- **Correcciones**: si un instrumento devuelto se corrige y se vuelve a validar, el documento se reescribe en el **mismo archivo** de Drive (mismo enlace de siempre) — el historial de versiones queda en las revisiones nativas del propio Doc, no como archivos `_v1`, `_v2` sueltos.
-- **PER no ve nada de esto**: el PER no tiene acceso a Drive — solo completa el formulario dentro de la app. La carpeta y los documentos son visibles para Coordinación y Dirección/Administración.
-- **Si algo no se generó a tiempo**: el Administrador Nacional tiene un botón para forzar la sincronización manualmente — ver §17.
 
 ---
 
@@ -897,11 +889,6 @@ Dashboard con las métricas clave del convenio SENDA, filtrable por región:
 - Indicadores de adherencia, evaluación y satisfacción.
 - Estadísticas de tareas y sesiones.
 - Resumen por región con porcentaje de cobertura.
-
-#### Botones de sincronización
-
-- **🔄 Sincronizar Google Workspace**: vuelca la tabla de casos al Sheet espejo. No toca documentos.
-- **📄 Subir documentos pendientes (N)**: solo aparece si hay documentos generados sin sincronizar (por ejemplo, si el cierre automático de etapa falló, o si el Registro de Acompañamiento acumuló sesiones nuevas sin que el caso haya cambiado de etapa todavía). Procesa hasta 10 casos por click; si quedan más, el contador se actualiza y hay que volver a hacer clic.
 
 ---
 
@@ -1044,7 +1031,6 @@ Vista de solo lectura, consolidada a nivel país, del catálogo de dispositivos 
 | **Funnel** | Pipeline de estados por los que pasa una persona antes de ingresar al programa |
 | **Snapshot** | Foto inmutable de indicadores para una fecha de corte oficial |
 | **PWA** | Progressive Web App. Aplicación web que se puede instalar como nativa |
-| **Google Workspace** | Suite de herramientas de Google (Drive, Docs, Forms, Calendar, Sheets) |
 | **TUS** | Trastorno por Uso de Sustancias |
 | **CESFAM** | Centro de Salud Familiar |
 | **OMIL** | Oficina Municipal de Intermediación Laboral |

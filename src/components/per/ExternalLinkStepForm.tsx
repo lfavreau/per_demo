@@ -31,7 +31,7 @@ export default function ExternalLinkStepForm({ taskId, title }: ExternalLinkStep
     <div className="p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
       <h3 className="font-bold text-sm text-slate-800">▶ {title}</h3>
       <p className="text-[10px] text-slate-400">
-        Este instrumento se completa fuera de la app. Pega el enlace del formulario de Google una vez enviado.
+        Este instrumento se completa fuera de la app. Pega el enlace del formulario una vez enviado.
       </p>
       {msg && (
         <div
@@ -48,7 +48,7 @@ export default function ExternalLinkStepForm({ taskId, title }: ExternalLinkStep
           required={REQUIRE_TEXT_FIELDS}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Pegar enlace del formulario de Google..."
+          placeholder="Pegar enlace del formulario..."
           className="flex-1 p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
         />
         <button

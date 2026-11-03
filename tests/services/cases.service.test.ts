@@ -2,7 +2,6 @@
 import { prisma } from "@/lib/db";
 import {
   createCaseFromCandidate,
-  provisionCaseDrive,
   reassignCase,
   transitionCaseStatus,
 } from "@/server/services/cases.service";
@@ -22,20 +21,6 @@ vi.mock("@/lib/program-config", async (importOriginal) => {
 });
 afterEach(() => {
   textRules.require = false;
-});
-
-// Los mocks de Drive en modo demo (isDemo: true) son deterministas y no hacen red — se dejan
-// pasar tal cual (importOriginal). Solo se sobreescribe createIapDocument puntualmente en el
-// test de rollback (CASE-09), para simular una falla real de Google Workspace.
-vi.mock("@/server/google/workspace", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/server/google/workspace")>();
-  return {
-    ...actual,
-    createCaseFolder: vi.fn(actual.createCaseFolder),
-    createIapDocument: vi.fn(actual.createIapDocument),
-    rollbackCaseFolder: vi.fn(actual.rollbackCaseFolder),
-    rollbackIapDocument: vi.fn(actual.rollbackIapDocument),
-  };
 });
 
 describe("cases.service — createCaseFromCandidate", () => {
@@ -158,7 +143,7 @@ describe("cases.service — createCaseFromCandidate", () => {
     expect(notification).not.toBeNull();
   });
 
-  it("CASE-07/08: match en un solo paso — nace FORMALIZADO/VINCULACION con Drive, IAP y primer Task", async () => {
+  it("CASE-07/08: match en un solo paso — nace FORMALIZADO/VINCULACION con IAP y primer Task", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: per } = await createPer(region);
@@ -177,7 +162,6 @@ describe("cases.service — createCaseFromCandidate", () => {
     expect(paCase.matchStatus).toBe("FORMALIZADO");
     expect(paCase.status).toBe("VINCULACION");
     expect(paCase.stage).toBe("VINCULACION");
-    expect(paCase.driveFolderCaseId).toBeTruthy();
 
     const iap = await prisma.iAPRecord.findFirst({ where: { paCaseId: paCase.id } });
     expect(iap).not.toBeNull();
@@ -187,29 +171,6 @@ describe("cases.service — createCaseFromCandidate", () => {
     expect(firstTask?.status).toBe("PENDIENTE");
   });
 
-  it("CASE-09: si falla la creación del IAP, no se persiste nada (nada a medias)", async () => {
-    const region = testRegion();
-    const coord = await createCoordinator(region);
-    const { profile: per } = await createPer(region);
-    const candidate = await createCandidate(region);
-
-    const workspace = await import("@/server/google/workspace");
-    (workspace.createIapDocument as any).mockRejectedValueOnce(new Error("mock: falla de Drive"));
-
-    await expect(
-      createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true)
-    ).rejects.toThrow(/mock: falla de Drive/);
-
-    expect(workspace.rollbackCaseFolder).toHaveBeenCalled();
-    // El IAP nunca llegó a crearse (falló antes): no hay nada que revertir de ese lado.
-    expect(workspace.rollbackIapDocument).not.toHaveBeenCalled();
-
-    const orphanCase = await prisma.pACase.findFirst({ where: { candidateId: candidate.id } });
-    expect(orphanCase).toBeNull();
-
-    const candidateAfter = await prisma.pACandidate.findUnique({ where: { id: candidate.id } });
-    expect(candidateAfter?.convertedToCaseId).toBeNull(); // no se tocó: la falla fue antes de ese paso
-  });
 });
 
 describe("cases.service — reassignCase", () => {
@@ -343,78 +304,17 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
     expect(audit).not.toBeNull();
   });
 
-  it("CASE-12: al cerrar VINCULACION se sincronizan en Drive los documentos generados pendientes", async () => {
+  it("CASE-13: un retiro voluntario exige el Formulario de Abandono validado", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { user: perUser, profile: per } = await createPer(region);
     const candidate = await createCandidate(region);
 
-    const paCase = await createCaseFromCandidate(
-      candidate.id,
-      per.id,
-      "motivo",
-      "NUEVO",
-      coord.id,
-      true
-    );
-    expect(paCase.driveFolderVinculacionId).toBeTruthy();
+    const paCase = await createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true);
 
-    // Se valida directo por Prisma en vez de recorrer todo el itinerario secuencial, que es
-    // irrelevante para lo que este test verifica.
-    const instrument = await prisma.instrument.findFirstOrThrow({
-      where: { activityKey: "ACTIVIDAD_1_MOTIVACIONES" },
-    });
-    await prisma.task.create({
-      data: {
-        title: instrument.name,
-        instrumentId: instrument.id,
-        paCaseId: paCase.id,
-        regionId: region,
-        assignedToUserId: perUser.id,
-        assignedByUserId: coord.id,
-        status: "VALIDADA",
-        contentJson: JSON.stringify({
-          date: "2026-08-01",
-          motivations: "Retomar estudios",
-          expectations: "Sentirme acompañada",
-        }),
-        isDemo: true,
-      },
-    });
-
-    await transitionCaseStatus(
-      paCase.id,
-      "CONEXION",
-      "Forzado para probar sincronización de documentos",
-      coord.id,
-      true,
-      true
-    );
-
-    const record = await prisma.documentRecord.findFirst({
-      where: { caseId: paCase.id, instrumentId: instrument.id, origin: "GENERATED", isFinalVigente: true },
-    });
-    expect(record).not.toBeNull();
-    expect(record?.stage).toBe("VINCULACION");
-    expect(record?.contentHash).toBeTruthy();
-    expect(record?.revisionId).toBeTruthy();
-  });
-
-  it("CASE-13: un retiro voluntario también sincroniza el Formulario de Abandono validado", async () => {
-    const region = testRegion();
-    const coord = await createCoordinator(region);
-    const { user: perUser, profile: per } = await createPer(region);
-    const candidate = await createCandidate(region);
-
-    const paCase = await createCaseFromCandidate(
-      candidate.id,
-      per.id,
-      "motivo",
-      "NUEVO",
-      coord.id,
-      true
-    );
-    expect(paCase.driveFolderFinalizacionId).toBeTruthy();
+    await expect(
+      transitionCaseStatus(paCase.id, "RETIRO_VOLUNTARIO", "Retiro solicitado", coord.id, true)
+    ).rejects.toThrow(/Formulario de Abandono/);
 
     const instrument = await prisma.instrument.findFirstOrThrow({
       where: { activityKey: "FORMULARIO_ABANDONO_PA" },
@@ -433,43 +333,8 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
       },
     });
 
-    // El retiro no pasa por el gate de avance de etapa (no es un cambio de VINCULACION/CONEXION/
-    // FINALIZACION): la sincronización tiene que dispararse igual, por la rama de retiro.
-    await transitionCaseStatus(paCase.id, "RETIRO_VOLUNTARIO", "Retiro solicitado por la persona acompañada", coord.id, true);
-
-    const record = await prisma.documentRecord.findFirst({
-      where: { caseId: paCase.id, instrumentId: instrument.id, origin: "GENERATED", isFinalVigente: true },
-    });
-    expect(record).not.toBeNull();
-    expect(record?.stage).toBe("FINALIZACION");
-  });
-});
-
-describe("cases.service — Drive diferido", () => {
-  it("CASE-20: con deferDrive el caso nace sin tocar Drive y provisionCaseDrive lo completa (idempotente)", async () => {
-    const region = testRegion();
-    const coord = await createCoordinator(region);
-    const { profile: per } = await createPer(region);
-    const candidate = await createCandidate(region);
-
-    const paCase = await createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true, { deferDrive: true });
-    expect(paCase.status).toBe("VINCULACION");
-    expect(paCase.driveFolderCaseId).toBeNull();
-    const iapBefore = await prisma.iAPRecord.findFirst({ where: { paCaseId: paCase.id } });
-    expect(iapBefore).not.toBeNull();
-    expect(iapBefore?.driveDocId).toBeNull();
-    // El PER ya tiene su primer paso del itinerario aunque Drive no esté listo.
-    expect(await prisma.task.count({ where: { paCaseId: paCase.id } })).toBeGreaterThan(0);
-
-    expect(await provisionCaseDrive(paCase.id)).toBe(true);
-    const done = await prisma.pACase.findUnique({ where: { id: paCase.id } });
-    expect(done?.driveFolderCaseId).toBeTruthy();
-    expect(done?.driveFolderVinculacionId).toBeTruthy();
-    const iapAfter = await prisma.iAPRecord.findFirst({ where: { paCaseId: paCase.id } });
-    expect(iapAfter?.driveDocId).toBeTruthy();
-
-    // Segunda llamada: no vuelve a aprovisionar.
-    expect(await provisionCaseDrive(paCase.id)).toBe(false);
+    const updated = await transitionCaseStatus(paCase.id, "RETIRO_VOLUNTARIO", "Retiro solicitado", coord.id, true);
+    expect(updated.status).toBe("RETIRO_VOLUNTARIO");
   });
 });
 
