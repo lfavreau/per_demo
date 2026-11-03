@@ -42,6 +42,17 @@ mkdirSync(dirname(outPath), { recursive: true });
 const source = createClient({ url: sourceUrl, authToken: useTurso ? process.env.TURSO_AUTH_TOKEN : undefined });
 const target = createClient({ url: `file:${outPath}` });
 
+// Un respaldo incompleto no debe quedar en disco pareciendo válido. En Windows hay que cerrar la
+// conexión antes de borrar el archivo.
+function discardPartialBackup() {
+  try {
+    target.close();
+    rmSync(outPath, { force: true });
+  } catch {
+    console.error(`No se pudo borrar el respaldo parcial; bórralo a mano: ${outPath}`);
+  }
+}
+
 const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
 const BATCH = 200;
 
@@ -81,8 +92,7 @@ async function main() {
 
   if (mismatches.length) {
     console.error("\n✖ El respaldo NO coincide con el origen:\n  " + mismatches.join("\n  "));
-    target.close();
-    rmSync(outPath, { force: true });
+    discardPartialBackup();
     process.exit(1);
   }
   console.log(`\n✔ Respaldo verificado: ${tables.length} tablas, ${totalRows} filas → ${outPath}`);
@@ -90,6 +100,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("Error:", err.message);
-  rmSync(outPath, { force: true });
+  discardPartialBackup();
   process.exit(1);
 });
