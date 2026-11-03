@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { submitTaskAction } from "@/app/actions/per";
+import CaseName from "@/components/cases/CaseName";
 
 interface TaskItem {
   id: string;
@@ -11,7 +12,7 @@ interface TaskItem {
   status: string;
   priority: string;
   googleUrl: string | null;
-  paCase: { code: string } | null;
+  paCase: { code: string; alias: string | null } | null;
   feedbacks: Array<{ text: string; createdAt: Date }>;
 }
 
@@ -81,7 +82,7 @@ export default function TaskSubmitForm({ tasks }: TaskSubmitFormProps) {
                     </h4>
                     {task.paCase && (
                       <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-bold">
-                        {task.paCase.code}
+                        <CaseName code={task.paCase.code} alias={task.paCase.alias} />
                       </span>
                     )}
                   </div>

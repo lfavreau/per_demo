@@ -35,7 +35,7 @@ model PERProfile {
   regionId            String
   coordinatorId       String?
   generation          String           // "PRIMERA", "SEGUNDA", "TERCERA", "OTRA"
-  certificationStatus String           @default("PENDIENTE") // "PENDIENTE", "HABILITADO", "NO_HABILITADO"
+  certificationStatus String           @default("PENDIENTE") // "HABILITADO", "NO_HABILITADO" (deshabilitado). "PENDIENTE" es legado y cuenta como habilitado
   certificationNote   String?
   certifiedByUserId   String?
   certifiedAt         DateTime?
@@ -72,7 +72,8 @@ model PACandidate {
 model PACase {
   id                          String              @id @default(cuid())
   code                        String              @unique // PA-{REGION}-{NNN}
-  type                        String              // "NUEVO", "CONTINUIDAD"
+  alias                       String?             // Alias opcional solo para vistas internas (no nombre completo ni RUT)
+  type                       String              // "NUEVO", "CONTINUIDAD"
   regionId                    String
   perId                       String
   per                         PERProfile          @relation(fields: [perId], references: [id])
@@ -266,7 +267,7 @@ model SessionLog {
   agreements            String?
   difficulties          String?
   nextAction            String?
-  perEmotion            String?   // "BIEN", "NEUTRO", "TRISTE", "ENOJADO"
+  perEmotion            String?   // "BIEN", "NEUTRO", "TRISTE", "MOLESTO" ("ENOJADO" legado)
   perReflection         String?
   attendance            String    // "REALIZADA", "NO_ASISTE_PA", "NO_ASISTE_PER", "REAGENDADA", "CANCELADA"
   stage                 String    @default("VINCULACION")

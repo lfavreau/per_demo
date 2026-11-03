@@ -14,6 +14,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { extractGoogleDriveFileId } from "@/lib/google-resource";
+import { normalizeCaseAlias } from "@/lib/nomenclatures";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -28,13 +29,14 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   const perId = formData.get("perId") as string;
   const matchRationale = formData.get("matchRationale") as string;
   const type = formData.get("type") as "NUEVO" | "CONTINUIDAD";
+  const alias = normalizeCaseAlias(formData.get("alias"));
 
   if (!candidateId || !perId || !matchRationale || !type) {
     return;
   }
 
   try {
-    const newCase = await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo);
+    const newCase = await createCaseFromCandidate(candidateId, perId, matchRationale, type, user.id, user.isDemo, alias);
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
     revalidatePath("/coordinacion/candidatas");
@@ -293,6 +295,7 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   const educationLevel = formData.get("educationLevel") as string;
   const employmentStatus = formData.get("employmentStatus") as string;
   const actaInput = String(formData.get("actaPrimerEncuentro") || "");
+  const alias = normalizeCaseAlias(formData.get("alias"));
 
   if (!perId || !matchRationale || !gender || !ageRange || !educationLevel || !employmentStatus) {
     throw new Error("Faltan campos obligatorios para el ingreso directo");
@@ -319,7 +322,8 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
       employmentStatus,
       user.id,
       user.isDemo,
-      actaFileId
+      actaFileId,
+      alias
     );
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");

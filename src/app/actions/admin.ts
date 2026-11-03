@@ -101,7 +101,7 @@ export async function toggleUserStatusAction(formData: FormData) {
       action: updatedStatus ? "ACTIVACION_USUARIO" : "DESACTIVACION_USUARIO",
       entityType: "USER",
       entityId: userId,
-      newValue: `Usuario ${targetUser.email} ${updatedStatus ? "activado" : "desactivado"}`,
+      newValue: `Usuario ${targetUser.email} ${updatedStatus ? "habilitado" : "deshabilitado"}`,
       isDemo: Boolean(adminUser.isDemo),
     },
   });

@@ -10,10 +10,12 @@ La app no reemplaza el registro oficial ni los documentos institucionales del pr
 
 El programa PER se estructura en torno al acompañamiento no clínico realizado por Pares Especialistas en Recuperación (PER), el Itinerario de Acompañamiento Personalizado (IAP), las bitácoras de sesión, la supervisión técnica, la formación continua, el seguimiento de casos, la evaluación y la sistematización.
 
+En la etapa beta, buena parte de las actividades se realiza de forma manual y fuera de la app; la plataforma la usa principalmente el PER para registrar sesiones, avances de etapa y actividades. La relación habitual es 1 PER por persona acompañada.
+
 La app resuelve operativamente:
 
 *   Quién acompaña a quién.
-*   Qué PER están habilitados.
+*   Qué PER están habilitados o deshabilitados.
 *   En qué etapa está cada acompañamiento.
 *   Qué instrumentos corresponden a cada fase.
 *   Qué documentos o formularios están pendientes.
@@ -35,16 +37,14 @@ La app organiza el proyecto en fases operativas alineadas al pipeline PER.
 Preparar las condiciones institucionales, territoriales, técnicas y documentales para iniciar el proceso.
 
 **Hitos en la app:**
-*   Registro y caracterización PER.
-*   Inducción PER.
-*   Validación de Código de Ética.
-*   Revisión de habilitación/certificación.
+*   Registro y caracterización PER (alta de la cuenta por el Administrador Nacional).
+*   Inducción PER (fuera de la app).
+*   Firma del Código de Ética (fuera de la app).
 *   Registro de documentos de preparación.
 *   Registro de reuniones ampliadas con centros o red territorial.
-*   Validación de PER disponible para acompañamiento.
 
 **Regla:**
-Si un PER no está habilitado por coordinación, no debe recibir asignaciones críticas ni acompañamientos activos, salvo autorización expresa.
+Un PER está registrado (habilitado) o deshabilitado; no hay estados intermedios. Un PER deshabilitado no puede ingresar ni recibir acompañamientos o tareas críticas.
 
 ---
 
@@ -54,7 +54,7 @@ Si un PER no está habilitado por coordinación, no debe recibir asignaciones cr
 Consolidar el ingreso de personas acompañadas desde centros de tratamiento, programas o red derivadora.
 
 **Hitos en la app:**
-*   Nómina regional de personas interesadas.
+*   Lista regional de personas interesadas.
 *   Primer contacto.
 *   Preinscripción.
 *   Entrevista inicial.
@@ -240,6 +240,6 @@ La app no debe ser un repositorio de links sueltos. Debe ordenar el trabajo del 
 Para asegurar la robustez digital en terreno y el control de auditoría exigido por el convenio, la plataforma incorpora:
 *   **Suscripción Web Push y Avisos In-App**: Campana integrada con polling reactivo de 15 segundos (que tiembla interactivamente al recibir nuevas notificaciones) combinada con notificaciones push del navegador para mantener al día a duplas y coordinadores en tiempo real.
 *   **Soporte Desconectado (Offline)**: Los PER pueden registrar bitácoras sin acceso a internet en terreno. Las fichas se almacenan localmente y se sincronizan con un solo toque al recuperar conectividad.
-*   **Habilitación de PER en un Toque**: El Coordinador Regional o Admin puede habilitar o suspender directamente la dotación PER desde su panel de supervisiones, controlando de manera reactiva quién puede recibir nuevos casos y hitos críticos.
+*   **Habilitar / Deshabilitar PER**: El Administrador Nacional crea las cuentas PER (habilitadas desde su creación) y puede deshabilitarlas o rehabilitarlas desde Gestión de Usuarios, controlando quién puede ingresar y recibir nuevos casos.
 *   **Reglas de Egreso Metodológico**: Control de egreso que exige obligatoriamente las validaciones del instrumento Ex-Post y la Encuesta de Satisfacción, informando al usuario sobre las reglas del convenio mediante un banner especial.
 *   **Bitácora de Auditoría Inmutable con Descarga a CSV**: Consola centralizada de acciones operativas para administradores nacionales con exportación a planillas de Excel mediante un botón dedicado en la cabecera.

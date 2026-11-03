@@ -21,6 +21,9 @@
 # seed dumps
 seed*.sql
 
+# archivos antiguos (fuera del repositorio)
+/archivos_antiguos/
+
 # production
 /build
 

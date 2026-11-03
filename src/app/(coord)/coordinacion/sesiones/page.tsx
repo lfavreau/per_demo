@@ -2,8 +2,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { validateSessionAction, returnSessionAction } from "@/app/actions/coordinator";
-import { mapEmotionToLabel } from "@/lib/nomenclatures";
 
 import SessionValidationQueue from "@/components/sessions/SessionValidationQueue";
 
@@ -30,6 +28,7 @@ export default async function CoordinatorSesionesPage() {
       paCase: {
         select: {
           code: true,
+          alias: true,
         },
       },
     },

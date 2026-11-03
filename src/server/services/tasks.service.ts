@@ -33,7 +33,7 @@ export async function assignTask({
       const instrument = await tx.instrument.findUnique({ where: { id: instrumentId } });
       if (instrument?.criticalTask) {
         const profile = await tx.pERProfile.findUnique({ where: { userId: assignedToUserId } });
-        if (profile && profile.certificationStatus !== "HABILITADO") {
+        if (profile && profile.certificationStatus === "NO_HABILITADO") {
           throw new Error("No se puede asignar una tarea crítica a un PER no habilitado.");
         }
       }

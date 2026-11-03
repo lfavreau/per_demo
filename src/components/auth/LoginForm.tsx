@@ -3,26 +3,37 @@
 import React, { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
+import { DEMO_ACCOUNTS, DEMO_REGIONS, type DemoAccount } from "@/lib/demo-accounts";
 
-interface UserDirectoryItem {
-  name: string;
-  username: string;
-  email: string;
-  role: "ADMIN" | "COORDINATOR";
-  roleLabel: string;
-  region: string;
+const REGISTERED_USERS: DemoAccount[] = DEMO_ACCOUNTS.filter((a) => a.role !== "PER");
+
+const ROLE_BADGE: Record<DemoAccount["role"], { label: string; className: string }> = {
+  ADMIN: { label: "ADMIN DEMO", className: "bg-blue-100 text-blue-800" },
+  COORDINATOR: { label: "COORD DEMO", className: "bg-blue-600/10 text-blue-700" },
+  PER: { label: "PER DEMO", className: "bg-emerald-600/10 text-emerald-700" },
+};
+
+function DemoAccountRow({ account }: { account: DemoAccount }) {
+  const badge = ROLE_BADGE[account.role];
+  return (
+    <form action={loginAction}>
+      <input type="hidden" name="email" value={account.username} />
+      <input type="hidden" name="isDemo" value="true" />
+      <button
+        type="submit"
+        className="w-full flex justify-between items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
+      >
+        <div className="min-w-0">
+          <span className="font-bold text-xs text-slate-950 block truncate">{account.name}</span>
+          <span className="text-[10px] text-slate-400 font-mono">{account.username}</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${badge.className}`}>
+          {badge.label}
+        </span>
+      </button>
+    </form>
+  );
 }
-
-const REGISTERED_USERS: UserDirectoryItem[] = [
-  // Admin
-  { name: "Administrador Nacional", username: "admin", email: "admin@per2026.cl", role: "ADMIN", roleLabel: "Administrador Nacional", region: "Nacional" },
-  // Coordinadores
-  { name: "Coordinadora Metropolitana", username: "coord.metro", email: "coord.metro@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Metropolitana" },
-  { name: "Coordinador Valparaíso", username: "coord.valpo", email: "coord.valpo@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Valparaíso" },
-  { name: "Coordinador Tarapacá", username: "coord.tarapaca", email: "coord.tarapaca@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Tarapacá" },
-  { name: "Coordinador Biobío", username: "coord.biobio", email: "coord.biobio@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Biobío" },
-  { name: "Coordinador Los Ríos", username: "coord.losrios", email: "coord.losrios@per2026.cl", role: "COORDINATOR", roleLabel: "Coordinador Regional", region: "Los Ríos" },
-];
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -30,6 +41,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [copiedUser, setCopiedUser] = useState<string | null>(null);
 
   const errorMsg =
@@ -40,7 +52,7 @@ export default function LoginForm() {
       : error === "invalid_password"
       ? "Contraseña incorrecta."
       : error === "email_not_found"
-      ? "El usuario no está registrado o se encuentra inactivo."
+      ? "El usuario no está registrado o se encuentra deshabilitado."
       : error === "demo_not_allowed"
       ? "Esta cuenta no está habilitada para el entorno demostrativo."
       : error === "real_mode_not_configured"
@@ -139,102 +151,20 @@ export default function LoginForm() {
       </form>
 
       {/* Cuentas de Evaluación Operativa (Modo Demo) */}
-      <div className="mt-8 pt-6 border-t border-slate-200">
-        <div className="text-center mb-3">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-            🧪 Cuentas de Evaluación Operativa (Modo Demo)
-          </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">
-            Acceso directo con datos de prueba precargados para evaluación
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 text-xs">
-          <form action={loginAction}>
-            <input type="hidden" name="email" value="admin" />
-            <input type="hidden" name="isDemo" value="true" />
-            <button
-              type="submit"
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-            >
-              <div>
-                <span className="font-bold text-slate-950 block">Administrador Nacional</span>
-                <span className="text-[10px] text-slate-400">admin (Acceso Directo Demo)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[9px] font-bold">
-                ADMIN DEMO
-              </span>
-            </button>
-          </form>
-
-          <form action={loginAction}>
-            <input type="hidden" name="email" value="coord.metro" />
-            <input type="hidden" name="isDemo" value="true" />
-            <button
-              type="submit"
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-            >
-              <div>
-                <span className="font-bold text-slate-950 block">Coordinadora Regional (MET)</span>
-                <span className="text-[10px] text-slate-400">coord.metro (Acceso Directo Demo)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-blue-600/10 text-blue-700 text-[9px] font-bold">
-                COORD DEMO
-              </span>
-            </button>
-          </form>
-
-          <form action={loginAction}>
-            <input type="hidden" name="email" value="coord.valpo" />
-            <input type="hidden" name="isDemo" value="true" />
-            <button
-              type="submit"
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-            >
-              <div>
-                <span className="font-bold text-slate-950 block">Coordinador Regional (VAL)</span>
-                <span className="text-[10px] text-slate-400">coord.valpo (Acceso Directo Demo)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-blue-600/10 text-blue-700 text-[9px] font-bold">
-                COORD DEMO
-              </span>
-            </button>
-          </form>
-
-          <form action={loginAction}>
-            <input type="hidden" name="email" value="per.carla" />
-            <input type="hidden" name="isDemo" value="true" />
-            <button
-              type="submit"
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-            >
-              <div>
-                <span className="font-bold text-slate-950 block">Carla Muñoz (PER Habilitado - MET)</span>
-                <span className="text-[10px] text-slate-400">per.carla (Acceso Directo Demo)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-600/10 text-emerald-700 text-[9px] font-bold">
-                PER DEMO
-              </span>
-            </button>
-          </form>
-
-          <form action={loginAction}>
-            <input type="hidden" name="email" value="per.valpo" />
-            <input type="hidden" name="isDemo" value="true" />
-            <button
-              type="submit"
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-            >
-              <div>
-                <span className="font-bold text-slate-950 block">Andrés Silva (PER No Habilitado - VAL)</span>
-                <span className="text-[10px] text-slate-400">per.valpo (Acceso Directo Demo)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-amber-600/10 text-amber-700 text-[9px] font-bold">
-                PER DEMO
-              </span>
-            </button>
-          </form>
-        </div>
+      <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          🧪 Cuentas de Evaluación Operativa (Modo Demo)
+        </p>
+        <p className="text-[10px] text-slate-400 mt-0.5 mb-3">
+          Acceso directo con datos de prueba precargados para evaluación
+        </p>
+        <button
+          type="button"
+          onClick={() => setIsDemoModalOpen(true)}
+          className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-slate-700 text-xs font-bold cursor-pointer"
+        >
+          🧪 Ver cuentas demo ({DEMO_ACCOUNTS.length})
+        </button>
       </div>
 
       {/* Resumen Link */}
@@ -248,6 +178,76 @@ export default function LoginForm() {
           📖 Ver Resumen de Operación y Funcionalidad (Resumen.md)
         </a>
       </div>
+
+      {/* MODAL DE CUENTAS DEMO */}
+      {isDemoModalOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          onClick={() => setIsDemoModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col text-slate-800 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                  <span>🧪</span> Cuentas Demo
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  Acceso directo con datos de prueba precargados
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDemoModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Administración Nacional
+                </h4>
+                <div className="space-y-2">
+                  {DEMO_ACCOUNTS.filter((a) => a.role === "ADMIN").map((a) => (
+                    <DemoAccountRow key={a.username} account={a} />
+                  ))}
+                </div>
+              </div>
+
+              {DEMO_REGIONS.map((region) => (
+                <div key={region}>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {region}
+                  </h4>
+                  <div className="space-y-2">
+                    {DEMO_ACCOUNTS.filter((a) => a.region === region).map((a) => (
+                      <DemoAccountRow key={a.username} account={a} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Total: <strong>{DEMO_ACCOUNTS.length} cuentas demo</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDemoModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE USUARIOS REGISTRADOS */}
       {isModalOpen && (
@@ -275,7 +275,7 @@ export default function LoginForm() {
             {/* Banner Informativo */}
             {copiedUser && (
               <div className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 text-center flex items-center justify-center gap-2 animate-bounce">
-                <span>✓ Usuario "{copiedUser}" copiado al portapapeles</span>
+                <span>✓ Usuario &quot;{copiedUser}&quot; copiado al portapapeles</span>
               </div>
             )}
 

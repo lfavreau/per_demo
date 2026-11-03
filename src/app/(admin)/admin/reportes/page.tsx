@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import AppShell from "@/components/shell/AppShell";
 import { prisma } from "@/lib/db";
 import { freezeSnapshotAction } from "@/app/actions/coordinator";
+import { mapDomainToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -234,11 +235,13 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     let levelBasic = 0;
     let levelIntermediate = 0;
     let levelIntense = 0;
+    let levelUnassigned = 0;
     allCases.forEach((c) => {
-      const lvl = c.intensityLevel || "BASICO";
+      const lvl = c.intensityLevel;
       if (lvl === "BASICO") levelBasic++;
       else if (lvl === "INTERMEDIO") levelIntermediate++;
       else if (lvl === "INTENSIVO") levelIntense++;
+      else levelUnassigned++;
     });
 
     // Metric 4: Sessions by operational stage and 3-month adherence
@@ -280,15 +283,17 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     let duplaMascMasc = 0;
     let duplaMixtaPerFem = 0;
     let duplaMixtaPerMasc = 0;
+    let duplaOtroSinRegistrar = 0;
 
     allCases.forEach((c) => {
-      const perGen = c.per.gender || "Femenino";
-      const accGen = c.genderSelfId || "Femenino";
+      const perGen = c.per.gender;
+      const accGen = c.genderSelfId;
 
       if (perGen === "Femenino" && accGen === "Femenino") duplaFemFem++;
       else if (perGen === "Masculino" && accGen === "Masculino") duplaMascMasc++;
       else if (perGen === "Femenino" && accGen === "Masculino") duplaMixtaPerFem++;
-      else duplaMixtaPerMasc++;
+      else if (perGen === "Masculino" && accGen === "Femenino") duplaMixtaPerMasc++;
+      else duplaOtroSinRegistrar++;
     });
 
     // Metric 6: Supervision sessions and intermediate evaluations
@@ -335,7 +340,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       const ageRange = c.ageRange || "Sin registrar";
       const educationLevel = c.educationLevel || "Sin registrar";
       const employmentStatus = c.employmentStatus || "Sin registrar";
-      const lvl = c.intensityLevel || "BASICO";
+      const lvl = c.intensityLevel || "Sin asignar";
       const exAnte = c.exAnteTaskId ? "SI" : "NO";
       const satisfaction = c.satisfactionTaskId ? "SI" : "NO";
       const sessionCount = c.sessionLogs.filter((s: any) => s.status === "VALIDADA" && s.attendance === "REALIZADA").length;
@@ -374,6 +379,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       levelBasic,
       levelIntermediate,
       levelIntense,
+      levelUnassigned,
       vinSesCount,
       conSesCount,
       finSesCount,
@@ -386,6 +392,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
       duplaMascMasc,
       duplaMixtaPerFem,
       duplaMixtaPerMasc,
+      duplaOtroSinRegistrar,
       supervisionCount,
       intermediateEvaluationsCount,
       closedCount,
@@ -419,6 +426,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     levelBasic: levelBasicVal,
     levelIntermediate: levelIntermediateVal,
     levelIntense: levelIntenseVal,
+    levelUnassigned: levelUnassignedVal = 0,
     vinSesCount: vinSesCountVal,
     conSesCount: conSesCountVal,
     finSesCount: finSesCountVal,
@@ -588,7 +596,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                   {satisfactionPercentVal >= 80 ? "Meta 80% OK" : "Pendiente"}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-500 block">{closedWithSatisfactionVal} de {closedCountVal} egresos</span>
+              <span className="text-[10px] text-slate-500 block">{closedWithSatisfactionVal} de {closedCountVal} casos cerrados</span>
             </div>
           </div>
         </div>
@@ -622,7 +630,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                 <tbody>
                   {domainStatsVal.map((d: any) => (
                     <tr key={d.domain} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                      <td className="py-2 font-medium text-slate-700">{d.domain}</td>
+                      <td className="py-2 font-medium text-slate-700">{mapDomainToLabel(d.domain)}</td>
                       <td className="py-2 text-center font-bold text-slate-900">{d.exAnteCount}</td>
                       <td className="py-2 text-center font-bold text-slate-900">{d.exPostCount}</td>
                     </tr>
@@ -671,6 +679,17 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                       <div className="bg-slate-900 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntenseVal/totalCasesCountVal)*100 : 0}%` }}></div>
                     </div>
                   </div>
+                  {levelUnassignedVal > 0 && (
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="font-semibold text-slate-500">Sin nivel asignado</span>
+                        <span className="font-bold text-slate-500">{levelUnassignedVal} casos</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-slate-300 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelUnassignedVal/totalCasesCountVal)*100 : 0}%` }}></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic mt-2">

@@ -176,7 +176,7 @@ export default function AppShell({ children, user }: AppShellProps) {
     ],
     COORDINATOR: [
       { name: "Resumen Regional", path: "/coordinacion", icon: "📊" },
-      { name: "Nómina / Fase 2", path: "/coordinacion/candidatas", icon: "👥" },
+      { name: "Registro de Ingresos", path: "/coordinacion/candidatas", icon: "👥" },
       { name: "Acompañamientos", path: "/coordinacion/casos", icon: "🤝" },
       { name: "Validación Sesiones", path: "/coordinacion/sesiones", icon: "✓" },
       { name: "Supervisiones", path: "/coordinacion/supervisiones", icon: "🗓️" },

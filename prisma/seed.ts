@@ -338,6 +338,7 @@ async function main() {
           role: "PER",
           regionId: reg.name,
           active: true,
+          isDemo: true,
         },
       });
 
@@ -347,7 +348,7 @@ async function main() {
           regionId: reg.name,
           coordinatorId: coord.id,
           generation: i === 0 ? "PRIMERA" : "SEGUNDA",
-          certificationStatus: i === 0 ? "HABILITADO" : "PENDIENTE",
+          certificationStatus: "HABILITADO",
           ethicsCodeStatus: i === 0 ? "VALIDADO" : "PENDIENTE",
           gender: i % 2 === 0 ? "Femenino" : "Masculino",
           inductionCompleted: i === 0,
@@ -392,7 +393,7 @@ async function main() {
       const cosam = regCosams[c % regCosams.length];
       const candGender = genders[c % genders.length];
       
-      let candBirthDate = new Date();
+      const candBirthDate = new Date();
       let ageRange = "";
       if (c % 3 === 0) {
         candBirthDate.setFullYear(candBirthDate.getFullYear() - 24);

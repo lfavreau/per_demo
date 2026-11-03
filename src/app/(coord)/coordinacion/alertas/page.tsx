@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
+import CaseName from "@/components/cases/CaseName";
 import { validateTaskAction, returnTaskAction, resolveAlertAction } from "@/app/actions/coordinator";
 import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
 
@@ -70,7 +71,7 @@ export default async function CoordinatorAlertasPage() {
                       <span className="font-bold text-slate-800">{task.title}</span>
                       {task.paCase && (
                         <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold text-[9px]">
-                          {task.paCase.code}
+                          <CaseName code={task.paCase.code} alias={task.paCase.alias} />
                         </span>
                       )}
                     </div>

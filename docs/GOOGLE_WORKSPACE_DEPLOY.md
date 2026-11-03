@@ -47,6 +47,14 @@ TURSO_DATABASE_URL
 TURSO_AUTH_TOKEN
 ```
 
+Para notificaciones push (opcional):
+
+```text
+NEXT_PUBLIC_VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY
+VAPID_SUBJECT
+```
+
 Después de modificarlas, crear un nuevo deployment.
 
 ## 4. Migración de separación demo/real
@@ -59,6 +67,15 @@ prisma/migrations/20260723_mode_isolation/migration.sql
 
 La migración agrega `isDemo` a dispositivos territoriales, snapshots y
 notificaciones, y clasifica los registros ya existentes como demostrativos.
+
+Luego aplicar también:
+
+```text
+prisma/migrations/20261029_case_alias/migration.sql
+```
+
+Agrega la columna `alias` (opcional) a `PACase`. Sin ella, las vistas de casos
+fallan en producción.
 
 ## 5. Recorrido de prueba real
 

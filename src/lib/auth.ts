@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { DEMO_ACCOUNTS } from "./demo-accounts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export interface SessionUser {
@@ -14,13 +15,7 @@ export interface SessionUser {
 }
 
 const COOKIE_NAME = "per_session";
-const DEMO_EMAILS = new Set([
-  "admin@per2026.cl",
-  "coord.metro@per2026.cl",
-  "coord.valpo@per2026.cl",
-  "per.carla@per2026.cl",
-  "per.valpo@per2026.cl",
-]);
+const DEMO_EMAILS = new Set(DEMO_ACCOUNTS.map((account) => account.email));
 
 function sessionSecret() {
   const secret = process.env.AUTH_SESSION_SECRET?.trim();

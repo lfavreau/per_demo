@@ -27,9 +27,16 @@ npm run start
 
 ---
 
+## Documentación
+
+*   Toda la documentación vive en `docs/` (excepto `README.md`, `CLAUDE.md`, `AGENTS.md` y `public/Resumen.md`, que la app publica en el login).
+*   `archivos_antiguos/` contiene material histórico y está excluida de git, TypeScript y ESLint.
+
+---
+
 ## Guía de Estilos y Reglas de Desarrollo
 
 1.  **Tecnologías Principales**: Next.js (App Router), TypeScript, Prisma ORM, Vanilla CSS (con Tailwind CSS).
 2.  **Manejo de Errores en Server Actions**: Siempre envolver acciones críticas con bloques `try/catch` y propagar redirecciones usando `redirect()` asegurando no tragarse el error especial de Next.js (lanzar `isRedirectError(error)` o verificar excepciones de redirección).
-3.  **Privacidad de Datos**: No registrar información confidencial o identificadores personales (Nombres, RUN, Rut) de las Personas Acompañadas. Usar únicamente los códigos correlativos únicos autogenerados por el sistema (ej. `PA-VAL-008`).
+3.  **Privacidad de Datos**: No registrar información confidencial o identificadores personales (Nombres, RUN, Rut) de las Personas Acompañadas. Usar únicamente los códigos correlativos únicos autogenerados por el sistema (ej. `PA-VAL-008`). El `alias` opcional de `PACase` es un apodo solo para vistas de la app (mostrar con `CaseName` / `formatCaseName`); no enviarlo a Google Workspace, notificaciones, reportes, CSV ni auditoría.
 4.  **Integración con Google**: Para habilitar la integración real con Google Workspace, configurar la variable de entorno `GOOGLE_APPS_SCRIPT_URL` en `.env.local` con la URL de la Web App desplegada desde `GoogleAppsScript.gs`. De lo contrario, el sistema utilizará de forma segura la simulación local de base de datos.

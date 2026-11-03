@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import SessionLogForm from "@/components/sessions/SessionLogForm";
 import TaskSubmitForm from "@/components/tasks/TaskSubmitForm";
-import { mapCaseStatusToLabel } from "@/lib/nomenclatures";
+import CaseName from "@/components/cases/CaseName";
+import CaseAliasForm from "@/components/cases/CaseAliasForm";
+import { formatCaseName, isPerHabilitado, mapCaseStatusToLabel } from "@/lib/nomenclatures";
 
 export default async function PERDashboardPage({
   searchParams,
@@ -54,7 +56,7 @@ export default async function PERDashboardPage({
   const formattedCasesForSelect = activeCases.map((c) => ({
     id: c.id,
     code: c.code,
-    label: `${c.code} — ${c.candidate?.sourceCenter || c.genderSelfId || "Persona Acompañada"} (${mapCaseStatusToLabel(c.status)})`,
+    label: `${formatCaseName(c)} — ${c.candidate?.sourceCenter || c.genderSelfId || "Persona Acompañada"} (${mapCaseStatusToLabel(c.status)})`,
   }));
 
   // 3. Fetch Tasks assigned to this PER
@@ -67,6 +69,7 @@ export default async function PERDashboardPage({
       paCase: {
         select: {
           code: true,
+          alias: true,
         },
       },
       feedbacks: {
@@ -140,15 +143,15 @@ export default async function PERDashboardPage({
     <AppShell user={user}>
       <div className="space-y-6">
         
-        {/* Verification of Certification status banner for unhabilitated PERs */}
-        {profile.certificationStatus !== "HABILITADO" && (
+        {/* Banner for disabled PERs */}
+        {!isPerHabilitado(profile.certificationStatus) && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-2 text-xs">
-            <h4 className="font-bold text-destructive">🛑 Estado: No Habilitado para Terreno</h4>
+            <h4 className="font-bold text-destructive">🛑 Estado: PER Deshabilitado</h4>
             <p className="text-slate-700 leading-relaxed">
-              Motivo: {profile.certificationNote || "Falta completar inducción o código de ética."}
+              Motivo: {profile.certificationNote || "Deshabilitado por coordinación."}
             </p>
             <p className="text-[10px] text-slate-500">
-              Las tareas críticas del programa (ej. Acta primer encuentro, IAP) se encuentran bloqueadas para tu usuario hasta que el coordinador valide tus antecedentes.
+              Las tareas críticas del programa (ej. Acta primer encuentro, IAP) se encuentran bloqueadas para tu usuario. Contacta a tu coordinador regional.
             </p>
           </div>
         )}
@@ -177,14 +180,15 @@ export default async function PERDashboardPage({
                         : "bg-secondary/35 border-border/50"
                     }`}
                   >
-                    <div>
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-blue-700">{c.code}</span>
+                        <CaseName code={c.code} alias={c.alias} className="font-extrabold text-blue-700" />
                         <span className="text-[10px] text-slate-400">({c.type})</span>
                       </div>
-                      <span className="text-slate-800 font-bold text-xs block mt-0.5">
+                      <span className="text-slate-800 font-bold text-xs block">
                         👤 {c.candidate?.sourceCenter || c.genderSelfId || "Caso Acompañado"}
                       </span>
+                      <CaseAliasForm key={`${c.id}-${c.alias || ""}`} caseId={c.id} alias={c.alias} />
                     </div>
                     <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">
                       {mapCaseStatusToLabel(c.status)}
@@ -214,7 +218,7 @@ export default async function PERDashboardPage({
                   >
                     <div className="flex justify-between items-center border-b pb-1">
                       <div>
-                        <span className="font-bold text-primary">{s.paCase.code}</span>
+                        <CaseName code={s.paCase.code} alias={s.paCase.alias} className="font-bold text-primary" />
                         <span className="text-[10px] text-slate-500 ml-2">Sesión #{s.sessionNumber}</span>
                       </div>
                       <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${

@@ -1,6 +1,6 @@
 # 📖 Guía de Uso — Plataforma de Coordinación PER 2026-2027
 
-**Versión**: 1.0 — Julio 2026  
+**Versión**: 1.1 — Octubre 2026 (beta)  
 **Público objetivo**: Pares Especialistas en Recuperación (PER), Coordinadores Regionales y personal de apoyo del pilotaje.
 
 > Esta guía está pensada para personas que no necesariamente tienen experiencia con aplicaciones web o con el programa PER de SENDA. Si estás empezando, no te preocupes: aquí explicamos todo paso a paso, con palabras simples y sin tecnicismos.
@@ -25,7 +25,7 @@
    - [6.8 Modo sin internet (offline)](#68-modo-sin-internet-offline)
 7. [Guía para el Coordinador Regional](#7-guía-para-el-coordinador-regional)
    - [7.1 Panel de casos y acompañamientos](#71-panel-de-casos-y-acompañamientos)
-   - [7.2 Nómina e ingreso de nuevas personas (Fase 2)](#72-nómina-e-ingreso-de-nuevas-personas-fase-2)
+   - [7.2 Registro de ingresos de nuevas personas](#72-registro-de-ingresos-de-nuevas-personas)
    - [7.3 Validación de sesiones](#73-validación-de-sesiones)
    - [7.4 Dotación PER y supervisiones](#74-dotación-per-y-supervisiones)
    - [7.5 Redes e integración social](#75-redes-e-integración-social)
@@ -50,6 +50,8 @@ Esta aplicación es una **herramienta digital de apoyo** al programa PER (Pares 
 
 > **Importante**: La app **no reemplaza** los documentos oficiales del programa (Google Docs, Google Forms, Google Drive). Lo que hace es **organizar** esos documentos, avisarte qué falta y ayudar a que nada se pierda.
 
+En esta etapa beta, muchas actividades (contactos, coordinaciones, derivaciones) se siguen haciendo fuera de la app. Tú la usarás sobre todo para **registrar tus sesiones, los avances de etapa y las actividades** con la persona que acompañas.
+
 ---
 
 ## 2. ¿Qué necesito para usarla?
@@ -67,7 +69,7 @@ Solo necesitas **una de estas tres cosas**:
 ### ¿Necesito internet?
 
 - **Para la mayoría de las acciones, sí**. Necesitas conexión a internet (datos móviles o WiFi).
-- **Pero** si estás en terreno y no tienes señal, puedes **guardar borradores** de tus bitácoras. Cuando vuelvas a tener internet, la app los enviará automáticamente (más detalles en la [sección 6.8](#68-modo-sin-internet-offline)).
+- **Pero** si estás en terreno y no tienes señal, puedes **guardar borradores** de tus bitácoras. Cuando vuelvas a tener internet, los envías con un toque (más detalles en la [sección 6.8](#68-modo-sin-internet-offline)).
 
 ---
 
@@ -79,16 +81,24 @@ Solo necesitas **una de estas tres cosas**:
 2. **Escribe la dirección web** que te entregó tu coordinador en la barra de direcciones (la barra de arriba donde aparecen las páginas web).
 3. Verás una pantalla con el título **"PER 2026-2027"** y un escudo azul.
 4. En el campo que dice **"Nombre de Usuario"**, escribe tu usuario. Por ejemplo:
-   - Si eres Carla Muñoz (PER de la región Metropolitana): escribe `per.carla`
+   - Si eres PER: el usuario que te creó el administrador (ej. `per.maria`)
    - Si eres coordinador de la región Metropolitana: escribe `coord.metro`
-5. Presiona el botón azul **"Ingresar al Portal"**.
-6. ¡Listo! La app te llevará automáticamente a tu panel de trabajo según tu rol.
+5. En el campo **"Contraseña"**, escribe la contraseña de acceso que te entregó tu coordinador.
+6. Presiona el botón azul **"Ingresar al Portal"**.
+7. ¡Listo! La app te llevará automáticamente a tu panel de trabajo según tu rol.
 
-> **💡 Consejo**: Si no recuerdas tu usuario, pregúntale a tu coordinador regional. Abajo del formulario de ingreso hay una lista de cuentas de prueba que puedes usar para explorar la app.
+> **💡 Consejo**: Si no recuerdas tu usuario, pregúntale a tu coordinador regional. Abajo del formulario de ingreso hay botones de **Modo Demo** para explorar la app con datos de prueba, sin contraseña.
 
 ### ¿Qué pasa si me equivoco?
 
-Si escribes un usuario que no existe, aparecerá un mensaje en rojo que dice: *"El correo no está registrado o se encuentra inactivo"*. Revisa que escribiste bien tu usuario y vuelve a intentar.
+| Error | Mensaje en rojo |
+| --- | --- |
+| Usuario no existe o está deshabilitado | *"El usuario no está registrado o se encuentra deshabilitado."* |
+| Contraseña incorrecta | *"Contraseña incorrecta."* |
+| Falta el usuario | *"Por favor, ingresa tu usuario o correo electrónico."* |
+| Falta la contraseña | *"Por favor, ingresa tu contraseña."* |
+
+Revisa lo que escribiste y vuelve a intentar.
 
 ---
 
@@ -134,13 +144,21 @@ Cuando entras a la app, verás una **barra superior** con:
 
 Si eres coordinador o administrador, verás un botón de **tres líneas horizontales** (☰) llamado "menú hamburguesa" en la esquina superior. Al tocarlo, se abre un panel lateral con todas las secciones disponibles:
 
-- 📋 Panel Principal
-- 👥 Nómina / Fase 2
-- 📊 Casos
-- 📝 Sesiones
-- 🏥 Supervisiones
-- 🌐 Redes
-- ⚠️ Alertas
+**Coordinador Regional:**
+- 📊 Resumen Regional
+- 👥 Registro de Ingresos
+- 🤝 Acompañamientos
+- ✓ Validación Sesiones
+- 🗓️ Supervisiones
+- 🌐 Gestión de Redes
+- ⚠️ Alertas y Tareas
+
+**Administrador Nacional:**
+- 📊 Resumen
+- 👥 Gestión de Usuarios
+- 📋 Instrumentos
+- 📥 Reportes SENDA
+- 🛡️ Auditoría
 
 Para cerrar el menú, toca la **X** o toca fuera del panel.
 
@@ -167,12 +185,11 @@ Cuando entras a la app, ves tu **panel de trabajo** dividido en varias tarjetas 
 | **Notificaciones**              | Mensajes de tu coordinador                              |
 | **Mis Supervisiones**           | Registro de las supervisiones técnicas que has tenido   |
 
-### Si ves un aviso rojo que dice "Estado: No Habilitado para Terreno"
+### Si ves un aviso rojo que dice "Estado: PER Deshabilitado"
 
-Esto significa que tu coordinador aún no ha validado tu habilitación técnica. Mientras aparezca este aviso:
-- **No podrás** recibir tareas críticas (como el IAP o el Acta de Primer Encuentro).
-- **Sí puedes** ver tu panel y familiarizarte con la app.
-- **¿Qué hacer?** Contacta a tu coordinador regional para que complete tu proceso de habilitación.
+Esto significa que tu cuenta fue deshabilitada por coordinación. Mientras aparezca este aviso:
+- **No podrás** recibir tareas críticas (como el IAP o el Acta de Primer Encuentro) ni casos nuevos.
+- **¿Qué hacer?** Contacta a tu coordinador regional.
 
 ---
 
@@ -197,7 +214,7 @@ La bitácora es el **registro de cada encuentro** que tienes con la persona que 
 
 5. **Duración** (en minutos): Escribe cuánto duró el encuentro. Por defecto dice 60 minutos (1 hora).
 
-6. **Dominio de Recuperación**: Selecciona el área principal que trabajaron en la sesión:
+6. **Ámbito trabajado (IAP)**: Selecciona el área principal que trabajaron en la sesión:
    - Apoyo social
    - Ejercicio de ciudadanía
    - Tiempo libre
@@ -206,7 +223,7 @@ La bitácora es el **registro de cada encuentro** que tienes con la persona que 
    - Educación y formación
    - Habitabilidad
    - Situación financiera
-   - Física y mental
+   - Salud física y mental
 
 7. **Asistencia**: Indica si la sesión se realizó o no:
    - **Realizada**: La sesión se llevó a cabo normalmente.
@@ -223,11 +240,11 @@ La bitácora es el **registro de cada encuentro** que tienes con la persona que 
 
 11. **Próxima acción** (opcional): ¿Qué viene después? Ejemplo: *"Contactar a la asistente social del CESFAM."*
 
-12. **¿Cómo te sentiste?** (Escala emocional): Elige una carita que represente cómo te sentiste tú como acompañante después de la sesión:
+12. **Tu registro emocional (PER)**: Elige una carita que represente cómo te sentiste tú como acompañante después de la sesión:
     - 😊 Bien
     - 😐 Neutro
     - 😢 Triste
-    - 😠 Enojado/a
+    - 😠 Molesto
 
 13. **Reflexión personal** (opcional): Un espacio para que escribas lo que tú quieras reflexionar sobre la sesión.
 
@@ -242,6 +259,7 @@ La bitácora es el **registro de cada encuentro** que tienes con la persona que 
 En la tarjeta **"Mis Acompañamientos Activos"** verás una lista con los casos que tienes asignados. Cada caso muestra:
 
 - **Código del caso**: Por ejemplo, `PA-MET-001`. Este código es la forma de identificar a cada persona acompañada en el sistema (por privacidad, no se usan nombres).
+- **Alias (opcional)**: Con **✏️ Asignar alias** puedes ponerle un apodo de referencia al caso (ej: "Don Pato"). Si tiene alias, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No uses nombre completo ni RUT. Para quitarlo, borra el texto y guarda.
 - **Tipo**: Si es un caso *Nuevo* o de *Continuidad*.
 - **Estado**: En qué etapa del acompañamiento está:
   - 🟡 **Vinculación**: Recién se están conociendo, construyendo el vínculo.
@@ -323,7 +341,7 @@ Si estás en terreno y **no tienes señal de internet**, la app te permite guard
 2. Llena el formulario de bitácora normalmente.
 3. En lugar del botón verde "Enviar", verás un botón que dice **"💾 Guardar Borrador Local"**. Presiónalo.
 4. Tu bitácora se guardará **dentro de tu celular** (no se pierde aunque cierres la app).
-5. Cuando vuelvas a tener internet, aparecerá un botón que dice **"Sincronizar Borradores"**. Presiónalo y todas tus bitácoras guardadas se enviarán al sistema.
+5. Cuando vuelvas a tener internet, presiona el botón **"🔄 Sincronizar ahora"** del aviso de borradores pendientes. Todas tus bitácoras guardadas se enviarán al sistema.
 
 > **⚠️ Importante**: Los borradores se guardan **solo en ese dispositivo**. Si cambias de celular o borras los datos del navegador, se perderán. Intenta sincronizar apenas tengas internet.
 
@@ -335,7 +353,7 @@ Como coordinador/a regional, tu rol es supervisar el trabajo de los PER de tu re
 
 ### 7.1 Panel de casos y acompañamientos
 
-**Ubicación en el menú**: 📊 Casos
+**Ubicación en el menú**: 🤝 Acompañamientos
 
 Aquí ves todos los casos de acompañamiento de tu región. Para cada caso puedes ver:
 
@@ -359,14 +377,16 @@ Cuando un caso cumple los requisitos para avanzar de etapa, verás botones para 
 Si una persona acompañada abandona el programa:
 
 1. Abre el caso correspondiente.
-2. Usa el botón **"Retiro Voluntario"** o **"Deserción"**.
-3. El sistema pedirá que existan al menos **3 intentos de contacto** registrados antes de permitir marcar una deserción.
+2. En **"Registrar Retiro o Deserción"**, elige *Retiro Voluntario* o *Deserción*.
+3. Escribe el motivo (y, si existe, el enlace al formulario) y confirma.
+
+Los intentos de contacto previos se gestionan fuera de la app.
 
 ---
 
-### 7.2 Nómina e ingreso de nuevas personas (Fase 2)
+### 7.2 Registro de ingresos de nuevas personas
 
-**Ubicación en el menú**: 👥 Nómina / Fase 2
+**Ubicación en el menú**: 👥 Registro de Ingresos
 
 Aquí gestionas el ingreso de nuevas personas al programa. La pantalla tiene dos partes:
 
@@ -379,12 +399,14 @@ Muestra las candidatas que están en estado *Admisible* o *Seleccionada*, listas
 Para crear una nueva dupla de acompañamiento:
 
 1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista.
-2. **Acompañante PER (Habilitado)**: Selecciona al PER que la acompañará. Solo aparecen los PER habilitados de tu región.
+2. **Acompañante PER**: Selecciona al PER que la acompañará. Solo aparecen los PER habilitados de tu región.
 3. **Tipo de Acompañamiento**: 
    - *Nuevo*: Primera vez que esta persona entra al programa.
    - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esta persona (afinidad territorial, experiencia, disponibilidad, etc.).
 5. Presiona **"Conformar Dupla"**.
+
+La dupla queda *Propuesta*. Después, en 🤝 Acompañamientos, la **validas** y la **formalizas** pegando el enlace al Acta de Primer Encuentro. Ahí el sistema crea la carpeta del caso en Drive y el IAP.
 
 > **¿Por qué dice "Fase 2"?** Porque en el modelo del programa PER, la Fase 2 es la etapa de *Admisibilidad e Ingreso*. Las personas pasan por este proceso antes de comenzar el acompañamiento activo (Fase 3 en adelante).
 
@@ -392,7 +414,7 @@ Para crear una nueva dupla de acompañamiento:
 
 ### 7.3 Validación de sesiones
 
-**Ubicación en el menú**: 📝 Sesiones
+**Ubicación en el menú**: ✓ Validación Sesiones
 
 Aquí llegan las bitácoras de sesión que tus PER envían desde terreno. El flujo de revisión funciona de la siguiente manera:
 
@@ -409,7 +431,7 @@ Aquí llegan las bitácoras de sesión que tus PER envían desde terreno. El flu
 
 ### 7.4 Dotación PER y supervisiones
 
-**Ubicación en el menú**: 🏥 Supervisiones
+**Ubicación en el menú**: 🗓️ Supervisiones
 
 Esta sección tiene dos partes:
 
@@ -417,8 +439,8 @@ Esta sección tiene dos partes:
 
 Ves a todos los PER de tu región con su información:
 
-- **Estado de habilitación**: *Habilitado* (puede trabajar) o *Pendiente* (aún no habilitado).
-- **Casos activos**: Cuántos acompañamientos tiene asignados (máximo 5 por PER).
+- **Estado**: *Habilitado* (puede trabajar) o *Deshabilitado*.
+- **Casos activos**: Cuántos acompañamientos tiene asignados (normalmente 1 por PER).
 - **Horas de supervisión acumuladas**.
 - **Última supervisión**: Cuándo fue su última reunión de supervisión contigo.
 - **Indicador de cumplimiento**:
@@ -426,13 +448,11 @@ Ves a todos los PER de tu región con su información:
   - ⚠️ Alerta (más de 15 días sin supervisión)
   - 🔴 Crítico (más de 30 días sin supervisión)
 
-#### Cambiar el estado de habilitación de un PER
+#### Deshabilitar a un PER
 
-Al lado del estado de cada PER verás un botón:
-- **"⚙️ Habilitar"** (si está en Pendiente): Presiona para habilitarlo para trabajo en terreno.
-- **"⚙️ Suspender"** (si ya está Habilitado): Presiona para suspenderlo temporalmente.
+El PER queda habilitado apenas el administrador crea su cuenta. Si necesitas deshabilitarlo (o volver a habilitarlo), pídeselo al Administrador Nacional, que lo hace desde *Gestión de Usuarios*.
 
-> Un PER suspendido o pendiente **no puede recibir nuevos casos ni tareas críticas**.
+> Un PER deshabilitado **no puede ingresar ni recibir nuevos casos o tareas críticas**.
 
 #### Registrar una supervisión
 
@@ -444,19 +464,19 @@ En el formulario de la derecha puedes registrar una nueva supervisión:
 4. **Duración**: En minutos.
 5. **Casos revisados**: Códigos de los casos que revisaron (separados por coma).
 6. **Acuerdos y observaciones**: Qué se discutió y qué se acordó.
-7. Presiona **"Registrar Supervisión"**.
+7. Presiona **"Registrar Supervisión"**. En modo real, además queda agendada en Google Calendar.
 
 ---
 
 ### 7.5 Redes e integración social
 
-**Ubicación en el menú**: 🌐 Redes0
+**Ubicación en el menú**: 🌐 Gestión de Redes
 
 Esta sección maneja tres cosas distintas:
 
 #### Dispositivos Territoriales
 
-Es un directorio de instituciones y organizaciones de tu territorio que pueden apoyar a las personas acompañadas: CESFAM, OMIL, Fundaciones, ONG, Municipalidades, etc. Puedes registrar nuevos actores con su nombre, tipo, persona de contacto y datos.
+Es un directorio de instituciones y organizaciones de tu territorio que pueden apoyar a las personas acompañadas. Se clasifican por tipo: Salud (COSAM/APS), Empleo (OMIL/SENCE), Vivienda (Municipal/DIDECO), Educación (CEIA/Adultos) u Otro. Puedes registrar nuevos actores con su nombre, tipo y persona de contacto.
 
 #### Activaciones de Red (Derivaciones)
 
@@ -467,18 +487,21 @@ Cuando una persona acompañada necesita apoyo de una de estas instituciones, aqu
 
 #### Actividades de Reflexión Operativa (Fase 5)
 
-Aquí se registran las actividades grupales del equipo: reuniones de equipo, focus groups, open spaces, etc. Incluye el tipo de actividad, la fecha, la cantidad de participantes y las notas.
+Aquí se registran las actividades grupales del equipo: focus groups temáticos y reuniones de equipo PER / duplas. Incluye el tipo de actividad, la fecha, la cantidad de participantes, el enlace al acta en Drive y las notas.
 
 ---
 
 ### 7.6 Alertas, hitos y entregables
 
-**Ubicación en el menú**: ⚠️ Alertas
+**Ubicación en el menú**: ⚠️ Alertas y Tareas
 
 Aquí ves las notificaciones críticas del sistema:
 
 - **Hitos pendientes**: Documentos enviados por los PER que esperan tu validación (IAP, evaluaciones, etc.).
-- **Alertas de inactividad**: El sistema detecta automáticamente cuando una dupla lleva **más de 14 días** sin registrar bitácoras y genera una alerta para que intervengas.
+- **Alertas de seguimiento**: Casos que llevan demasiados días sin bitácoras (más de 10 días en Vinculación, 14 en Conexión o 10 en Finalización).
+- **Alertas documentales**: Tareas atrasadas.
+
+Las alertas se recalculan al presionar **"Evaluar Alertas"** en el Resumen Regional.
 
 ---
 
@@ -486,9 +509,17 @@ Aquí ves las notificaciones críticas del sistema:
 
 Como administrador nacional, tienes acceso a las siguientes secciones:
 
-### Consola de KPIs y Reportes (`/admin/reportes`)
+### Resumen (`/admin`)
 
-Panel con las **8 métricas clave** del convenio SENDA. Puedes filtrar por región, género, rango etario, nivel educacional y situación laboral.
+Indicadores nacionales filtrables por región: casos, cupos por región, tareas y sesiones. Incluye el botón para sincronizar Google Workspace.
+
+### Gestión de Usuarios (`/admin/usuarios`)
+
+Creas las cuentas de los PER (nombre, usuario y región). El PER queda **habilitado** desde su creación. Con el botón **"Deshabilitar"** / **"Habilitar"** controlas si puede ingresar.
+
+### Consola de Reportes SENDA (`/admin/reportes`)
+
+Panel con los indicadores del convenio SENDA (nuevos acompañamientos, adherencia, satisfacción al cierre, capitales de recuperación, intensidad, supervisión y redes). Se filtra por región y período de informe, y muestra la desagregación por género, rango etario, nivel educacional y situación laboral.
 
 El botón **"Congelar Reporte Oficial"** guarda una foto permanente de los indicadores para una fecha de corte. Esta foto no se puede modificar y sirve como evidencia para las auditorías y la liberación de pagos (remesas).
 
@@ -524,7 +555,7 @@ Si eres nuevo en el programa, aquí tienes un glosario de los términos más imp
 
 | Fase       | Nombre                       | ¿De qué se trata?                                                                                                                                                         |
 | ------------| ------------------------------| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Fase 1** | Preparación y Habilitación   | Se capacita a los PER, se firma el Código de Ética, se prepara todo para empezar.                                                                                         |
+| **Fase 1** | Preparación y Habilitación   | Se capacita a los PER, se firma el Código de Ética y el administrador registra su cuenta en la app.                                                                       |
 | **Fase 2** | Admisibilidad e Ingreso      | Se reciben las derivaciones de personas, se evalúa si son admisibles y se seleccionan para el programa.                                                                   |
 | **Fase 3** | Conformación de Duplas       | Se empareja a cada PA con un PER y se formaliza el primer encuentro.                                                                                                      |
 | **Fase 4** | Acompañamiento               | El corazón del programa. El PER y la PA se reúnen periódicamente, trabajan el IAP y avanzan en los objetivos. Tiene 3 etapas: *Vinculación*, *Conexión* y *Finalización*. |
@@ -571,6 +602,8 @@ Son los **códigos de caso** que identifican a cada persona acompañada. Se usan
 - **PA**: Persona Acompañada.
 - **MET**: Región (en este caso, Metropolitana).
 - **001**: Número correlativo.
+
+Si el caso tiene **alias**, el alias aparece primero y el código entre paréntesis. El alias solo se ve dentro de la app: las carpetas de Drive, las notificaciones y los reportes siguen usando el código.
 
 ### ¿Quién puede ver mis datos?
 

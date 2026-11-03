@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { logSessionAction, syncOfflineSessionsAction } from "@/app/actions/per";
+import { mapDomainToLabel } from "@/lib/nomenclatures";
 
 interface SessionLogFormProps {
   cases: Array<{ id: string; code: string; label?: string }>;
@@ -305,7 +306,7 @@ export default function SessionLogForm({ cases, domains }: SessionLogFormProps) 
               >
                 {domains.map((dom) => (
                   <option key={dom} value={dom}>
-                    {dom}
+                    {mapDomainToLabel(dom)}
                   </option>
                 ))}
               </select>

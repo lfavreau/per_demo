@@ -2,13 +2,15 @@
 
 import React, { useState, useTransition } from "react";
 import { validateSessionAction, returnSessionAction } from "@/app/actions/coordinator";
-import { mapEmotionToLabel } from "@/lib/nomenclatures";
+import { mapDomainToLabel, mapEmotionToLabel } from "@/lib/nomenclatures";
+import CaseName from "@/components/cases/CaseName";
 
 interface SessionLog {
   id: string;
   paCaseId: string;
   paCase: {
     code: string;
+    alias: string | null;
   };
   sessionNumber: number;
   date: Date | string;
@@ -72,7 +74,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
             >
               <div className="space-y-2">
                 <div className="flex justify-between border-b border-slate-200 pb-2 font-semibold flex-wrap gap-2">
-                  <span className="text-blue-700">{session.paCase.code}</span>
+                  <CaseName code={session.paCase.code} alias={session.paCase.alias} className="text-blue-700" />
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600 text-[10px]">
                       {mapEmotionToLabel(session.perEmotion || "BIEN")}
@@ -118,7 +120,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
             <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                  <span>📝</span> Bitácora del Caso: <span className="text-blue-700">{selectedSession.paCase.code}</span>
+                  <span>📝</span> Bitácora del Caso: <CaseName code={selectedSession.paCase.code} alias={selectedSession.paCase.alias} className="text-blue-700" />
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">
                   Revisión metodológica del encuentro de acompañamiento
@@ -162,7 +164,7 @@ export default function SessionValidationQueue({ pendingSessions }: SessionValid
                 </div>
                 <div>
                   <span className="text-[9px] uppercase font-bold text-slate-400 block">Ámbito Trabajado (IAP)</span>
-                  <span className="font-semibold text-slate-800 text-xs">{selectedSession.recoveryDomainId || "No especificado"}</span>
+                  <span className="font-semibold text-slate-800 text-xs">{selectedSession.recoveryDomainId ? mapDomainToLabel(selectedSession.recoveryDomainId) : "No especificado"}</span>
                 </div>
                 <div>
                   <span className="text-[9px] uppercase font-bold text-slate-400 block">Duración</span>

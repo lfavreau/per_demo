@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { mapCaseStatusToLabel, mapEmotionToLabel } from "@/lib/nomenclatures";
+import CaseName from "@/components/cases/CaseName";
+import CaseAliasForm from "@/components/cases/CaseAliasForm";
+import { CASE_ALIAS_MAX_LENGTH, formatCaseName, mapCaseStatusToLabel, mapEmotionToLabel } from "@/lib/nomenclatures";
 import {
   createDirectContinuityCaseAction,
   formalizeMatchAction,
@@ -46,7 +48,7 @@ export default async function CoordinatorCasosPage({
   });
 
   const allRegionalPers = await prisma.pERProfile.findMany({
-    where: { regionId: user.regionId, certificationStatus: "HABILITADO" },
+    where: { regionId: user.regionId, certificationStatus: { not: "NO_HABILITADO" }, user: { active: true } },
     include: {
       user: true,
       cases: {
@@ -60,7 +62,7 @@ export default async function CoordinatorCasosPage({
   const regionalPers = allRegionalPers.filter((p) => Boolean(p.user?.isDemo) === isDemo);
 
   // 2. Generate Timeline if a case is selected
-  let timelineEvents: Array<{
+  const timelineEvents: Array<{
     date: Date;
     title: string;
     description: string;
@@ -169,7 +171,7 @@ export default async function CoordinatorCasosPage({
               <option value="">-- Seleccionar Caso --</option>
               {regionalCases.map((c) => (
                 <option key={c.id} value={c.code}>
-                  {c.code} — {c.candidate?.sourceCenter || c.genderSelfId || "Ingreso Directo"} [PER: {c.per?.user?.name || "Sin PER"}] ({mapCaseStatusToLabel(c.status)})
+                  {formatCaseName(c)} — {c.candidate?.sourceCenter || c.genderSelfId || "Ingreso Directo"} [PER: {c.per?.user?.name || "Sin PER"}] ({mapCaseStatusToLabel(c.status)})
                 </option>
               ))}
             </select>
@@ -248,8 +250,17 @@ export default async function CoordinatorCasosPage({
                 <h4 className="font-bold text-sm text-slate-800">Detalles del Acompañamiento</h4>
                 <div className="space-y-3 text-xs">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Código</span>
-                    <span className="font-bold text-slate-800 text-sm">{selectedCaseDetails.code}</span>
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Persona Acompañada</span>
+                    <CaseName
+                      code={selectedCaseDetails.code}
+                      alias={selectedCaseDetails.alias}
+                      className="font-bold text-slate-800 text-sm block"
+                    />
+                    <CaseAliasForm
+                      key={`${selectedCaseDetails.id}-${selectedCaseDetails.alias || ""}`}
+                      caseId={selectedCaseDetails.id}
+                      alias={selectedCaseDetails.alias}
+                    />
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
@@ -493,9 +504,20 @@ export default async function CoordinatorCasosPage({
               </div>
 
               <form action={createDirectContinuityCaseAction} className="space-y-3.5 text-xs">
-                
+
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Asignar a PER Habilitado:</label>
+                  <label className="font-bold text-slate-700">Alias (opcional):</label>
+                  <input
+                    type="text"
+                    name="alias"
+                    maxLength={CASE_ALIAS_MAX_LENGTH}
+                    placeholder="Apodo de referencia, no nombre completo ni RUT"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Asignar a PER:</label>
                   <select 
                     name="perId" 
                     required 
@@ -503,7 +525,7 @@ export default async function CoordinatorCasosPage({
                   >
                     <option value="">Selecciona PER...</option>
                     {regionalPers.map(p => (
-                      <option key={p.id} value={p.id}>{p.user.name} ({p.cases.length} / 5 acompañamientos)</option>
+                      <option key={p.id} value={p.id}>{p.user.name} ({p.cases.length} casos activos)</option>
                     ))}
                   </select>
                 </div>

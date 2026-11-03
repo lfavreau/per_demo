@@ -44,7 +44,8 @@ export async function createCaseFromCandidate(
   matchRationale: string,
   type: "NUEVO" | "CONTINUIDAD",
   actorId: string,
-  isDemo: boolean
+  isDemo: boolean,
+  alias: string | null = null
 ) {
   return await prisma.$transaction(async (tx) => {
     // 1. Get candidate details
@@ -77,6 +78,7 @@ export async function createCaseFromCandidate(
     const newCase = await tx.pACase.create({
       data: {
         code,
+        alias,
         type,
         regionId: candidate.regionId,
         perId,
@@ -340,6 +342,46 @@ export async function updateIntensityLevel(caseId: string, intensityLevel: "BASI
   });
 }
 
+export async function updateCaseAlias(caseId: string, alias: string | null, actorId: string, isDemo: boolean) {
+  return await prisma.$transaction(async (tx) => {
+    const paCase = await tx.pACase.findUnique({
+      where: { id: caseId },
+      include: { per: true },
+    });
+    if (!paCase || paCase.isDemo !== isDemo) throw new Error("Caso no encontrado");
+
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    const allowed =
+      actor?.role === "ADMIN" ||
+      (actor?.role === "COORDINATOR" && actor.regionId === paCase.regionId) ||
+      (actor?.role === "PER" && paCase.per.userId === actorId);
+    if (!actor || !allowed) {
+      throw new Error("No autorizado para editar el alias de este caso");
+    }
+
+    const updated = await tx.pACase.update({
+      where: { id: caseId },
+      data: { alias },
+    });
+
+    // The alias itself is not written to the audit log (privacy rule): only whether one is set.
+    await tx.auditLog.create({
+      data: {
+        userId: actorId,
+        role: actor.role,
+        action: "UPDATE_CASE_ALIAS",
+        entityType: "PACase",
+        entityId: caseId,
+        previousValue: JSON.stringify({ hasAlias: Boolean(paCase.alias) }),
+        newValue: JSON.stringify({ hasAlias: Boolean(alias) }),
+        isDemo,
+      },
+    });
+
+    return updated;
+  });
+}
+
 export async function transitionCaseStatus(
   caseId: string,
   toStatus: string,
@@ -370,14 +412,6 @@ export async function transitionCaseStatus(
 
       if (!isExPostValidated || !isSatValidated) {
         throw new Error("Bloqueo de Egreso: Se requiere registro y validación del diagnóstico final (Ex-Post) y la Encuesta de Satisfacción.");
-      }
-    }
-
-    // Deserción validations (requires contact attempts log verification or reason)
-    if (toStatus === "DESERCION") {
-      const attempts = await tx.contactAttempt.count({ where: { paCaseId: caseId } });
-      if (attempts < 3 && !reason.toLowerCase().includes("forzada")) {
-        throw new Error("No se puede marcar deserción sin registrar al menos 3 intentos de contacto fallidos.");
       }
     }
 
@@ -515,7 +549,8 @@ export async function createDirectContinuityCase(
   employmentStatus: string,
   actorId: string,
   isDemo: boolean,
-  actaPrimerEncuentroDriveId: string
+  actaPrimerEncuentroDriveId: string,
+  alias: string | null = null
 ) {
   const actor = await prisma.user.findUnique({ where: { id: actorId } });
   if (!actor || (actor.role !== "ADMIN" && actor.regionId !== regionId)) {
@@ -523,7 +558,7 @@ export async function createDirectContinuityCase(
   }
 
   const selectedPer = await prisma.pERProfile.findUnique({ where: { id: perId } });
-  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus !== "HABILITADO") {
+  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus === "NO_HABILITADO") {
     throw new Error("El PER seleccionado no está habilitado en la región actual");
   }
 
@@ -565,6 +600,7 @@ export async function createDirectContinuityCase(
       const paCase = await tx.pACase.create({
         data: {
           code,
+          alias,
           type: "CONTINUIDAD",
           regionId,
           perId,

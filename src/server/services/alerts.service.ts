@@ -122,7 +122,7 @@ export async function checkAllAlertRules(isDemo: boolean) {
       },
       assignedTo: {
         profile: {
-          certificationStatus: { not: "HABILITADO" },
+          certificationStatus: "NO_HABILITADO",
         },
       },
       isDemo,

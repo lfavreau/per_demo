@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import { syncMirrorSheet } from "@/server/google/workspace";
-import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
 
 // Server action for manual Sheets Mirror sync from the dashboard
 async function triggerSheetsSync(formData: FormData) {
