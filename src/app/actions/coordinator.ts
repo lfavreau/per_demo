@@ -6,7 +6,7 @@ import { isNextRedirect } from "@/lib/next-errors";
 import { createCaseFromCandidate, deletePersona, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert } from "@/server/services/alerts.service";
-import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
+import { cancelWithdrawal, ensureWithdrawalStep } from "@/server/services/itinerary.service";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
@@ -220,6 +220,23 @@ export async function ensureWithdrawalStepAction(caseId: string): Promise<void> 
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo iniciar el formulario de abandono";
     redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
+  }
+}
+
+/** Deshace el inicio de un retiro (borra el Formulario de Abandono pendiente). */
+export async function cancelWithdrawalAction(caseId: string): Promise<{ ok: boolean; message: string }> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    return { ok: false, message: "No autorizado" };
+  }
+  try {
+    await cancelWithdrawal(caseId, user.id, Boolean(user.isDemo));
+    revalidatePath("/coordinacion");
+    revalidatePath("/coordinacion/casos");
+    revalidatePath("/per", "layout");
+    return { ok: true, message: "Retiro cancelado. El caso quedó como estaba." };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "No se pudo cancelar el retiro." };
   }
 }
 

@@ -11,6 +11,7 @@ import StageItineraryBoard from "@/components/per/StageItineraryBoard";
 import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import RegistroAcompanamientoForm from "@/components/per/RegistroAcompanamientoForm";
 import SessionHighlightModal from "@/components/per/SessionHighlightModal";
+import ModalButton from "@/components/shared/ModalButton";
 
 function daysAgo(date: Date | null): string {
   if (!date) return "sin registro";
@@ -87,14 +88,32 @@ export default async function PERCaseStagePage({
     <AppShell user={user}>
       <div className="space-y-6">
         {state.pendingWithdrawalStep && state.pendingWithdrawalStep.status !== "VALIDADA" && (
-          <NativeInstrumentForm
-            taskId={state.pendingWithdrawalStep.taskId}
-            caseId={paCase.id}
-            title={`⚠️ ${state.pendingWithdrawalStep.title}`}
-            contentTarget="TASK_JSON"
-            fields={getStepByActivityKey(state.pendingWithdrawalStep.activityKey)?.fields ?? []}
-            existingContentJson={state.pendingWithdrawalStep.contentJson}
-          />
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 text-xs">
+            <div>
+              <p className="font-bold text-amber-900">⚠️ Coordinación inició el retiro de esta persona</p>
+              <p className="text-amber-800 mt-0.5">
+                {state.pendingWithdrawalStep.status === "ENVIADA"
+                  ? "Ya enviaste el formulario de abandono; coordinación lo está revisando."
+                  : "Completa el formulario de abandono para que coordinación pueda registrar la salida."}
+              </p>
+            </div>
+            {state.pendingWithdrawalStep.status !== "ENVIADA" && (
+              <ModalButton
+                label="📋 Completar formulario de abandono"
+                title={state.pendingWithdrawalStep.title}
+                buttonClassName="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs cursor-pointer"
+              >
+                <NativeInstrumentForm
+                  taskId={state.pendingWithdrawalStep.taskId}
+                  caseId={paCase.id}
+                  title={state.pendingWithdrawalStep.title}
+                  contentTarget="TASK_JSON"
+                  fields={getStepByActivityKey(state.pendingWithdrawalStep.activityKey)?.fields ?? []}
+                  existingContentJson={state.pendingWithdrawalStep.contentJson}
+                />
+              </ModalButton>
+            )}
+          </div>
         )}
 
         <div className={isCaseHighlighted ? "rounded-2xl animate-highlight" : undefined}>

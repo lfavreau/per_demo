@@ -280,8 +280,11 @@ El botón para avanzar de etapa (Vinculación → Conexión → Finalización �
 Si una persona acompañada abandona el programa:
 
 1. Abre el caso correspondiente.
-2. Usa el botón **"Retiro Voluntario"** o **"Deserción"**.
-3. Se habilita un Formulario de Abandono que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar el caso — es el único requisito para cualquiera de las dos salidas.
+2. Presiona **"🚪 Registrar Retiro o Deserción"**: se abre una ventana.
+3. Dentro, **"📋 Iniciar Formulario de Abandono"**. Es un formulario de la propia app (fecha, motivo y observaciones), no un documento de Google. Al iniciarlo, el PER ve un aviso con un botón para completarlo, y solo mientras el retiro esté iniciado.
+4. Cuando el PER lo envía, lo **validas o devuelves** desde la misma ventana. Una vez validado, eliges *Retiro voluntario* o *Deserción* y lo registras.
+
+**¿Lo iniciaste por error?** Abre la misma ventana (ahora el botón dice "🚪 Retiro en proceso — ver o cancelar") y presiona **"↩️ Cancelar retiro"**. Se borra el formulario, el caso queda como estaba y se avisa al PER. Solo se puede mientras el retiro no esté registrado.
 
 ---
 

@@ -12,7 +12,7 @@ import {
 import { getItineraryState } from "@/server/services/itinerary.service";
 import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
 import StageAdvanceButton from "@/components/coordinator/StageAdvanceButton";
-import WithdrawalGate from "@/components/coordinator/WithdrawalGate";
+import WithdrawalModal from "@/components/coordinator/WithdrawalModal";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
@@ -412,9 +412,12 @@ export default async function CoordinatorCasosPage({
                   )}
 
                   {/* Forced Withdrawal (Retiro Voluntario / Deserción) */}
-                  <div className="border-t border-slate-100 pt-4 space-y-3">
-                    <h5 className="font-bold text-xs text-slate-800">Registrar Retiro o Deserción</h5>
-                    <WithdrawalGate caseId={selectedCaseDetails.id} withdrawalStep={itineraryState.pendingWithdrawalStep} />
+                  <div className="border-t border-slate-100 pt-4">
+                    <WithdrawalModal
+                      caseId={selectedCaseDetails.id}
+                      caseCode={selectedCaseDetails.code}
+                      withdrawalStep={itineraryState.pendingWithdrawalStep}
+                    />
                   </div>
 
                 </div>

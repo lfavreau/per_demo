@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { updateTaskStatus } from "@/server/services/tasks.service";
+import { createNotificationWithPush } from "@/server/services/push.service";
 import {
   getSequentialStepsForStage,
   getStepByActivityKey,
@@ -392,6 +393,22 @@ export async function assertStageAdvanceAllowed(
   return { satisfied: missing.length === 0, missing };
 }
 
+const WITHDRAWAL_ACTIVITY_KEYS = ["FORMULARIO_ABANDONO_PA", "FORMULARIO_ABANDONO_PER"];
+
+async function assertCanOperateWithdrawal(
+  tx: TxClient,
+  paCase: { regionId: string; isDemo: boolean },
+  actorId: string,
+  isDemo: boolean
+) {
+  if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+  const actor = await tx.user.findUnique({ where: { id: actorId } });
+  if (!actor || (actor.role !== "ADMIN" && !(actor.role === "COORDINATOR" && actor.regionId === paCase.regionId))) {
+    throw new Error("No autorizado para operar casos de esta región");
+  }
+  return actor;
+}
+
 export async function ensureWithdrawalStep(paCaseId: string, kind: "PA" | "PER", actorId: string, isDemo: boolean) {
   const activityKey = kind === "PA" ? "FORMULARIO_ABANDONO_PA" : "FORMULARIO_ABANDONO_PER";
   return prisma.$transaction(async (tx) => {
@@ -400,7 +417,7 @@ export async function ensureWithdrawalStep(paCaseId: string, kind: "PA" | "PER",
 
     const paCase = await tx.pACase.findUnique({ where: { id: paCaseId }, include: { per: true } });
     if (!paCase) throw new Error("Caso no encontrado");
-    if (paCase.isDemo !== isDemo) throw new Error("El caso no pertenece al modo de trabajo actual");
+    await assertCanOperateWithdrawal(tx, paCase, actorId, isDemo);
 
     const step = getStepByActivityKey(activityKey);
     const instrument = await tx.instrument.findFirst({ where: { activityKey, status: "VIGENTE" } });
@@ -425,4 +442,58 @@ export async function ensureWithdrawalStep(paCaseId: string, kind: "PA" | "PER",
       },
     });
   });
+}
+
+/**
+ * Deshace el inicio de un retiro: borra el Formulario de Abandono del caso (con lo que el PER
+ * haya alcanzado a escribir) y deja el caso exactamente como estaba. Solo mientras el caso siga
+ * activo: un retiro ya registrado no se revierte desde aquí. Avisa al PER y deja auditoría.
+ */
+export async function cancelWithdrawal(paCaseId: string, actorId: string, isDemo: boolean) {
+  const result = await prisma.$transaction(async (tx) => {
+    const paCase = await tx.pACase.findUnique({ where: { id: paCaseId }, include: { per: true } });
+    if (!paCase) throw new Error("Caso no encontrado");
+    const actor = await assertCanOperateWithdrawal(tx, paCase, actorId, isDemo);
+    if (["RETIRO_VOLUNTARIO", "DESERCION", "EGRESO"].includes(paCase.status)) {
+      throw new Error("El retiro ya fue registrado; no se puede cancelar desde aquí.");
+    }
+
+    const tasks = await tx.task.findMany({
+      where: { paCaseId, instrument: { activityKey: { in: WITHDRAWAL_ACTIVITY_KEYS } } },
+      select: { id: true, status: true },
+    });
+    if (tasks.length === 0) throw new Error("Este caso no tiene un retiro iniciado.");
+    const taskIds = tasks.map((t) => t.id);
+
+    await tx.taskEvent.deleteMany({ where: { taskId: { in: taskIds } } });
+    await tx.feedback.deleteMany({ where: { OR: [{ taskId: { in: taskIds } }, { entityId: { in: taskIds } }] } });
+    await tx.alert.deleteMany({ where: { taskId: { in: taskIds } } });
+    await tx.task.deleteMany({ where: { id: { in: taskIds } } });
+
+    await tx.auditLog.create({
+      data: {
+        userId: actorId,
+        role: actor.role,
+        action: "CANCEL_WITHDRAWAL",
+        entityType: "PACase",
+        entityId: paCaseId,
+        previousValue: JSON.stringify(tasks.map((t) => t.status)),
+        isDemo,
+      },
+    });
+
+    await createNotificationWithPush(
+      {
+        userId: paCase.per.userId,
+        title: `Caso ${paCase.code}: retiro cancelado`,
+        message: `Coordinación canceló el inicio del retiro del caso ${paCase.code}. Ya no tienes que completar el formulario de abandono.`,
+        link: `/per/casos/${paCase.id}/etapa`,
+        isDemo,
+      },
+      tx
+    );
+
+    return { removed: tasks.length };
+  });
+  return result;
 }

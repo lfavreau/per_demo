@@ -795,7 +795,9 @@ El botón para avanzar de etapa (Vinculación → Conexión → Finalización �
 
 #### Retiro voluntario y deserción
 
-Al pie de las acciones de fase hay un bloque para registrar el abandono del caso. Al activarlo se habilita el **Formulario de Abandono** correspondiente (persona acompañada o PER), que debe completarse y validarse igual que cualquier otro instrumento antes de cerrar definitivamente el caso.
+Al pie de las acciones de fase hay un botón **"🚪 Registrar Retiro o Deserción"** que abre una ventana. Ahí se inicia el **Formulario de Abandono** (un formulario de la propia app: fecha, motivo y observaciones), que el PER completa desde un botón que solo aparece mientras el retiro está iniciado. Coordinación lo valida o devuelve en la misma ventana y, una vez validado, registra el Retiro voluntario o la Deserción.
+
+**Deshacer:** mientras el retiro no esté registrado, la ventana (que pasa a decir "Retiro en proceso — ver o cancelar") tiene el botón **"↩️ Cancelar retiro"**: borra el formulario, deja el caso como estaba y avisa al PER.
 
 #### Reasignar Acompañante
 
