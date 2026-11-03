@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import { logSupervisionAction } from "@/app/actions/coordinator";
 import { SUPERVISION_ALERT_DAYS } from "@/lib/program-config";
+import { isPerHabilitado } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,7 @@ export default async function CoordinatorSupervisionesPage({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {perComplianceList.map(({ per, lastDate, daysSinceLast, alertStatus, totalHours }) => {
+                  const isCertified = per.user.active && isPerHabilitado(per.certificationStatus);
                   return (
                     <div
                       key={per.id}
@@ -127,21 +129,15 @@ export default async function CoordinatorSupervisionesPage({
                             <p className="text-[10px] text-slate-500 mt-0.5">Generación: {per.generation}</p>
                           </div>
                           <div className="shrink-0">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                                per.certificationStatus === "HABILITADO"
-                                  ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                  : per.certificationStatus === "PENDIENTE"
-                                  ? "bg-amber-50 text-amber-800 border-amber-200"
-                                  : "bg-red-50 text-red-800 border-red-200"
-                              }`}
-                            >
-                              {per.certificationStatus === "HABILITADO"
-                                ? "✓ Habilitado"
-                                : per.certificationStatus === "PENDIENTE"
-                                ? "⏳ Pendiente"
-                                : "✕ No Habilitado"}
-                            </span>
+                            {isCertified ? (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                ✓ Habilitado
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                Deshabilitado
+                              </span>
+                            )}
                           </div>
                         </div>
 

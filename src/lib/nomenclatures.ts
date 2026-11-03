@@ -39,12 +39,12 @@ export function mapStageToLabel(stage: string): string {
 }
 
 /**
- * Combina el código correlativo del caso con el alias/trato preferido de la persona
- * acompañada (Actividad 2). Nunca incluye nombre legal ni RUN — solo lo que el PACase
- * ya guarda como alias.
+ * Combina el alias/trato preferido de la persona acompañada con el código correlativo del caso
+ * ("Alias (PA-VAL-008)"; solo el código si no hay alias). Nunca incluye nombre legal ni RUN
+ * — solo lo que el PACase ya guarda como alias.
  */
 export function formatCaseLabel(code: string, alias?: string | null): string {
-  return alias && alias.trim() ? `${code} (${alias.trim()})` : code;
+  return alias && alias.trim() ? `${alias.trim()} (${code})` : code;
 }
 
 /**
@@ -77,6 +77,41 @@ export function mapAlertTypeToLabel(type: string): string {
 }
 
 /**
+ * A PER is either registered (habilitado) or explicitly disabled.
+ * "PENDIENTE" is a legacy value and counts as habilitado.
+ */
+export function isPerHabilitado(certificationStatus: string | null | undefined): boolean {
+  return certificationStatus !== "NO_HABILITADO";
+}
+
+/**
+ * Maps the stored recovery domain id to its official display label.
+ * Stored values are kept unchanged to preserve existing records.
+ */
+export function mapDomainToLabel(domain: string): string {
+  return domain === "Física y mental" ? "Salud física y mental" : domain;
+}
+
+export const CASE_ALIAS_MAX_LENGTH = 40;
+
+/**
+ * Cleans the optional case alias: trims, collapses spaces and caps its length.
+ * Returns null when empty so the case falls back to its code.
+ */
+export function normalizeCaseAlias(alias: unknown): string | null {
+  if (typeof alias !== "string") return null;
+  const clean = alias.replace(/\s+/g, " ").trim().slice(0, CASE_ALIAS_MAX_LENGTH);
+  return clean || null;
+}
+
+/**
+ * Plain-text case name for selects and labels: "Alias (PA-VAL-008)" or just the code.
+ */
+export function formatCaseName(paCase: { code: string; alias?: string | null }): string {
+  return paCase.alias ? `${paCase.alias} (${paCase.code})` : paCase.code;
+}
+
+/**
  * Maps the 4 emotions recorded in the IAP to discrete professional labels.
  */
 export function mapEmotionToLabel(emotion: string): string {
@@ -84,7 +119,7 @@ export function mapEmotionToLabel(emotion: string): string {
     case "BIEN":
       return "😊 Bien";
     case "NEUTRO":
-      return "😐 Neutral";
+      return "😐 Neutro";
     case "TRISTE":
       return "😢 Triste";
     case "ENOJADO":

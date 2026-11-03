@@ -141,10 +141,10 @@ export default async function CoordinatorPage({
           <div className="p-6 bg-card border border-border rounded-2xl shadow-sm flex flex-col justify-between">
             <div className="space-y-2">
               <h3 className="font-bold text-sm text-slate-800">
-                Nómina Preselección
+                Personas esperando PER
               </h3>
               <p className="text-xs text-slate-500">
-                Total de personas en preselección (Fase 2):
+                Total de personas en preselección:
               </p>
             </div>
             <div className="text-center py-4 bg-slate-50 border border-slate-200 rounded-xl mt-4">
@@ -158,7 +158,7 @@ export default async function CoordinatorPage({
         {/* pre-selection funnel stage summary card */}
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
           <h3 className="font-bold text-sm text-slate-800 mb-4">
-            Distribución del Embudo de Preselección (Fase 2)
+            Distribución del Embudo de Preselección
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 text-center">
             {funnelSummary.map((f) => (

@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
+import CaseName from "@/components/cases/CaseName";
+import { formatCaseName } from "@/lib/nomenclatures";
 import {
   registerNetworkDeviceAction,
-  logNetworkActivationAction,
-  registerPhase5RecordAction
+  logNetworkActivationAction, 
+  registerPhase5RecordAction 
 } from "@/app/actions/coordinator";
 
 export const dynamic = "force-dynamic";
@@ -138,7 +140,7 @@ export default async function CoordinatorRedesPage() {
                         <span className="font-bold text-slate-800 text-sm">{act.networkDevice.name}</span>
                         {act.paCase && (
                           <span className="px-1.5 py-0.5 rounded bg-blue-600/10 text-blue-700 text-[9px] font-bold">
-                            {act.paCase.code}
+                            <CaseName code={act.paCase.code} alias={act.paCase.alias} />
                           </span>
                         )}
                       </div>
@@ -288,7 +290,7 @@ export default async function CoordinatorRedesPage() {
                   >
                     <option value="">Ninguno / Gestión General</option>
                     {regionalCases.map(c => (
-                      <option key={c.id} value={c.id}>{c.code}</option>
+                      <option key={c.id} value={c.id}>{formatCaseName(c)}</option>
                     ))}
                   </select>
                 </div>

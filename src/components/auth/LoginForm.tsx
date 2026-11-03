@@ -3,50 +3,37 @@
 import React, { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/app/actions/auth";
+import { DEMO_ACCOUNTS, DEMO_REGIONS, type DemoAccount } from "@/lib/demo-accounts";
 
-interface UserDirectoryItem {
-  name: string;
-  username: string;
-  role: "ADMIN" | "COORDINATOR";
-  region: string;
+const REGISTERED_USERS: DemoAccount[] = DEMO_ACCOUNTS.filter((a) => a.role !== "PER");
+
+const ROLE_BADGE: Record<DemoAccount["role"], { label: string; className: string }> = {
+  ADMIN: { label: "ADMIN DEMO", className: "bg-blue-100 text-blue-800" },
+  COORDINATOR: { label: "COORD DEMO", className: "bg-blue-600/10 text-blue-700" },
+  PER: { label: "PER DEMO", className: "bg-emerald-600/10 text-emerald-700" },
+};
+
+function DemoAccountRow({ account }: { account: DemoAccount }) {
+  const badge = ROLE_BADGE[account.role];
+  return (
+    <form action={loginAction}>
+      <input type="hidden" name="email" value={account.username} />
+      <input type="hidden" name="isDemo" value="true" />
+      <button
+        type="submit"
+        className="w-full flex justify-between items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
+      >
+        <div className="min-w-0">
+          <span className="font-bold text-xs text-slate-950 block truncate">{account.name}</span>
+          <span className="text-[10px] text-slate-400 font-mono">{account.username}</span>
+        </div>
+        <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${badge.className}`}>
+          {badge.label}
+        </span>
+      </button>
+    </form>
+  );
 }
-
-const REGISTERED_USERS: UserDirectoryItem[] = [
-  // Admin
-  { name: "Administrador Nacional", username: "admin", role: "ADMIN", region: "Nacional" },
-  // Coordinadores
-  { name: "Coordinadora Metropolitana", username: "coord.metro", role: "COORDINATOR", region: "Metropolitana" },
-  { name: "Coordinador Valparaíso", username: "coord.valpo", role: "COORDINATOR", region: "Valparaíso" },
-  { name: "Coordinador Tarapacá", username: "coord.tarapaca", role: "COORDINATOR", region: "Tarapacá" },
-  { name: "Coordinador Biobío", username: "coord.biobio", role: "COORDINATOR", region: "Biobío" },
-  { name: "Coordinador Los Ríos", username: "coord.losrios", role: "COORDINATOR", region: "Los Ríos" },
-];
-
-interface DemoAccount {
-  username: string;
-  name: string;
-  badge: string;
-  badgeClass: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  { username: "admin", name: "Administrador Nacional", badge: "ADMIN DEMO", badgeClass: "bg-blue-100 text-blue-800" },
-  { username: "coord.metro", name: "Coordinadora Regional (MET)", badge: "COORD DEMO", badgeClass: "bg-blue-600/10 text-blue-700" },
-  { username: "coord.valpo", name: "Coordinador Regional (VAL)", badge: "COORD DEMO", badgeClass: "bg-blue-600/10 text-blue-700" },
-  { username: "coord.tarapaca", name: "Coordinador Regional (TAR)", badge: "COORD DEMO", badgeClass: "bg-blue-600/10 text-blue-700" },
-  { username: "coord.biobio", name: "Coordinador Regional (BIO)", badge: "COORD DEMO", badgeClass: "bg-blue-600/10 text-blue-700" },
-  { username: "coord.losrios", name: "Coordinador Regional (LOS)", badge: "COORD DEMO", badgeClass: "bg-blue-600/10 text-blue-700" },
-  { username: "per.carla", name: "Carla Muñoz (PER Habilitado - MET)", badge: "PER DEMO", badgeClass: "bg-emerald-600/10 text-emerald-700" },
-  { username: "per.valpo", name: "Andrés Silva (PER Habilitado - VAL)", badge: "PER DEMO", badgeClass: "bg-emerald-600/10 text-emerald-700" },
-  { username: "per.diego", name: "Diego Rojas (PER Pendiente - MET)", badge: "PER DEMO", badgeClass: "bg-amber-600/10 text-amber-700" },
-  { username: "per.juan", name: "Juan Pérez (PER Pendiente - MET)", badge: "PER DEMO", badgeClass: "bg-amber-600/10 text-amber-700" },
-  { username: "per.sonia", name: "Sonia Reyes (PER Pendiente - VAL)", badge: "PER DEMO", badgeClass: "bg-amber-600/10 text-amber-700" },
-  { username: "per.lucas", name: "Lucas Díaz (PER Habilitado - TAR)", badge: "PER DEMO", badgeClass: "bg-emerald-600/10 text-emerald-700" },
-  { username: "per.mario", name: "Mario Soto (PER Pendiente - TAR)", badge: "PER DEMO", badgeClass: "bg-amber-600/10 text-amber-700" },
-  { username: "per.camila", name: "Camila Vera (PER Habilitado - BIO)", badge: "PER DEMO", badgeClass: "bg-emerald-600/10 text-emerald-700" },
-  { username: "per.pedro", name: "Pedro Castillo (PER Habilitado - LOS)", badge: "PER DEMO", badgeClass: "bg-emerald-600/10 text-emerald-700" },
-  { username: "per.elena", name: "Elena Gómez (PER Pendiente - LOS)", badge: "PER DEMO", badgeClass: "bg-amber-600/10 text-amber-700" },
-];
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -55,6 +42,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const [copiedUser, setCopiedUser] = useState<string | null>(null);
 
   const errorMsg =
     error === "missing_email"
@@ -64,7 +52,7 @@ export default function LoginForm() {
       : error === "invalid_password"
       ? "Contraseña incorrecta."
       : error === "email_not_found"
-      ? "El usuario no está registrado o se encuentra inactivo."
+      ? "El usuario no está registrado o se encuentra deshabilitado."
       : error === "demo_not_allowed"
       ? "Esta cuenta no está habilitada para el entorno demostrativo."
       : error === "account_is_demo_only"
@@ -73,9 +61,10 @@ export default function LoginForm() {
       ? "El modo real aún no tiene una contraseña configurada en Vercel."
       : null;
 
-  const handleSelectUser = (username: string) => {
-    setEmail(username);
-    setIsModalOpen(false);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedUser(text);
+    setTimeout(() => setCopiedUser(null), 2000);
   };
 
   return (
@@ -163,18 +152,20 @@ export default function LoginForm() {
         </button>
       </form>
 
-      {/* Acceso a Cuentas de Evaluación Operativa (Modo Demo) */}
+      {/* Cuentas de Evaluación Operativa (Modo Demo) */}
       <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          🧪 Cuentas de Evaluación Operativa (Modo Demo)
+        </p>
+        <p className="text-[10px] text-slate-400 mt-0.5 mb-3">
+          Acceso directo con datos de prueba precargados para evaluación
+        </p>
         <button
           type="button"
           onClick={() => setIsDemoModalOpen(true)}
-          className="w-full flex justify-between items-center px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left cursor-pointer"
+          className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-slate-700 text-xs font-bold cursor-pointer"
         >
-          <div>
-            <span className="font-bold text-xs text-slate-800 block">🧪 Cuentas de Evaluación Operativa</span>
-            <span className="text-[10px] text-slate-400">Acceso directo con datos de prueba precargados</span>
-          </div>
-          <span className="text-slate-400">→</span>
+          🧪 Ver cuentas demo ({DEMO_ACCOUNTS.length})
         </button>
       </div>
 
@@ -190,6 +181,76 @@ export default function LoginForm() {
         </a>
       </div>
 
+      {/* MODAL DE CUENTAS DEMO */}
+      {isDemoModalOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          onClick={() => setIsDemoModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col text-slate-800 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                  <span>🧪</span> Cuentas Demo
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  Acceso directo con datos de prueba precargados
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDemoModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Administración Nacional
+                </h4>
+                <div className="space-y-2">
+                  {DEMO_ACCOUNTS.filter((a) => a.role === "ADMIN").map((a) => (
+                    <DemoAccountRow key={a.username} account={a} />
+                  ))}
+                </div>
+              </div>
+
+              {DEMO_REGIONS.map((region) => (
+                <div key={region}>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {region}
+                  </h4>
+                  <div className="space-y-2">
+                    {DEMO_ACCOUNTS.filter((a) => a.region === region).map((a) => (
+                      <DemoAccountRow key={a.username} account={a} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Total: <strong>{DEMO_ACCOUNTS.length} cuentas demo</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDemoModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL DE USUARIOS REGISTRADOS */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
@@ -201,7 +262,7 @@ export default function LoginForm() {
                   <span>👥</span> Usuarios Registrados en el Sistema
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Selecciona una cuenta institucional para usar su usuario
+                  Copia el nombre de usuario de las cuentas institucionales
                 </p>
               </div>
               <button
@@ -213,6 +274,13 @@ export default function LoginForm() {
               </button>
             </div>
 
+            {/* Banner Informativo */}
+            {copiedUser && (
+              <div className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 text-center flex items-center justify-center gap-2 animate-bounce">
+                <span>✓ Usuario &quot;{copiedUser}&quot; copiado al portapapeles</span>
+              </div>
+            )}
+
             {/* Lista de Usuarios */}
             <div className="p-5 overflow-y-auto flex-1 space-y-4">
               {/* Sección Admin */}
@@ -222,11 +290,9 @@ export default function LoginForm() {
                 </h4>
                 <div className="space-y-2">
                   {REGISTERED_USERS.filter((u) => u.role === "ADMIN").map((u) => (
-                    <button
+                    <div
                       key={u.username}
-                      type="button"
-                      onClick={() => handleSelectUser(u.username)}
-                      className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-blue-300 hover:bg-blue-50/50 transition text-left cursor-pointer"
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-slate-300 transition"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -235,12 +301,21 @@ export default function LoginForm() {
                             ADMIN
                           </span>
                         </div>
-                        <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">{u.username}</span>
+                        <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">
+                          {u.username} <span className="text-slate-400">({u.email})</span>
+                        </span>
                       </div>
-                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-bold">
-                        Usar
-                      </span>
-                    </button>
+
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(u.username)}
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                        >
+                          📋 Copiar
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -252,11 +327,9 @@ export default function LoginForm() {
                 </h4>
                 <div className="space-y-2">
                   {REGISTERED_USERS.filter((u) => u.role === "COORDINATOR").map((u) => (
-                    <button
+                    <div
                       key={u.username}
-                      type="button"
-                      onClick={() => handleSelectUser(u.username)}
-                      className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-blue-300 hover:bg-blue-50/50 transition text-left cursor-pointer"
+                      className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 hover:border-slate-300 transition"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -265,12 +338,21 @@ export default function LoginForm() {
                             {u.region}
                           </span>
                         </div>
-                        <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">{u.username}</span>
+                        <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">
+                          {u.username} <span className="text-slate-400">({u.email})</span>
+                        </span>
                       </div>
-                      <span className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-bold">
-                        Usar
-                      </span>
-                    </button>
+
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(u.username)}
+                          className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                        >
+                          📋 Copiar
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -294,62 +376,6 @@ export default function LoginForm() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE CUENTAS DEMO */}
-      {isDemoModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col text-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-              <div>
-                <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
-                  <span>🧪</span> Cuentas de Evaluación Operativa (Modo Demo)
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Acceso directo con datos de prueba precargados para evaluación
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsDemoModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold text-sm flex items-center justify-center transition cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto flex-1 grid grid-cols-1 gap-2 text-xs">
-              {DEMO_ACCOUNTS.map((acc) => (
-                <form key={acc.username} action={loginAction}>
-                  <input type="hidden" name="email" value={acc.username} />
-                  <input type="hidden" name="isDemo" value="true" />
-                  <button
-                    type="submit"
-                    className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition text-left text-slate-700 cursor-pointer"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-950 block">{acc.name}</span>
-                      <span className="text-[10px] text-slate-400">{acc.username} (Acceso Directo Demo)</span>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${acc.badgeClass}`}>
-                      {acc.badge}
-                    </span>
-                  </button>
-                </form>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setIsDemoModalOpen(false)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition cursor-pointer"
               >
                 Cerrar

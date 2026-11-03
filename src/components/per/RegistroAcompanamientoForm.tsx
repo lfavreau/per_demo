@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { logSessionAction, syncOfflineSessionsAction } from "@/app/actions/per";
+import { mapDomainToLabel } from "@/lib/nomenclatures";
 
 interface GoalOption {
   id: string;
@@ -232,9 +233,9 @@ export default function RegistroAcompanamientoForm({
                 required
                 className="w-full p-2.5 bg-background border border-border rounded-xl outline-none"
               >
-                {domains.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {domains.map((dom) => (
+                  <option key={dom} value={dom}>
+                    {mapDomainToLabel(dom)}
                   </option>
                 ))}
               </select>

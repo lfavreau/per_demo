@@ -105,7 +105,7 @@ describe("alerts.service — checkAllAlertRules", () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const admin = await createCoordinator(region);
-    const { user: perUser } = await createPer(region, { certificationStatus: "PENDIENTE" });
+    const { user: perUser } = await createPer(region, { certificationStatus: "NO_HABILITADO" });
     const instrument = await createAdHocInstrument(admin.id, { criticalTask: true });
 
     const task = await prisma.task.create({

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import { createCaseAction, createCandidateAction } from "@/app/actions/coordinator";
 import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
+import CaseName from "@/components/cases/CaseName";
+import { isPerHabilitado } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +45,12 @@ export default async function CoordinatorCandidatasPage({
       },
     },
   });
-  const perProfiles = allPerProfiles.filter((p: any) => Boolean(p.user?.isDemo) === isDemo);
-  // Tope: un PER lleva como máximo un acompañamiento activo a la vez.
-  const availablePers = perProfiles.filter((p) => p.certificationStatus !== "NO_HABILITADO" && p.cases.length === 0);
+  const perProfiles = allPerProfiles.filter(
+    (p: any) =>
+      Boolean(p.user?.isDemo) === isDemo &&
+      p.user?.active !== false &&
+      isPerHabilitado(p.certificationStatus)
+  );
 
   // 3. Fetch Existing Cases/Matches created in region
   const allCases = await prisma.pACase.findMany({
@@ -67,7 +72,7 @@ export default async function CoordinatorCandidatasPage({
         {/* Page Header */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h3 className="font-extrabold text-base text-slate-900">Gestión de Nóminas e Ingresos (Fase 2)</h3>
+            <h3 className="font-extrabold text-base text-slate-900">Registro de Ingresos</h3>
             <p className="text-xs text-slate-500 mt-1">
               Revisa las postulaciones derivadas de los centros de tratamiento o red derivadora y formaliza el emparejamiento con duplas de acompañamiento.
             </p>
@@ -87,7 +92,7 @@ export default async function CoordinatorCandidatasPage({
         {/* Formulario para Registrar Nueva Postulante / Candidata */}
         <div className="p-6 bg-white border border-blue-100 rounded-2xl shadow-sm space-y-4">
           <h4 className="font-bold text-xs text-blue-900 uppercase tracking-wider flex items-center gap-2">
-            <span>➕</span> Registrar Nueva Persona Acompañada / Derivación a Nómina
+            <span>➕</span> Registrar nueva persona derivada
           </h4>
           <form action={createCandidateAction} className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div>
@@ -127,7 +132,7 @@ export default async function CoordinatorCandidatasPage({
                 type="submit"
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition text-xs cursor-pointer"
               >
-                ➕ Registrar e Ingresar a Nómina
+                ➕ Registrar persona
               </button>
             </div>
           </form>
@@ -139,7 +144,7 @@ export default async function CoordinatorCandidatasPage({
           {/* Candidates Table (Left side) */}
           <div className="lg:col-span-2 p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
             <h4 className="font-semibold text-xs text-slate-500 uppercase tracking-wider">
-              Nómina de Preselección ({candidates.length})
+              Personas esperando PER
             </h4>
             <div className="overflow-x-auto text-xs">
               <table className="w-full text-left border-collapse">
@@ -192,7 +197,7 @@ export default async function CoordinatorCandidatasPage({
             
             <form action={createCaseAction} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Persona Acompañada Apta (Fase 2)</label>
+                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Persona Acompañada Apta</label>
                 <select
                   name="candidateId"
                   required
@@ -203,27 +208,27 @@ export default async function CoordinatorCandidatasPage({
                     .filter((c) => c.status === "SELECCIONADA" || c.status === "ADMISIBLE")
                     .map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.sourceCenter} (Fase 2)
+                        {c.sourceCenter}
                       </option>
                     ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acompañante PER Disponible</label>
+                <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acompañante PER</label>
                 <select
                   name="perId"
                   required
                   className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
                 >
                   <option value="">-- Seleccionar --</option>
-                  {availablePers.map((p) => (
+                  {perProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.user?.name || "PER"}
+                      {p.user?.name || "PER"} ({p.cases.length} casos activos)
                     </option>
                   ))}
                 </select>
-                {availablePers.length === 0 && (
+                {perProfiles.length === 0 && (
                   <p className="text-[10px] text-amber-600 mt-1">
                     No hay PER disponibles: todos tienen un acompañamiento activo o no están habilitados.
                   </p>
@@ -279,7 +284,7 @@ export default async function CoordinatorCandidatasPage({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border text-muted-foreground font-semibold">
-                  <th className="pb-2">Código Caso</th>
+                  <th className="pb-2">Caso</th>
                   <th className="pb-2">Origen / Postulante</th>
                   <th className="pb-2">Acompañante PER</th>
                   <th className="pb-2">Estado Match</th>
@@ -291,7 +296,9 @@ export default async function CoordinatorCandidatasPage({
               <tbody>
                 {matches.map((m) => (
                   <tr key={m.id} className="border-b border-border/50 hover:bg-secondary/10">
-                    <td className="py-3 font-bold text-blue-700">{m.code}</td>
+                    <td className="py-3 font-bold text-blue-700">
+                      <CaseName code={m.code} alias={m.alias} />
+                    </td>
                     <td className="py-3 font-semibold text-slate-800">
                       {m.candidate?.sourceCenter || m.genderSelfId || "Ingreso Directo"}
                     </td>

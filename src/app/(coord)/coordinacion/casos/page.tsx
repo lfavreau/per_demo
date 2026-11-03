@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { mapCaseStatusToLabel, mapEmotionToLabel, mapStageToLabel } from "@/lib/nomenclatures";
+import CaseName from "@/components/cases/CaseName";
+import CaseAliasForm from "@/components/cases/CaseAliasForm";
+import { CASE_ALIAS_MAX_LENGTH, formatCaseName, mapCaseStatusToLabel, mapEmotionToLabel, mapStageToLabel } from "@/lib/nomenclatures";
 import {
   createDirectContinuityCaseAction,
   reassignCaseAction,
@@ -48,7 +50,7 @@ export default async function CoordinatorCasosPage({
   });
 
   const allRegionalPers = await prisma.pERProfile.findMany({
-    where: { regionId: user.regionId, certificationStatus: "HABILITADO" },
+    where: { regionId: user.regionId, certificationStatus: { not: "NO_HABILITADO" }, user: { active: true } },
     include: {
       user: true,
       cases: {
@@ -60,11 +62,9 @@ export default async function CoordinatorCasosPage({
     },
   });
   const regionalPers = allRegionalPers.filter((p) => Boolean(p.user?.isDemo) === isDemo);
-  // Tope: un PER lleva como máximo un acompañamiento activo a la vez.
-  const availablePers = regionalPers.filter((p) => p.cases.length === 0);
 
   // 2. Generate Timeline if a case is selected
-  let timelineEvents: Array<{
+  const timelineEvents: Array<{
     date: Date;
     title: string;
     description: string;
@@ -178,7 +178,7 @@ export default async function CoordinatorCasosPage({
               <option value="">-- Seleccionar Caso --</option>
               {regionalCases.map((c) => (
                 <option key={c.id} value={c.code}>
-                  {c.code} — {c.candidate?.sourceCenter || c.genderSelfId || "Ingreso Directo"} [PER: {c.per?.user?.name || "Sin PER"}] ({mapCaseStatusToLabel(c.status)})
+                  {formatCaseName(c)} — {c.candidate?.sourceCenter || c.genderSelfId || "Ingreso Directo"} [PER: {c.per?.user?.name || "Sin PER"}] ({mapCaseStatusToLabel(c.status)})
                 </option>
               ))}
             </select>
@@ -257,8 +257,17 @@ export default async function CoordinatorCasosPage({
                 <h4 className="font-bold text-sm text-slate-800">Detalles del Acompañamiento</h4>
                 <div className="space-y-3 text-xs">
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Código</span>
-                    <span className="font-bold text-slate-800 text-sm">{selectedCaseDetails.code}</span>
+                    <span className="text-slate-400 block text-[9px] uppercase font-bold">Persona Acompañada</span>
+                    <CaseName
+                      code={selectedCaseDetails.code}
+                      alias={selectedCaseDetails.alias}
+                      className="font-bold text-slate-800 text-sm block"
+                    />
+                    <CaseAliasForm
+                      key={`${selectedCaseDetails.id}-${selectedCaseDetails.alias || ""}`}
+                      caseId={selectedCaseDetails.id}
+                      alias={selectedCaseDetails.alias}
+                    />
                   </div>
 
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
@@ -339,13 +348,13 @@ export default async function CoordinatorCasosPage({
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
                       >
                         <option value="">-- Seleccionar --</option>
-                        {availablePers.map((p) => (
-                          <option key={p.id} value={p.id}>{p.user.name}</option>
+                        {regionalPers.map((p) => (
+                          <option key={p.id} value={p.id}>{p.user.name} ({p.cases.length} casos activos)</option>
                         ))}
                       </select>
-                      {availablePers.length === 0 && (
+                      {regionalPers.length === 0 && (
                         <p className="text-[10px] text-amber-600 mt-1">
-                          No hay otro PER disponible en la región (todos tienen un acompañamiento activo).
+                          No hay otro PER habilitado en la región.
                         </p>
                       )}
                     </div>
@@ -361,7 +370,7 @@ export default async function CoordinatorCasosPage({
                     </div>
                     <button
                       type="submit"
-                      disabled={availablePers.length === 0}
+                      disabled={regionalPers.length === 0}
                       className="w-full py-2 px-4 bg-slate-800 hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs"
                     >
                       Reasignar Caso
@@ -457,22 +466,22 @@ export default async function CoordinatorCasosPage({
               </div>
 
               <form action={createDirectContinuityCaseAction} className="space-y-3.5 text-xs">
-                
+
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Asignar a PER Disponible:</label>
+                  <label className="font-bold text-slate-700">Asignar a PER:</label>
                   <select
                     name="perId"
                     required
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none font-semibold"
                   >
                     <option value="">Selecciona PER...</option>
-                    {availablePers.map(p => (
-                      <option key={p.id} value={p.id}>{p.user.name}</option>
+                    {regionalPers.map(p => (
+                      <option key={p.id} value={p.id}>{p.user.name} ({p.cases.length} casos activos)</option>
                     ))}
                   </select>
-                  {availablePers.length === 0 && (
+                  {regionalPers.length === 0 && (
                     <p className="text-[10px] text-amber-600">
-                      No hay PER disponibles: todos tienen un acompañamiento activo o no están habilitados.
+                      No hay PER habilitados en la región.
                     </p>
                   )}
                 </div>

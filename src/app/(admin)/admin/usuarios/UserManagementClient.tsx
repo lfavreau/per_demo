@@ -54,7 +54,7 @@ export default function UserManagementClient({
             <span>👥</span> Gestión de Usuarios y Acompañantes PER
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Administra la nómina oficial, crea nuevos acompañantes PER y asígnalos a su respectiva Coordinación Regional.
+            Administra la lista oficial de personas, crea nuevos acompañantes PER y asígnalos a su respectiva Coordinación Regional.
           </p>
         </div>
         <button
@@ -96,13 +96,13 @@ export default function UserManagementClient({
               : errorMsg === "missing_fields"
               ? "Por favor, completa todos los campos requeridos."
               : errorMsg === "cannot_deactivate_admin"
-              ? "No es posible desactivar la cuenta del Administrador Principal."
+              ? "No es posible deshabilitar la cuenta del Administrador Principal."
               : errorMsg === "invalid_admin_password"
               ? "Contraseña de administrador incorrecta. No se realizó ningún cambio."
               : errorMsg === "per_has_cases"
-              ? "No se puede eliminar: este acompañante tiene casos asociados. Desactívalo en su lugar."
+              ? "No se puede eliminar: este acompañante tiene casos asociados. Deshabilítalo en su lugar."
               : errorMsg === "delete_failed"
-              ? "No se pudo eliminar: el usuario tiene registros asociados que lo impiden. Desactívalo en su lugar."
+              ? "No se pudo eliminar: el usuario tiene registros asociados que lo impiden. Deshabilítalo en su lugar."
               : errorMsg === "user_not_found"
               ? "No se encontró el usuario indicado."
               : errorMsg === "invalid_certification_status"
@@ -126,7 +126,7 @@ export default function UserManagementClient({
             </p>
           </div>
           <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200">
-            {pers.filter((p) => p.active).length} Activos
+            {pers.filter((p) => p.active).length} Habilitados
           </span>
         </div>
 
@@ -135,7 +135,7 @@ export default function UserManagementClient({
             <span className="text-2xl block mb-2">👤</span>
             <p className="text-xs font-bold text-slate-700">No hay Acompañantes PER registrados aún</p>
             <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
-              Haz clic en el botón "Crear Acompañante PER" arriba para registrar y asignar personal a una coordinación regional.
+              Haz clic en el botón &quot;Crear Acompañante PER&quot; arriba para registrar y asignar personal a una coordinación regional.
             </p>
           </div>
         ) : (
@@ -167,19 +167,16 @@ export default function UserManagementClient({
                           <input type="hidden" name="perId" value={per.profile.id} />
                           <select
                             name="status"
-                            defaultValue={per.profile.certificationStatus}
+                            defaultValue={per.profile.certificationStatus === "NO_HABILITADO" ? "NO_HABILITADO" : "HABILITADO"}
                             onChange={(e) => e.currentTarget.form?.requestSubmit()}
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] border outline-none cursor-pointer ${
-                              per.profile.certificationStatus === "HABILITADO"
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                                : per.profile.certificationStatus === "PENDIENTE"
-                                ? "bg-amber-100 text-amber-800 border-amber-200"
-                                : "bg-red-100 text-red-800 border-red-200"
+                              per.profile.certificationStatus === "NO_HABILITADO"
+                                ? "bg-red-100 text-red-800 border-red-200"
+                                : "bg-emerald-100 text-emerald-800 border-emerald-200"
                             }`}
                           >
                             <option value="HABILITADO">Habilitado</option>
-                            <option value="PENDIENTE">Pendiente</option>
-                            <option value="NO_HABILITADO">No Habilitado</option>
+                            <option value="NO_HABILITADO">Deshabilitado</option>
                           </select>
                         </form>
                       ) : (
@@ -189,11 +186,11 @@ export default function UserManagementClient({
                     <td className="py-3 px-4 text-center">
                       {per.active ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                          Activo
+                          Habilitado
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold text-[10px]">
-                          Inactivo
+                          Deshabilitado
                         </span>
                       )}
                     </td>
@@ -268,7 +265,7 @@ export default function UserManagementClient({
                 </span>
               </div>
               <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
-                Activo
+                Habilitado
               </span>
             </div>
           ))}

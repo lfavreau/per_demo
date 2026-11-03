@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { validateItineraryStepAction, returnItineraryStepAction } from "@/app/actions/itinerary";
 import { renderInstrumentContent } from "./renderInstrumentContent";
+import CaseName from "@/components/cases/CaseName";
 
 export interface PendingTaskView {
   id: string;
@@ -10,7 +11,7 @@ export interface PendingTaskView {
   description: string | null;
   contentJson: string | null;
   googleUrl: string | null;
-  paCase: { code: string } | null;
+  paCase: { code: string; alias?: string | null } | null;
   assignedTo: { name: string };
   instrument: { activityKey: string | null; submissionMode: string } | null;
 }
@@ -66,7 +67,7 @@ export default function TaskValidationQueue({ pendingTasks }: TaskValidationQueu
               <span className="font-bold text-slate-800">{task.title}</span>
               {task.paCase && (
                 <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold text-[9px] shrink-0">
-                  {task.paCase.code}
+                  <CaseName code={task.paCase.code} alias={task.paCase.alias} />
                 </span>
               )}
             </div>
@@ -100,7 +101,7 @@ export default function TaskValidationQueue({ pendingTasks }: TaskValidationQueu
                 <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
                   <span>📝</span> {selectedTask.title}
                   {selectedTask.paCase && (
-                    <span className="text-blue-700">— {selectedTask.paCase.code}</span>
+                    <span className="text-blue-700">— <CaseName code={selectedTask.paCase.code} alias={selectedTask.paCase.alias} /></span>
                   )}
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">

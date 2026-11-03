@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
+import CaseName from "@/components/cases/CaseName";
+import { mapCaseStatusToLabel } from "@/lib/nomenclatures";
 
 export default async function PERDashboardPage({
   searchParams,
@@ -47,29 +50,30 @@ export default async function PERDashboardPage({
     redirect(`/per/casos/${resolvedCaseId}/etapa?${highlightQuery.toString()}`);
   }
 
-  // Un PER lleva como máximo un acompañamiento activo a la vez, así que esta
-  // vista solo necesita decidir entre redirigir al instrumento o mostrar el
-  // estado vacío — nunca hay una lista que recorrer.
-  const activeCase = await prisma.pACase.findFirst({
+  // Lo habitual es 1 PER con 1 persona acompañada: en ese caso se entra directo al
+  // itinerario. Si el PER lleva más de un caso, se muestra la lista para elegir.
+  const activeCases = await prisma.pACase.findMany({
     where: {
       perId: profile.id,
       isDemo,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
+    select: { id: true, code: true, alias: true, status: true },
+    orderBy: { createdAt: "asc" },
   });
 
-  if (activeCase) {
-    redirect(`/per/casos/${activeCase.id}/etapa`);
+  if (activeCases.length === 1) {
+    redirect(`/per/casos/${activeCases[0].id}/etapa`);
   }
 
   return (
     <AppShell user={user}>
       <div className="space-y-6">
-        {profile.certificationStatus !== "HABILITADO" && (
+        {profile.certificationStatus === "NO_HABILITADO" && (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-2 text-xs">
-            <h4 className="font-bold text-destructive">🛑 Estado: No Habilitado para Terreno</h4>
+            <h4 className="font-bold text-destructive">🛑 Estado: PER Deshabilitado</h4>
             <p className="text-slate-700 leading-relaxed">
-              Motivo: {profile.certificationNote || "Falta completar inducción o código de ética."}
+              Motivo: {profile.certificationNote || "Deshabilitado por coordinación."}
             </p>
             <p className="text-[10px] text-slate-500">
               Las tareas críticas del programa se encuentran bloqueadas para tu usuario hasta que el coordinador valide tus antecedentes.
@@ -79,7 +83,24 @@ export default async function PERDashboardPage({
 
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
           <h3 className="font-bold text-sm text-slate-800 mb-3">Mi Agenda</h3>
-          <p className="text-slate-400 text-center py-4 text-xs">No tienes un acompañamiento activo asignado.</p>
+          {activeCases.length === 0 ? (
+            <p className="text-slate-400 text-center py-4 text-xs">No tienes un acompañamiento activo asignado.</p>
+          ) : (
+            <div className="space-y-2 text-xs">
+              {activeCases.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/per/casos/${c.id}/etapa`}
+                  className="flex justify-between items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-100 transition"
+                >
+                  <CaseName code={c.code} alias={c.alias} className="font-bold text-slate-800" />
+                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px] shrink-0">
+                    {mapCaseStatusToLabel(c.status)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </AppShell>

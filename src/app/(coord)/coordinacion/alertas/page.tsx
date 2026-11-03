@@ -35,6 +35,7 @@ export default async function CoordinatorValidacionPage({
       paCase: {
         select: {
           code: true,
+          alias: true,
         },
       },
     },
@@ -49,7 +50,7 @@ export default async function CoordinatorValidacionPage({
       isDemo,
     },
     include: {
-      paCase: { select: { code: true } },
+      paCase: { select: { code: true, alias: true } },
       assignedTo: { select: { name: true } },
       instrument: { select: { activityKey: true, submissionMode: true } },
     },

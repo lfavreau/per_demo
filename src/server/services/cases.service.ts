@@ -11,7 +11,6 @@ import {
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/services/itinerary.service";
 import { syncPendingCaseDocuments } from "@/server/services/document-sync.service";
-import { MAX_ACTIVE_CASES_PER_PER } from "@/lib/program-config";
 import type { CaseStage } from "@/lib/instrument-itinerary";
 
 // Helper to abbreviate Chilean regions
@@ -43,23 +42,6 @@ async function generatePaCode(regionId: string, isDemo: boolean): Promise<string
     code = `PA-${abbr}-${String(sequential).padStart(3, "0")}`;
   }
   return code;
-}
-
-// Un PER lleva como máximo un acompañamiento activo a la vez. "Activo" excluye
-// los estados terminales (egreso, retiro, deserción): esos ya no ocupan cupo.
-async function assertPerHasNoActiveCase(perId: string, isDemo: boolean) {
-  const activeCount = await prisma.pACase.count({
-    where: {
-      perId,
-      isDemo,
-      status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
-    },
-  });
-  if (activeCount >= MAX_ACTIVE_CASES_PER_PER) {
-    throw new Error(
-      `El PER ya tiene un acompañamiento activo en curso (máximo permitido: ${MAX_ACTIVE_CASES_PER_PER}).`
-    );
-  }
 }
 
 interface ProvisionCaseInput {
@@ -232,8 +214,6 @@ export async function createCaseFromCandidate(
   if (per.certificationStatus === "NO_HABILITADO") {
     throw new Error("No se puede asignar acompañamiento a un PER no habilitado");
   }
-  await assertPerHasNoActiveCase(perId, isDemo);
-
   const code = await generatePaCode(candidate.regionId, isDemo);
 
   const paCase = await provisionAndPersistCase({
@@ -297,18 +277,6 @@ export async function reassignCase(
       throw new Error("No se puede reasignar a un PER no habilitado");
     }
 
-    const otherActiveCount = await tx.pACase.count({
-      where: {
-        perId: newPerId,
-        isDemo,
-        status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
-      },
-    });
-    if (otherActiveCount >= MAX_ACTIVE_CASES_PER_PER) {
-      throw new Error(
-        `El PER de destino ya tiene un acompañamiento activo en curso (máximo permitido: ${MAX_ACTIVE_CASES_PER_PER}).`
-      );
-    }
 
     const previousPer = paCase.per;
 
@@ -346,6 +314,46 @@ export async function reassignCase(
       link: `/per?highlightCaseId=${caseId}`,
       isDemo,
     }, tx);
+
+    return updated;
+  });
+}
+
+export async function updateCaseAlias(caseId: string, alias: string | null, actorId: string, isDemo: boolean) {
+  return await prisma.$transaction(async (tx) => {
+    const paCase = await tx.pACase.findUnique({
+      where: { id: caseId },
+      include: { per: true },
+    });
+    if (!paCase || paCase.isDemo !== isDemo) throw new Error("Caso no encontrado");
+
+    const actor = await tx.user.findUnique({ where: { id: actorId } });
+    const allowed =
+      actor?.role === "ADMIN" ||
+      (actor?.role === "COORDINATOR" && actor.regionId === paCase.regionId) ||
+      (actor?.role === "PER" && paCase.per.userId === actorId);
+    if (!actor || !allowed) {
+      throw new Error("No autorizado para editar el alias de este caso");
+    }
+
+    const updated = await tx.pACase.update({
+      where: { id: caseId },
+      data: { alias },
+    });
+
+    // The alias itself is not written to the audit log (privacy rule): only whether one is set.
+    await tx.auditLog.create({
+      data: {
+        userId: actorId,
+        role: actor.role,
+        action: "UPDATE_CASE_ALIAS",
+        entityType: "PACase",
+        entityId: caseId,
+        previousValue: JSON.stringify({ hasAlias: Boolean(paCase.alias) }),
+        newValue: JSON.stringify({ hasAlias: Boolean(alias) }),
+        isDemo,
+      },
+    });
 
     return updated;
   });
@@ -579,11 +587,9 @@ export async function createDirectContinuityCase(
   }
 
   const selectedPer = await prisma.pERProfile.findUnique({ where: { id: perId }, include: { user: true } });
-  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus !== "HABILITADO") {
+  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus === "NO_HABILITADO") {
     throw new Error("El PER seleccionado no está habilitado en la región actual");
   }
-  await assertPerHasNoActiveCase(perId, isDemo);
-
   const code = await generatePaCode(regionId, isDemo);
 
   const candidate = await prisma.pACandidate.create({

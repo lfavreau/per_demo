@@ -611,7 +611,7 @@ Un botón de **tres líneas (☰)** abre el panel lateral con las secciones disp
 | Icono | Sección | Ruta |
 |---|---|---|
 | 📊 | Resumen Regional | `/coordinacion` |
-| 👥 | Nómina / Fase 2 | `/coordinacion/candidatas` |
+| 👥 | Registro de Ingresos | `/coordinacion/candidatas` |
 | 🤝 | Acompañamientos | `/coordinacion/casos` |
 | ✓ | Validación | `/coordinacion/alertas` |
 | 🗓️ | Supervisiones | `/coordinacion/supervisiones` |
@@ -665,7 +665,7 @@ Esta es la sección más importante si eres un Par Especialista en Recuperación
 
 ### 15.1 Tu pantalla principal (`/per`)
 
-Tu vista se organiza en **2 pestañas fijas** abajo de la pantalla — un PER lleva como máximo un acompañamiento activo a la vez, así que ya no existe una pestaña ni ruta "Casos Activos":
+Tu vista se organiza en **2 pestañas fijas** abajo de la pantalla — lo habitual es que un PER lleve un solo acompañamiento, por eso no existe una pestaña ni ruta "Casos Activos" (si lleva más de uno, `/per` muestra la lista para elegir):
 
 | Pestaña | Ruta | ¿Para qué sirve? |
 |---|---|---|
@@ -719,7 +719,7 @@ A diferencia de las Actividades, el Registro de Acompañamiento **no es un paso 
 
 ### 15.3 Tu acompañamiento activo
 
-Llevas como máximo un caso activo a la vez, así que no hay una lista que recorrer: lo que ves es directamente el encabezado de tu único caso, con:
+Lo habitual es llevar un solo caso, así que lo que ves es directamente el encabezado de tu caso (si llevas más de uno, antes eliges de una lista), con:
 - **Código del caso**: Ej: `PA-MET-001` (por privacidad, no se usan nombres). Si la persona tiene un alias registrado en la Actividad 2, aparece junto al código: `PA-MET-001 (Fer)`.
 - **Tipo**: *Nuevo* o *Continuidad*.
 - **Estado**: En qué etapa del acompañamiento está:
@@ -750,13 +750,13 @@ Si estás en terreno **sin señal**:
 Tu panel de resumen regional muestra:
 
 - **Estadísticas de tareas**: Pendientes, en revisión, completadas, atrasadas.
-- **Funnel de Fase 2**: Estado de las candidatas en el pipeline de ingreso (9 estados, ver §16.2).
+- **Funnel de ingreso**: Estado de las candidatas en el pipeline de ingreso (9 estados, ver §16.2).
 - **Casos activos**: Distribución por etapa (Vinculación, Conexión, Finalización, Egreso).
 - **Casos que Requieren Apoyo Metodológico**: las alertas de atraso/inactividad ya no dependen de un botón — se recalculan solas cada vez que entras a este panel. Desde aquí mismo escribes la nota y las cierras.
 
 ---
 
-### 16.2 Nómina e ingreso de personas — Fase 2 (`/coordinacion/candidatas`)
+### 16.2 Registro de ingresos de personas (`/coordinacion/candidatas`)
 
 Aquí gestionas el ingreso de nuevas personas al programa. La tabla lista **a toda la nómina**, no solo a quienes están listas para match.
 
@@ -771,7 +771,7 @@ Cada fila tiene un selector de estado editable con un clic — se guarda solo, y
 #### Conformar una dupla — en un solo paso
 
 1. **Persona Acompañada Apta**: Selecciona a la persona de la lista (solo aparecen *Admisible* o *Seleccionada*).
-2. **Acompañante PER Disponible**: Solo aparecen los PER habilitados de tu región que **no tengan ya un acompañamiento activo** — cada PER lleva como máximo uno a la vez.
+2. **Acompañante PER**: Aparecen los PER habilitados de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
 3. **Tipo de Acompañamiento**: *Nuevo* o *Continuidad*.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esa persona.
 5. Presiona **"Conformar Dupla"**.
@@ -781,6 +781,8 @@ Al enviar el formulario, la plataforma aprovisiona de una vez la carpeta de Driv
 > La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación), que se materializa sola en Drive apenas se valida (ver §22).
 
 > **¿Te equivocaste de PER o necesitas cambiarlo?** En la ficha del caso (§16.3) hay una tarjeta **"Reasignar Acompañante"** — es la operación de excepción para corregir una dupla ya formalizada.
+
+> **Alias (opcional)**: apodo de referencia que el coordinador o el PER asigna con **✏️ Asignar alias**. Si existe, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No usar nombre completo ni RUT. Drive, notificaciones, reportes y CSV siguen usando el código, y la auditoría registra el cambio sin guardar el texto.
 
 ---
 
@@ -846,7 +848,7 @@ Más abajo, en la misma página: instrumentos del itinerario (IAP, evaluaciones,
 | Campo | Descripción |
 |---|---|
 | Habilitación | *Habilitado* / *Pendiente* / *No Habilitado* — de solo lectura |
-| Acompañamiento | *Disponible* o *Asignado* — cada PER lleva como máximo uno a la vez |
+| Acompañamiento | *Disponible* o *Asignado* |
 | Horas de supervisión | Acumuladas |
 | Última supervisión | Fecha |
 | Cumplimiento | 💚 Al día / ⚠️ Alerta (>15 días) / 🔴 Crítico (>30 días) |
@@ -931,7 +933,7 @@ Módulo para **crear y administrar cuentas de usuarios PER**.
 
 #### Habilitación
 
-Cada PER tiene un selector de estado (Habilitado / Pendiente / No Habilitado) en la misma fila. Cámbialo con un clic para suspender a alguien puntualmente — es la única pantalla donde este estado se edita; el coordinador solo lo ve, de solo lectura, en `/coordinacion/supervisiones`.
+Cada PER tiene un selector de estado (Habilitado / Deshabilitado) en la misma fila. Cámbialo con un clic para suspender a alguien puntualmente — es la única pantalla donde este estado se edita; el coordinador solo lo ve, de solo lectura, en `/coordinacion/supervisiones`.
 
 #### Activar / Desactivar usuarios
 
@@ -1138,7 +1140,7 @@ Sí. La base de datos está alojada en la nube con conexiones cifradas. Cada acc
 ### Sobre el programa PER
 
 **¿Cuántas personas puedo acompañar a la vez?**
-**Un acompañamiento activo por PER.** No es una recomendación: la plataforma no permite asignarte un segundo caso mientras tengas uno activo. Cuando ese caso cierra (egreso, retiro o deserción), tu cupo queda libre para el siguiente.
+**Lo habitual es una persona por PER.** La plataforma no impone un tope: en casos excepcionales puedes llevar más de uno, y en ese caso al entrar ves la lista de tus acompañamientos para elegir.
 
 **¿Cuánto dura un acompañamiento completo?**
 Aproximadamente **9 meses**: 1 mes de vinculación + 6 meses de conexión + 2 meses de finalización.

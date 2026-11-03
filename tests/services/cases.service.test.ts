@@ -62,38 +62,17 @@ describe("cases.service — createCaseFromCandidate", () => {
     ).rejects.toThrow(/no habilitado/);
   });
 
-  it("CASE-03b: tope de 1 caso activo por PER (MAX_ACTIVE_CASES_PER_PER)", async () => {
+  it("CASE-03b: sin tope — un PER puede llevar más de un caso activo a la vez", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: per } = await createPer(region);
     const candidate1 = await createCandidate(region);
     const candidate2 = await createCandidate(region);
 
-    const firstCase = await createCaseFromCandidate(
-      candidate1.id,
-      per.id,
-      "motivo",
-      "NUEVO",
-      coord.id,
-      true
-    );
+    const firstCase = await createCaseFromCandidate(candidate1.id, per.id, "motivo", "NUEVO", coord.id, true);
+    const secondCase = await createCaseFromCandidate(candidate2.id, per.id, "motivo", "NUEVO", coord.id, true);
 
-    // Segundo intento con el mismo PER, que ya tiene un caso activo (VINCULACION) → bloqueado.
-    await expect(
-      createCaseFromCandidate(candidate2.id, per.id, "motivo", "NUEVO", coord.id, true)
-    ).rejects.toThrow(/ya tiene un acompañamiento activo/);
-
-    // Cerrar el primer caso libera el cupo.
-    await prisma.pACase.update({ where: { id: firstCase.id }, data: { status: "EGRESO" } });
-
-    const secondCase = await createCaseFromCandidate(
-      candidate2.id,
-      per.id,
-      "motivo",
-      "NUEVO",
-      coord.id,
-      true
-    );
+    expect(firstCase.perId).toBe(per.id);
     expect(secondCase.perId).toBe(per.id);
   });
 
@@ -254,7 +233,7 @@ describe("cases.service — reassignCase", () => {
     expect(newCase.perId).toBe(perA.id);
   });
 
-  it("CASE-17: no reasigna a un PER que ya tiene otro caso activo", async () => {
+  it("CASE-17: reasigna a un PER que ya tiene otro caso activo (sin tope)", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: perA } = await createPer(region);
@@ -262,19 +241,11 @@ describe("cases.service — reassignCase", () => {
     const candidate1 = await createCandidate(region);
     const candidate2 = await createCandidate(region);
 
-    const caseA = await createCaseFromCandidate(
-      candidate1.id,
-      perA.id,
-      "motivo",
-      "NUEVO",
-      coord.id,
-      true
-    );
+    const caseA = await createCaseFromCandidate(candidate1.id, perA.id, "motivo", "NUEVO", coord.id, true);
     await createCaseFromCandidate(candidate2.id, perB.id, "motivo", "NUEVO", coord.id, true);
 
-    await expect(reassignCase(caseA.id, perB.id, "motivo", coord.id, true)).rejects.toThrow(
-      /ya tiene un acompañamiento activo/
-    );
+    const moved = await reassignCase(caseA.id, perB.id, "motivo", coord.id, true);
+    expect(moved.perId).toBe(perB.id);
   });
 
   it("reasignar sin motivo está prohibido", async () => {

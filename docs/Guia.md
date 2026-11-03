@@ -23,7 +23,7 @@
    - [6.6 Modo sin internet (offline)](#66-modo-sin-internet-offline)
 7. [Guía para el Coordinador Regional](#7-guía-para-el-coordinador-regional)
    - [7.1 Panel de casos y acompañamientos](#71-panel-de-casos-y-acompañamientos)
-   - [7.2 Nómina e ingreso de nuevas personas (Fase 2)](#72-nómina-e-ingreso-de-nuevas-personas-fase-2)
+   - [7.2 Registro de ingresos de nuevas personas](#72-registro-de-ingresos-de-nuevas-personas)
    - [7.3 Bandeja de Validación (Registros de Acompañamiento e hitos)](#73-bandeja-de-validación-registros-de-acompañamiento-e-hitos)
    - [7.4 Dotación PER y supervisiones](#74-dotación-per-y-supervisiones)
    - [7.5 Redes e integración social](#75-redes-e-integración-social)
@@ -135,7 +135,7 @@ Cuando entras a la app, verás una **barra superior** con:
 Si eres coordinador o administrador, verás un botón de **tres líneas horizontales** (☰) llamado "menú hamburguesa" en la esquina superior. Al tocarlo, se abre un panel lateral con todas las secciones disponibles:
 
 - 📋 Panel Principal
-- 👥 Nómina / Fase 2
+- 👥 Registro de Ingresos
 - 📊 Casos
 - ✓ Validación (Registros de Acompañamiento e hitos del itinerario, en una sola bandeja)
 - 🏥 Supervisiones
@@ -145,7 +145,7 @@ Para cerrar el menú, toca la **X** o toca fuera del panel.
 
 ### Si eres PER
 
-Como acompañante PER, tu vista tiene **2 pestañas fijas** abajo de la pantalla: **📅 Mi Agenda** y **🔔 Avisos**. No hay una pestaña de "Casos Activos" porque llevas como máximo un acompañamiento activo a la vez: al entrar a la app llegas directo a la pantalla de trabajo del caso, donde está el itinerario que se explica en la [sección 6.2](#62-completar-el-itinerario-de-un-caso).
+Como acompañante PER, tu vista tiene **2 pestañas fijas** abajo de la pantalla: **📅 Mi Agenda** y **🔔 Avisos**. No hay una pestaña de "Casos Activos": lo habitual es llevar un solo acompañamiento, así que al entrar a la app llegas directo a la pantalla de trabajo del caso (si llevas más de uno, ves primero la lista para elegir), donde está el itinerario que se explica en la [sección 6.2](#62-completar-el-itinerario-de-un-caso).
 
 ---
 
@@ -159,7 +159,7 @@ Cuando entras a la app, tu vista tiene **2 pestañas fijas** abajo de la pantall
 
 | Pestaña | ¿Para qué sirve? |
 | ---------| -------------------|
-| **📅 Mi Agenda** | Pantalla de entrada. Te lleva directo a trabajar en tu acompañamiento activo — como llevas como máximo uno a la vez, no hay una lista que recorrer |
+| **📅 Mi Agenda** | Pantalla de entrada. Te lleva directo a trabajar en tu acompañamiento activo; si llevas más de uno, primero ves la lista para elegir |
 | **🔔 Avisos** | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
 Al entrar a la app llegas directo a la pantalla de trabajo de tu caso, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)). Si no tienes ningún acompañamiento asignado todavía, Mi Agenda te lo indica ahí mismo.
@@ -215,7 +215,7 @@ En el encabezado de tu pantalla de trabajo (donde llegas al abrir **"Mi Agenda"*
   - 🔵 **Conexión**: Ya están trabajando juntos con el IAP.
   - 🟢 **Finalización**: Preparando el cierre del acompañamiento.
 
-Como llevas como máximo un acompañamiento activo a la vez, no hay una lista de casos que revisar — este es el único.
+Lo habitual es llevar un solo acompañamiento, por eso no hay una lista de casos que revisar — este es el tuyo.
 
 ---
 
@@ -292,9 +292,9 @@ Si una persona acompañada abandona el programa:
 
 ---
 
-### 7.2 Nómina e ingreso de nuevas personas (Fase 2)
+### 7.2 Registro de ingresos de nuevas personas
 
-**Ubicación en el menú**: 👥 Nómina / Fase 2
+**Ubicación en el menú**: 👥 Registro de Ingresos
 
 Aquí gestionas el ingreso de nuevas personas al programa. La pantalla tiene dos partes:
 
@@ -307,7 +307,7 @@ Muestra **a todas** las personas de tu nómina de preselección, no solo las apt
 Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo envío**:
 
 1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista (solo aparecen las que están en *Admisible* o *Seleccionada*).
-2. **Acompañante PER Disponible**: Selecciona al PER que la acompañará. Solo aparecen los PER habilitados de tu región que **no tengan ya un acompañamiento activo** — cada PER lleva como máximo uno a la vez.
+2. **Acompañante PER**: Selecciona al PER que la acompañará. Aparecen los PER habilitados de tu región, con cuántos casos activos lleva cada uno (lo habitual es uno, pero no hay tope).
 3. **Tipo de Acompañamiento**:
    - *Nuevo*: Primera vez que esta persona entra al programa.
    - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
@@ -316,9 +316,9 @@ Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo
 
 Al enviar, la plataforma crea de una vez la carpeta del caso en Drive, el documento IAP y deja el caso formalizado — no existe un paso intermedio de "proponer" que alguien tenga que volver a abrir y aprobar por separado. Si algo falla al aprovisionar Drive, no se crea nada: vuelves a intentar con el mismo formulario.
 
-> **¿Por qué dice "Fase 2"?** Porque en el modelo del programa PER, la Fase 2 es la etapa de *Admisibilidad e Ingreso*. Las personas pasan por este proceso antes de comenzar el acompañamiento activo (Fase 3 en adelante).
-
 > **¿Y si me equivoqué de PER, o el acompañante ya no puede seguir?** En la ficha del caso (sección 7.1) hay una tarjeta **"Reasignar Acompañante"** — cambia el PER a cargo, libera el cupo del anterior y notifica a ambos.
+
+> **Alias (opcional)**: Con **✏️ Asignar alias** (en la ficha del caso) puedes ponerle un apodo de referencia a la persona acompañada, por ejemplo "Don Pato". Si tiene alias, se muestra como nombre principal y el código queda más chico entre paréntesis: **Don Pato** (PA-MET-001). No uses nombre completo ni RUT. El alias solo se ve dentro de la app: Drive, notificaciones y reportes siguen usando el código.
 
 ---
 
@@ -355,8 +355,8 @@ Esta sección tiene dos partes:
 
 Ves a todos los PER de tu región con su información:
 
-- **Estado de habilitación**: *Habilitado*, *Pendiente* o *No Habilitado* — de solo lectura.
-- **Acompañamiento**: si tiene o no un caso activo asignado (*Disponible* / *Asignado*) — cada PER lleva como máximo uno a la vez.
+- **Estado de habilitación**: *Habilitado* o *Deshabilitado* — de solo lectura.
+- **Acompañamiento**: si tiene o no un caso activo asignado (*Disponible* / *Asignado*).
 - **Horas de supervisión acumuladas**.
 - **Última supervisión**: Cuándo fue su última reunión de supervisión contigo.
 - **Indicador de cumplimiento**:
@@ -432,7 +432,7 @@ Como administrador nacional, tienes acceso a las siguientes secciones:
 Aquí creas y administras las cuentas de los acompañantes PER.
 
 - **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna. Nace **Habilitado** — se asume que la contratación ya se resolvió fuera de la app.
-- **Habilitación**: selector junto a cada PER (Habilitado / Pendiente / No Habilitado) — cámbialo con un clic, se guarda solo. Es la única pantalla donde se puede cambiar; úsalo como excepción para suspender a alguien.
+- **Habilitación**: selector junto a cada PER (Habilitado / Deshabilitado) — cámbialo con un clic, se guarda solo. Es la única pantalla donde se puede cambiar; úsalo como excepción para suspender a alguien.
 - **Activar / Desactivar**: Un botón junto a cada PER. Uno desactivado no puede iniciar sesión.
 - **Editar**: Cambia nombre, usuario o región. Te va a pedir la **contraseña de administrador** para confirmar.
 - **Eliminar**: Si el PER tiene casos asociados, el sistema **no te deja eliminarlo** (para no dejar casos sin dueño) — desactívalo en su lugar. Si no tiene casos, te pide la contraseña de administrador y lo elimina de forma permanente.

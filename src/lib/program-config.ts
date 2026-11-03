@@ -14,9 +14,6 @@ export const REGIONS = [
 
 export const REGION_NAMES = REGIONS.map((r) => r.name);
 
-// Un PER lleva como máximo este número de acompañamientos activos a la vez.
-export const MAX_ACTIVE_CASES_PER_PER = 1;
-
 // Sesiones de Registro de Acompañamiento validadas antes de que la Evaluación Intermedia
 // (Actividad 5) se desbloquee sola en Conexión. El coordinador puede habilitarla antes a mano
 // si a su criterio ya corresponde — ver triggerIntermediateEvaluation en itinerary.service.ts.

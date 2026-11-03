@@ -12,7 +12,22 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "archivos_antiguos/**",
+    ".open-next/**",
+    "scratch/**",
   ]),
+  {
+    // Etapa beta: patrones existentes que funcionan; se reportan como advertencia.
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
+  {
+    // db.ts carga los adaptadores (Turso, D1, SQLite) en tiempo de ejecución según el entorno.
+    files: ["src/lib/db.ts"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

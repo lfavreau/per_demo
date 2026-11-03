@@ -4,6 +4,7 @@ import AppShell from "@/components/shell/AppShell";
 import { prisma } from "@/lib/db";
 import { freezeSnapshotAction } from "@/app/actions/coordinator";
 import { computeKpis } from "@/server/services/reports.service";
+import { mapDomainToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
 
@@ -163,6 +164,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
     levelBasic: levelBasicVal,
     levelIntermediate: levelIntermediateVal,
     levelIntense: levelIntenseVal,
+    levelUnassigned: levelUnassignedVal = 0,
     vinSesCount: vinSesCountVal,
     conSesCount: conSesCountVal,
     finSesCount: finSesCountVal,
@@ -332,7 +334,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                   {satisfactionPercentVal >= 80 ? "Meta 80% OK" : "Pendiente"}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-500 block">{closedWithSatisfactionVal} de {closedCountVal} egresos</span>
+              <span className="text-[10px] text-slate-500 block">{closedWithSatisfactionVal} de {closedCountVal} casos cerrados</span>
             </div>
           </div>
         </div>
@@ -366,7 +368,7 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                 <tbody>
                   {domainStatsVal.map((d: any) => (
                     <tr key={d.domain} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                      <td className="py-2 font-medium text-slate-700">{d.domain}</td>
+                      <td className="py-2 font-medium text-slate-700">{mapDomainToLabel(d.domain)}</td>
                       <td className="py-2 text-center font-bold text-slate-900">{d.exAnteCount}</td>
                       <td className="py-2 text-center font-bold text-slate-900">{d.exPostCount}</td>
                     </tr>
@@ -415,6 +417,17 @@ export default async function AdminReportesPage({ searchParams }: { searchParams
                       <div className="bg-slate-900 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelIntenseVal/totalCasesCountVal)*100 : 0}%` }}></div>
                     </div>
                   </div>
+                  {levelUnassignedVal > 0 && (
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="font-semibold text-slate-500">Sin nivel asignado</span>
+                        <span className="font-bold text-slate-500">{levelUnassignedVal} casos</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-slate-300 h-full rounded-full" style={{ width: `${totalCasesCountVal > 0 ? (levelUnassignedVal/totalCasesCountVal)*100 : 0}%` }}></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic mt-2">
