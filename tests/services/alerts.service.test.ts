@@ -101,11 +101,11 @@ describe("alerts.service — checkAllAlertRules", () => {
     expect(alert).not.toBeNull();
   });
 
-  it("ALRT-05: PER no habilitado con tarea crítica genera alerta CRITICA", async () => {
+  it("ALRT-05: PER inactivo con tarea crítica genera alerta CRITICA", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const admin = await createCoordinator(region);
-    const { user: perUser } = await createPer(region, { certificationStatus: "NO_HABILITADO" });
+    const { user: perUser } = await createPer(region, { active: false });
     const instrument = await createAdHocInstrument(admin.id, { criticalTask: true });
 
     const task = await prisma.task.create({

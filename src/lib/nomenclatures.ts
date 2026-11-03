@@ -77,14 +77,6 @@ export function mapAlertTypeToLabel(type: string): string {
 }
 
 /**
- * A PER is either registered (habilitado) or explicitly disabled.
- * "PENDIENTE" is a legacy value and counts as habilitado.
- */
-export function isPerHabilitado(certificationStatus: string | null | undefined): boolean {
-  return certificationStatus !== "NO_HABILITADO";
-}
-
-/**
  * Maps the stored recovery domain id to its official display label.
  * Stored values are kept unchanged to preserve existing records.
  */

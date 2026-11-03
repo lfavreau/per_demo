@@ -164,13 +164,6 @@ Cuando entras a la app, tu vista tiene **2 pestañas fijas** abajo de la pantall
 
 Al entrar a la app llegas directo a la pantalla de trabajo de tu caso, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)). Si no tienes ningún acompañamiento asignado todavía, Mi Agenda te lo indica ahí mismo.
 
-### Si ves un aviso rojo que dice "Estado: No Habilitado para Terreno"
-
-Esto significa que tu coordinador aún no ha validado tu habilitación técnica. Mientras aparezca este aviso:
-- **No podrás** recibir tareas críticas.
-- **Sí puedes** ver tu panel y familiarizarte con la app.
-- **¿Qué hacer?** Contacta a tu coordinador regional para que complete tu proceso de habilitación.
-
 ---
 
 ### 6.2 Completar el itinerario de un caso
@@ -307,7 +300,7 @@ Muestra **a todas** las personas de tu nómina de preselección, no solo las apt
 Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo envío**:
 
 1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista (solo aparecen las que están en *Admisible* o *Seleccionada*).
-2. **Acompañante PER**: Selecciona al PER que la acompañará. Aparecen los PER habilitados de tu región, con cuántos casos activos lleva cada uno (lo habitual es uno, pero no hay tope).
+2. **Acompañante PER**: Selecciona al PER que la acompañará. Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (lo habitual es uno, pero no hay tope).
 3. **Tipo de Acompañamiento**:
    - *Nuevo*: Primera vez que esta persona entra al programa.
    - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
@@ -355,7 +348,7 @@ Esta sección tiene dos partes:
 
 Ves a todos los PER de tu región con su información:
 
-- **Estado de habilitación**: *Habilitado* o *Deshabilitado* — de solo lectura.
+- **Estado**: *Activo* o *Inactivo* — de solo lectura.
 - **Acompañamiento**: si tiene o no un caso activo asignado (*Disponible* / *Asignado*).
 - **Horas de supervisión acumuladas**.
 - **Última supervisión**: Cuándo fue su última reunión de supervisión contigo.
@@ -364,11 +357,9 @@ Ves a todos los PER de tu región con su información:
   - ⚠️ Alerta (más de 15 días sin supervisión)
   - 🔴 Crítico (más de 30 días sin supervisión)
 
-#### Sobre la habilitación de un PER
+#### Sobre el estado de un PER
 
-Esta pantalla ya **no** tiene botones para habilitar o suspender: el estado se muestra de solo lectura, con una nota que apunta a Administración → Gestión de Usuarios. Un PER nuevo nace habilitado (la decisión de contratación y habilitación se toma en la reunión de coordinación, fuera de la app); el selector en Administración queda como excepción, para suspender a alguien puntualmente.
-
-> Un PER no habilitado **no puede recibir nuevos casos ni tareas críticas**.
+Este estado se muestra de solo lectura, con una nota que apunta a Administración → Gestión de Usuarios, que es donde se activa o desactiva a un PER. Un PER inactivo **no puede iniciar sesión ni recibir nuevos casos**.
 
 #### Registrar una supervisión
 
@@ -415,7 +406,7 @@ Ya no hay un botón para "revisar alertas": el sistema recalcula todo **solo, ca
 
 - Casos sin Registros de Acompañamiento por más de 10-14 días según su etapa.
 - Tareas vencidas (pasan a estado *Atrasada* automáticamente).
-- PER sin habilitación con una tarea crítica asignada.
+- PER inactivo con una tarea crítica asignada.
 - Instrumentos enviados hace más de 5 días sin que los hayas revisado.
 - Casos estancados en su etapa actual.
 
@@ -431,13 +422,13 @@ Como administrador nacional, tienes acceso a las siguientes secciones:
 
 Aquí creas y administras las cuentas de los acompañantes PER.
 
-- **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna. Nace **Habilitado** — se asume que la contratación ya se resolvió fuera de la app.
-- **Habilitación**: selector junto a cada PER (Habilitado / Deshabilitado) — cámbialo con un clic, se guarda solo. Es la única pantalla donde se puede cambiar; úsalo como excepción para suspender a alguien.
+- **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna. Nace **Activo** — se asume que la contratación ya se resolvió fuera de la app.
+- **Estado**: la columna *Estado* muestra si el PER está **Activo** o **Inactivo**. Con el botón **Desactivar / Activar** lo cambias; un PER inactivo no puede iniciar sesión ni recibir casos. Úsalo como excepción para suspender a alguien.
 - **Activar / Desactivar**: Un botón junto a cada PER. Uno desactivado no puede iniciar sesión.
 - **Editar**: Cambia nombre, usuario o región. Te va a pedir la **contraseña de administrador** para confirmar.
 - **Eliminar**: Si el PER tiene casos asociados, el sistema **no te deja eliminarlo** (para no dejar casos sin dueño) — desactívalo en su lugar. Si no tiene casos, te pide la contraseña de administrador y lo elimina de forma permanente.
 
-> Editar, eliminar y los cambios de habilitación quedan siempre registrados en la Bitácora de Auditoría.
+> Editar, eliminar y los cambios de estado quedan siempre registrados en la Bitácora de Auditoría.
 
 ### Catálogo Nacional de Redes (`/admin/redes`)
 

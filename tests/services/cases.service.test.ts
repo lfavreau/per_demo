@@ -67,15 +67,15 @@ describe("cases.service — createCaseFromCandidate", () => {
     expect(paCase.regionId).toBe(region);
   });
 
-  it("CASE-03: no se asigna caso a PER no habilitado", async () => {
+  it("CASE-03: no se asigna caso a PER inactivo", async () => {
     const region = testRegion();
     const coord = await createCoordinator(region);
     const candidate = await createCandidate(region);
-    const { profile: per } = await createPer(region, { certificationStatus: "NO_HABILITADO" });
+    const { profile: per } = await createPer(region, { active: false });
 
     await expect(
       createCaseFromCandidate(candidate.id, per.id, "motivo", "NUEVO", coord.id, true)
-    ).rejects.toThrow(/no habilitado/);
+    ).rejects.toThrow(/inactivo/);
   });
 
   it("CASE-03b: sin tope — un PER puede llevar más de un caso activo a la vez", async () => {

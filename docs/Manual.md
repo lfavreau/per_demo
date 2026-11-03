@@ -136,7 +136,7 @@ El programa PER se organiza en **5 fases secuenciales** que estructuran todo el 
 | Caracterización | Registro del perfil del PER (experiencia, formación, región) |
 | Habilitación | El coordinador valida que el PER está listo para acompañar |
 
-> **Regla**: Un PER que no ha sido habilitado por coordinación **no puede recibir asignaciones de casos** ni tareas críticas.
+> **Regla**: Un PER inactivo (desactivado en Administración) **no puede iniciar sesión ni recibir asignaciones de casos**.
 
 ### Fase 2 — Admisibilidad e Ingreso
 
@@ -635,7 +635,7 @@ La plataforma tiene **dos modos de operación** completamente independientes:
 
 ### 🧪 Modo Demo
 
-- Se accede desde el botón **"🧪 Cuentas de Evaluación Operativa"** al final de la pantalla de login, que abre un modal con **16 cuentas** de acceso directo: 1 Administrador, los 5 Coordinadores Regionales y 10 acompañantes PER (dos por región, cubriendo Vinculación/Conexión/Finalización con distintos estados de habilitación).
+- Se accede desde el botón **"🧪 Cuentas de Evaluación Operativa"** al final de la pantalla de login, que abre un modal con **16 cuentas** de acceso directo: 1 Administrador, los 5 Coordinadores Regionales y 10 acompañantes PER (dos por región, cubriendo Vinculación/Conexión/Finalización).
 - Contiene **datos ficticios** precargados: casos, registros de acompañamiento, tareas, supervisiones, candidatas y alertas.
 - Ideal para **explorar la plataforma**, capacitarse y conocer las funcionalidades sin afectar datos reales.
 - Los datos demo están completamente aislados del modo real.
@@ -673,10 +673,6 @@ Tu vista se organiza en **2 pestañas fijas** abajo de la pantalla — lo habitu
 | 🔔 **Avisos** | `/per/avisos` | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
 `/per` resuelve directo a tu **pantalla de etapa** (`/per/casos/[id]/etapa`), que es donde realmente se trabaja: ahí ves el itinerario de la etapa actual y el formulario del paso pendiente, con el código y alias del caso en el encabezado. Ver la [sección 5](#5-el-itinerario-de-acompañamiento-personalizado-iap) para entender cómo funciona ese itinerario.
-
-#### Si ves "Estado: No Habilitado para Terreno"
-
-Significa que tu coordinador aún no ha validado tu habilitación técnica. **No podrás recibir tareas críticas**, pero sí puedes familiarizarte con la app. Contacta a tu coordinador regional.
 
 ---
 
@@ -771,7 +767,7 @@ Cada fila tiene un selector de estado editable con un clic — se guarda solo, y
 #### Conformar una dupla — en un solo paso
 
 1. **Persona Acompañada Apta**: Selecciona a la persona de la lista (solo aparecen *Admisible* o *Seleccionada*).
-2. **Acompañante PER**: Aparecen los PER habilitados de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
+2. **Acompañante PER**: Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
 3. **Tipo de Acompañamiento**: *Nuevo* o *Continuidad*.
 4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esa persona.
 5. Presiona **"Conformar Dupla"**.
@@ -847,15 +843,15 @@ Más abajo, en la misma página: instrumentos del itinerario (IAP, evaluaciones,
 
 | Campo | Descripción |
 |---|---|
-| Habilitación | *Habilitado* / *Pendiente* / *No Habilitado* — de solo lectura |
+| Estado | *Activo* / *Inactivo* — de solo lectura |
 | Acompañamiento | *Disponible* o *Asignado* |
 | Horas de supervisión | Acumuladas |
 | Última supervisión | Fecha |
 | Cumplimiento | 💚 Al día / ⚠️ Alerta (>15 días) / 🔴 Crítico (>30 días) |
 
-#### Sobre la habilitación
+#### Sobre el estado
 
-Esta pantalla ya no tiene botones para habilitar o suspender a un PER — el estado se muestra de solo lectura, con una nota que apunta a `/admin/usuarios`. Un PER nace habilitado por defecto (la decisión de contratación y habilitación se resuelve en la reunión de coordinación, fuera de la app); el selector en Administración queda como excepción, para suspender a alguien puntualmente.
+El estado se muestra de solo lectura, con una nota que apunta a `/admin/usuarios`, donde se activa o desactiva a un PER. Un PER inactivo no puede iniciar sesión ni recibir casos.
 
 #### Registrar supervisión
 
@@ -892,7 +888,7 @@ Ya no existe un botón para evaluar alertas ni un ítem de menú propio: las reg
 | **Instrumento pendiente de validación** | Un paso del itinerario lleva varios días enviado sin revisión de coordinación |
 | **Etapa estancada** | El caso tiene todo validado pero no avanza de etapa |
 | **Alertas de supervisión** | PER con >15 días sin supervisión |
-| **Alertas documentales** | Tareas atrasadas o PER no habilitado |
+| **Alertas documentales** | Tareas atrasadas o PER inactivo |
 
 Los hitos pendientes de validación se revisan en la bandeja de §16.4, no aquí.
 
@@ -929,15 +925,11 @@ Módulo para **crear y administrar cuentas de usuarios PER**.
 4. Selecciona la **Coordinación Regional** a la que se asigna.
 5. Presiona **"Guardar Acompañante"**.
 
-> El nuevo PER nace con habilitación **"Habilitado"** — se asume que la contratación y la habilitación ya se resolvieron en la reunión de coordinación, fuera de la app — y aparece de inmediato en la nómina, pudiendo iniciar sesión.
-
-#### Habilitación
-
-Cada PER tiene un selector de estado (Habilitado / Deshabilitado) en la misma fila. Cámbialo con un clic para suspender a alguien puntualmente — es la única pantalla donde este estado se edita; el coordinador solo lo ve, de solo lectura, en `/coordinacion/supervisiones`.
+> El nuevo PER nace **Activo** — se asume que la contratación ya se resolvió en la reunión de coordinación, fuera de la app — y aparece de inmediato en la nómina, pudiendo iniciar sesión.
 
 #### Activar / Desactivar usuarios
 
-Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivado no puede iniciar sesión — esto es distinto de la habilitación: un PER puede estar activo (puede loguearse) y a la vez no habilitado (no puede recibir casos ni tareas críticas).
+Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivado (*Inactivo*) no puede iniciar sesión ni recibir casos; la columna *Estado* muestra si está *Activo* o *Inactivo*.
 
 > ⚠️ La cuenta `admin@per2026.cl` no puede ser desactivada.
 
@@ -1054,7 +1046,7 @@ Vista de solo lectura, consolidada a nivel país, del catálogo de dispositivos 
 | **Egreso** | Cierre exitoso del proceso de acompañamiento |
 | **Retiro Voluntario** | La PA decide salir del programa por su cuenta |
 | **Deserción** | La PA abandona sin aviso y sin responder a intentos de contacto |
-| **Habilitación** | Validación de que un PER está listo para trabajar en terreno |
+| **Activo / Inactivo** | Estado de la cuenta de un PER: un PER inactivo no inicia sesión ni recibe casos |
 | **Funnel** | Pipeline de estados por los que pasa una persona antes de ingresar al programa |
 | **Snapshot** | Foto inmutable de indicadores para una fecha de corte oficial |
 | **PWA** | Progressive Web App. Aplicación web que se puede instalar como nativa |

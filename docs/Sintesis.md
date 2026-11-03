@@ -23,7 +23,7 @@
 | **PA** — Persona Acompañada | Dirige su propio proceso |
 | **Dupla** | PER + PA |
 | **Coordinador/a Regional** | Supervisa PER, valida entregas, arma duplas, gestiona alertas |
-| **Administrador Nacional** | KPIs, usuarios (alta y deshabilitación de PER), instrumentos, auditoría, reportes SENDA |
+| **Administrador Nacional** | KPIs, usuarios (alta y desactivación de PER), instrumentos, auditoría, reportes SENDA |
 
 ### Qué NO hace un PER
 - No reemplaza terapia, no diagnostica ni prescribe.
@@ -104,7 +104,6 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 | Mis Supervisiones | Registro hecho por coordinación |
 
 - **Offline**: banner amarillo → "Guardar Borrador Local" → "Sincronizar ahora" al volver la señal. Borradores solo en ese dispositivo.
-- **Deshabilitado**: aviso "PER Deshabilitado".
 
 ### Coordinador Regional — `/coordinacion`
 | Sección | Ruta | Función |
@@ -113,7 +112,7 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 | Registro de Ingresos | `/candidatas` | Funnel de ingreso, proponer dupla con fundamentación |
 | Acompañamientos | `/casos` | Validar y formalizar dupla, timeline, avance de etapa, retiro/deserción, enlaces a carpeta/IAP/Acta |
 | Validación sesiones | `/sesiones` | Bandeja → modal completo → Aprobar o Devolver con observaciones |
-| Supervisiones | `/supervisiones` | Dotación PER (Habilitado/Deshabilitado), registrar supervisión (agenda en Calendar), semáforo 💚 / ⚠️ >15 d / 🔴 >30 d |
+| Supervisiones | `/supervisiones` | Dotación PER (Activo/Inactivo), registrar supervisión (agenda en Calendar), semáforo 💚 / ⚠️ >15 d / 🔴 >30 d |
 | Redes | `/redes` | Dispositivos territoriales, activaciones (derivaciones), focus groups y reuniones de equipo (Fase 5) |
 | Alertas | `/alertas` | Hitos por validar, casos sin bitácora, tareas atrasadas |
 
@@ -121,7 +120,7 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 | Sección | Función |
 |---|---|
 | Resumen | KPIs nacionales filtrables por región; sincronizar Google Workspace |
-| Usuarios | Crear cuentas PER (quedan habilitadas), asignar región, Deshabilitar/Habilitar |
+| Usuarios | Crear cuentas PER (quedan activas), asignar región, Desactivar/Activar |
 | Instrumentos | Catálogo por fase: obligatorio, bloquea avance, requiere validación; Vigente/Borrador/Archivado |
 | Reportes SENDA | Métricas del convenio por región, período y desagregación (género, edad, educación, empleo); CSV; **Congelar Snapshot** |
 | Auditoría | Log inmutable (quién, rol, acción, entidad, valores previos/nuevos); exportar CSV |
@@ -130,7 +129,7 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 
 ## 5. Ciclo de vida de un caso (flujo para demo en vivo)
 
-1. **Admin** crea cuenta PER (queda habilitada).
+1. **Admin** crea cuenta PER (queda activa).
 2. **Coord** registra candidata y la avanza por el funnel hasta *Admisible/Seleccionada*.
 3. **Coord** propone dupla (PER + PA + fundamentación) → valida → PER entrega Acta de Primer Encuentro → **formaliza**.
 4. Sistema crea en Drive carpeta del caso + IAP desde plantilla + tareas por instrumento.
@@ -157,7 +156,7 @@ Región/
 
 | Regla | Detalle |
 |---|---|
-| Estado PER | Habilitado o Deshabilitado, sin estados intermedios. Deshabilitado no ingresa ni recibe casos |
+| Estado PER | Activo o Inactivo, sin estados intermedios. Inactivo no ingresa ni recibe casos |
 | Carga | Habitual 1 PER : 1 PA; sin tope en la plataforma |
 | Match | Requiere fundamentación; pasa por Propuesto → Validado → Formalizado |
 | Egreso | Bloqueado sin Ex-Post + Encuesta de Satisfacción validadas ("Requisito Metodológico del Convenio") |

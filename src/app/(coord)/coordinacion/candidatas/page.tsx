@@ -5,7 +5,6 @@ import AppShell from "@/components/shell/AppShell";
 import { createCaseAction, createCandidateAction } from "@/app/actions/coordinator";
 import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
 import CaseName from "@/components/cases/CaseName";
-import { isPerHabilitado } from "@/lib/nomenclatures";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +48,7 @@ export default async function CoordinatorCandidatasPage({
   const perProfiles = allPerProfiles.filter(
     (p: any) =>
       Boolean(p.user?.isDemo) === isDemo &&
-      p.user?.active !== false &&
-      isPerHabilitado(p.certificationStatus)
+      p.user?.active !== false
   );
 
   // 3. Fetch Existing Cases/Matches created in region

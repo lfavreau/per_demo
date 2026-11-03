@@ -113,7 +113,7 @@ export async function checkAllAlertRules(isDemo: boolean) {
     }
   }
 
-  // RULE 3: PER non-certified performing critical tasks
+  // RULE 3: tarea crítica asignada a un PER inactivo (no puede iniciar sesión para completarla)
   const criticalTasksByUncertifiedPer = await prisma.task.findMany({
     where: {
       status: { notIn: ["VALIDADA", "CANCELADA", "NO_APLICA"] },
@@ -121,9 +121,7 @@ export async function checkAllAlertRules(isDemo: boolean) {
         criticalTask: true,
       },
       assignedTo: {
-        profile: {
-          certificationStatus: "NO_HABILITADO",
-        },
+        active: false,
       },
       isDemo,
     },

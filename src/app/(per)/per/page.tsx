@@ -69,18 +69,6 @@ export default async function PERDashboardPage({
   return (
     <AppShell user={user}>
       <div className="space-y-6">
-        {profile.certificationStatus === "NO_HABILITADO" && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-2 text-xs">
-            <h4 className="font-bold text-destructive">🛑 Estado: PER Deshabilitado</h4>
-            <p className="text-slate-700 leading-relaxed">
-              Motivo: {profile.certificationNote || "Deshabilitado por coordinación."}
-            </p>
-            <p className="text-[10px] text-slate-500">
-              Las tareas críticas del programa se encuentran bloqueadas para tu usuario hasta que el coordinador valide tus antecedentes.
-            </p>
-          </div>
-        )}
-
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
           <h3 className="font-bold text-sm text-slate-800 mb-3">Mi Agenda</h3>
           {activeCases.length === 0 ? (

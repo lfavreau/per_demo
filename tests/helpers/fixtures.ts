@@ -38,7 +38,8 @@ export async function createCoordinator(regionId: string, isDemo = true) {
 }
 
 interface CreatePerOptions {
-  certificationStatus?: "PENDIENTE" | "HABILITADO" | "NO_HABILITADO";
+  /** false = cuenta inactiva (no inicia sesión ni recibe casos). */
+  active?: boolean;
   isDemo?: boolean;
   coordinatorId?: string;
 }
@@ -52,7 +53,7 @@ export async function createPer(regionId: string, opts: CreatePerOptions = {}) {
       email: `${uid("per")}@per2026.cl`,
       role: "PER",
       regionId,
-      active: true,
+      active: opts.active ?? true,
       isDemo,
     },
   });
@@ -62,7 +63,6 @@ export async function createPer(regionId: string, opts: CreatePerOptions = {}) {
       regionId,
       coordinatorId: opts.coordinatorId,
       generation: "PRIMERA",
-      certificationStatus: opts.certificationStatus ?? "HABILITADO",
     },
   });
   return { user, profile };

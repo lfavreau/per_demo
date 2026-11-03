@@ -226,63 +226,6 @@ export async function toggleUserStatusAction(formData: FormData) {
   redirect("/admin/usuarios?success=status_updated");
 }
 
-export async function updatePerStatusAction(formData: FormData): Promise<void> {
-  const adminUser = await requireUser(["ADMIN"]);
-
-  const perId = formData.get("perId") as string;
-  const toStatus = formData.get("status") as string;
-
-  if (!perId || !toStatus) {
-    redirect("/admin/usuarios?error=missing_fields");
-  }
-  if (!["HABILITADO", "NO_HABILITADO"].includes(toStatus)) {
-    redirect("/admin/usuarios?error=invalid_certification_status");
-  }
-
-  const profile = await prisma.pERProfile.findUnique({
-    where: { id: perId },
-    include: { user: true },
-  });
-  if (!profile) {
-    redirect("/admin/usuarios?error=user_not_found");
-  }
-
-  // La habilitación no puede cruzar modos: un admin en sesión demo no debe
-  // alterar el estado de un PER real, ni al revés.
-  if (Boolean(profile!.user.isDemo) !== Boolean(adminUser.isDemo)) {
-    redirect("/admin/usuarios?error=mode_mismatch");
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.pERProfile.update({
-      where: { id: perId },
-      data: {
-        certificationStatus: toStatus,
-        certifiedByUserId: adminUser.id,
-        certifiedAt: toStatus === "HABILITADO" ? new Date() : null,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        userId: adminUser.id,
-        role: adminUser.role,
-        action: toStatus === "HABILITADO" ? "HABILITACION_PER" : "SUSPENSION_PER",
-        entityType: "PERProfile",
-        entityId: perId,
-        previousValue: profile!.certificationStatus,
-        newValue: toStatus,
-        isDemo: Boolean(adminUser.isDemo),
-      },
-    });
-  });
-
-  revalidatePath("/admin/usuarios");
-  revalidatePath("/coordinacion/supervisiones");
-  revalidatePath("/per", "layout");
-  redirect("/admin/usuarios?success=cert_updated");
-}
-
 export async function updateInstrumentPlacementAction(formData: FormData): Promise<void> {
   const adminUser = await requireUser(["ADMIN"]);
 

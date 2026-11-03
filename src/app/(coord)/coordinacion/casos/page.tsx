@@ -51,7 +51,7 @@ export default async function CoordinatorCasosPage({
   });
 
   const allRegionalPers = await prisma.pERProfile.findMany({
-    where: { regionId: user.regionId, certificationStatus: { not: "NO_HABILITADO" }, user: { active: true } },
+    where: { regionId: user.regionId, user: { active: true } },
     include: {
       user: true,
       cases: {

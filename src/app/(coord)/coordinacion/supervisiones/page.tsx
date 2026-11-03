@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import { logSupervisionAction } from "@/app/actions/coordinator";
 import { SUPERVISION_ALERT_DAYS } from "@/lib/program-config";
-import { isPerHabilitado } from "@/lib/nomenclatures";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
@@ -105,13 +104,13 @@ export default async function CoordinatorSupervisionesPage({
                   Dotación PER de la Región ({perProfiles.length})
                 </h4>
                 <p className="text-[10px] text-slate-400 mt-0.5">
-                  La habilitación de terreno se gestiona desde Administración → Gestión de Usuarios.
+                  Activar o desactivar a un PER se hace desde Administración → Gestión de Usuarios.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {perComplianceList.map(({ per, lastDate, daysSinceLast, alertStatus, totalHours }) => {
-                  const isCertified = per.user.active && isPerHabilitado(per.certificationStatus);
+                  const isActive = per.user.active;
                   return (
                     <div
                       key={per.id}
@@ -130,13 +129,13 @@ export default async function CoordinatorSupervisionesPage({
                             <p className="text-[10px] text-slate-500 mt-0.5">Generación: {per.generation}</p>
                           </div>
                           <div className="shrink-0">
-                            {isCertified ? (
+                            {isActive ? (
                               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                ✓ Habilitado
+                                ✓ Activo
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                Deshabilitado
+                                Inactivo
                               </span>
                             )}
                           </div>

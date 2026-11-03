@@ -35,7 +35,7 @@ model PERProfile {
   regionId            String
   coordinatorId       String?
   generation          String           // "PRIMERA", "SEGUNDA", "TERCERA", "OTRA"
-  certificationStatus String           @default("PENDIENTE") // "HABILITADO", "NO_HABILITADO" (deshabilitado). "PENDIENTE" es legado y cuenta como habilitado
+  certificationStatus String           @default("PENDIENTE") // LEGADO: ya no se usa en la lógica. El estado del PER es User.active (activo/inactivo).
   certificationNote   String?
   certifiedByUserId   String?
   certifiedAt         DateTime?

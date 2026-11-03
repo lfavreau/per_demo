@@ -212,8 +212,8 @@ export async function createCaseFromCandidate(
 
   const per = await prisma.pERProfile.findUnique({ where: { id: perId }, include: { user: true } });
   if (!per) throw new Error("PER no encontrado");
-  if (per.certificationStatus === "NO_HABILITADO") {
-    throw new Error("No se puede asignar acompañamiento a un PER no habilitado");
+  if (!per.user.active) {
+    throw new Error("No se puede asignar acompañamiento a un PER inactivo");
   }
   const code = await generatePaCode(candidate.regionId, isDemo);
 
@@ -274,8 +274,8 @@ export async function reassignCase(
     if (newPer.regionId !== paCase.regionId) {
       throw new Error("El PER de destino no pertenece a la región del caso");
     }
-    if (newPer.certificationStatus === "NO_HABILITADO") {
-      throw new Error("No se puede reasignar a un PER no habilitado");
+    if (!newPer.user.active) {
+      throw new Error("No se puede reasignar a un PER inactivo");
     }
 
 
@@ -588,8 +588,8 @@ export async function createDirectContinuityCase(
   }
 
   const selectedPer = await prisma.pERProfile.findUnique({ where: { id: perId }, include: { user: true } });
-  if (!selectedPer || selectedPer.regionId !== regionId || selectedPer.certificationStatus === "NO_HABILITADO") {
-    throw new Error("El PER seleccionado no está habilitado en la región actual");
+  if (!selectedPer || selectedPer.regionId !== regionId || !selectedPer.user.active) {
+    throw new Error("El PER seleccionado no está activo en la región actual");
   }
   const code = await generatePaCode(regionId, isDemo);
 
