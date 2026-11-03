@@ -45,7 +45,7 @@ Orientado a la recuperación · Centrado en la persona · Voluntario · Foco en 
 | Fase | Qué ocurre |
 |---|---|
 | **1. Preparación y habilitación** | Inducción y Código de Ética (fuera de la app), caracterización, alta de la cuenta PER |
-| **2. Admisibilidad e ingreso** | Funnel: Derivada → Contactada → Preinscrita → Entrevistada → Admisible → Seleccionada → En espera (+ No admisible / Descartada) |
+| **2. Admisibilidad e ingreso** | Estado de ingreso: Seleccionada o Lista de espera; el coordinador asigna PER a las seleccionadas |
 | **3. Conformación de duplas** | Match PER-PA con fundamentación, Acta de Primer Encuentro, encuadre |
 | **4. Acompañamiento** | 3 etapas (abajo), IAP, bitácoras, redes |
 | **5. Evaluación y sistematización** | Encuestas, focus groups, informes de brechas, retiros/deserciones, informe a SENDA |
@@ -108,8 +108,8 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 ### Coordinador Regional — `/coordinacion`
 | Sección | Ruta | Función |
 |---|---|---|
-| Resumen regional | `/coordinacion` | Tareas, funnel Fase 2, casos por etapa, "Evaluar Alertas" |
-| Registro de Ingresos | `/candidatas` | Funnel de ingreso, proponer dupla con fundamentación |
+| Resumen regional | `/coordinacion` | Tareas, personas por estado de ingreso, casos por etapa, "Evaluar Alertas" |
+| Registro de Ingresos | `/candidatas` | Registrar personas (nombre o alias), asignar PER, historial con estado de ingreso editable |
 | Acompañamientos | `/casos` | Validar y formalizar dupla, timeline, avance de etapa, retiro/deserción, enlaces a carpeta/IAP/Acta |
 | Validación sesiones | `/sesiones` | Bandeja → modal completo → Aprobar o Devolver con observaciones |
 | Supervisiones | `/supervisiones` | Dotación PER (Activo/Inactivo), registrar supervisión (agenda en Calendar), semáforo 💚 / ⚠️ >15 d / 🔴 >30 d |
@@ -130,8 +130,8 @@ Para cada pieza de trabajo responde: **qué** hacer · **quién** · **para qué
 ## 5. Ciclo de vida de un caso (flujo para demo en vivo)
 
 1. **Admin** crea cuenta PER (queda activa).
-2. **Coord** registra candidata y la avanza por el funnel hasta *Admisible/Seleccionada*.
-3. **Coord** propone dupla (PER + PA + fundamentación) → valida → PER entrega Acta de Primer Encuentro → **formaliza**.
+2. **Coord** registra a la persona (nombre o alias) como *Seleccionada* o *Lista de espera*.
+3. **Coord** asigna un PER a una persona *Seleccionada* → el caso queda formalizado de inmediato.
 4. Sistema crea en Drive carpeta del caso + IAP desde plantilla + tareas por instrumento.
 5. **PER** registra bitácoras → **Coord** valida o devuelve.
 6. **PER** entrega documentos (enlace Drive) → **Coord** valida → copia a `99_Validados`.

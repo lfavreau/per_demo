@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
+import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -23,10 +24,12 @@ export async function createCaseAction(formData: FormData): Promise<void> {
 
   const candidateId = formData.get("candidateId") as string;
   const perId = formData.get("perId") as string;
-  const matchRationale = formData.get("matchRationale") as string;
-  const type = formData.get("type") as "NUEVO" | "CONTINUIDAD";
+  // La vista solo asigna un PER a una persona acompañada: sin tipo ni fundamentación.
+  // Si algún formulario aún los envía, se respetan; si no, el caso queda como NUEVO.
+  const matchRationale = String(formData.get("matchRationale") || "");
+  const type = formData.get("type") === "CONTINUIDAD" ? "CONTINUIDAD" : "NUEVO";
 
-  if (!candidateId || !perId || !type || (REQUIRE_TEXT_FIELDS && !matchRationale)) {
+  if (!candidateId || !perId) {
     return;
   }
 
@@ -541,8 +544,12 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
     throw new Error("No autorizado");
   }
 
-  const sourceCenter = (formData.get("sourceCenter") as string) || "Derivación Directa";
-  const status = (formData.get("status") as string) || "SELECCIONADA";
+  // sourceCenter guarda el nombre o alias de la persona acompañada (es lo que se muestra en la app).
+  const sourceCenter = String(formData.get("sourceCenter") || "").trim().slice(0, CASE_ALIAS_MAX_LENGTH) || "Sin nombre";
+  const status = String(formData.get("status") || "SELECCIONADA");
+  if (!INTAKE_STATUSES.includes(status)) {
+    throw new Error("Estado de ingreso inválido");
+  }
   const notes = (formData.get("notes") as string) || "";
   const gender = (formData.get("gender") as string) || null;
   const ageRange = (formData.get("ageRange") as string) || null;
@@ -568,17 +575,10 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
   revalidatePath("/coordinacion");
 }
 
-const CANDIDATE_STATUSES = [
-  "DERIVADA",
-  "CONTACTADA",
-  "PREINSCRITA",
-  "ENTREVISTADA",
-  "ADMISIBLE",
-  "NO_ADMISIBLE",
-  "SELECCIONADA",
-  "EN_ESPERA",
-  "DESCARTADA",
-];
+// Estado de ingreso: solo "Seleccionada" (se le puede asignar PER) o "Lista de espera".
+// Los estados anteriores (Derivada, Admisible, etc.) pueden seguir en datos antiguos, pero ya no se ofrecen.
+const INTAKE_STATUSES = ["SELECCIONADA", "EN_ESPERA"];
+const CANDIDATE_STATUSES = INTAKE_STATUSES;
 
 export async function updateCandidateStatusAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();

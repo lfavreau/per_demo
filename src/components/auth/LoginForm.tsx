@@ -46,7 +46,7 @@ export default function LoginForm() {
 
   const errorMsg =
     error === "missing_email"
-      ? "Por favor, ingresa tu usuario o correo electrónico."
+      ? "Por favor, ingresa tu nombre de usuario."
       : error === "missing_password"
       ? "Por favor, ingresa tu contraseña."
       : error === "invalid_password"
@@ -302,7 +302,7 @@ export default function LoginForm() {
                           </span>
                         </div>
                         <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">
-                          {u.username} <span className="text-slate-400">({u.email})</span>
+                          {u.username}
                         </span>
                       </div>
 
@@ -339,7 +339,7 @@ export default function LoginForm() {
                           </span>
                         </div>
                         <span className="block text-[11px] font-mono text-slate-500 truncate mt-0.5">
-                          {u.username} <span className="text-slate-400">({u.email})</span>
+                          {u.username}
                         </span>
                       </div>
 

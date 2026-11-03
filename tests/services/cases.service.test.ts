@@ -444,6 +444,20 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
   });
 });
 
+describe("cases.service — nombre o alias de la persona", () => {
+  it("CASE-19: el caso toma como alias el nombre o alias con que se registró a la persona", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: per } = await createPer(region);
+    const candidate = await createCandidate(region);
+    await prisma.pACandidate.update({ where: { id: candidate.id }, data: { sourceCenter: "  Don   Pato  " } });
+
+    const paCase = await createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true);
+    expect(paCase.alias).toBe("Don Pato");
+    expect(paCase.type).toBe("NUEVO");
+  });
+});
+
 describe("cases.service — textos opcionales (REQUIRE_TEXT_FIELDS apagado)", () => {
   it("CASE-18: reasignar y forzar avance funcionan sin motivo escrito", async () => {
     const region = testRegion();

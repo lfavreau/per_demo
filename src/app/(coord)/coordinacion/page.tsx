@@ -36,23 +36,12 @@ export default async function CoordinatorPage({
     where: { regionId: user.regionId, isDemo },
   });
 
-  // Funnel stage definitions
-  const stages = [
-    "DERIVADA",
-    "CONTACTADA",
-    "PREINSCRITA",
-    "ENTREVISTADA",
-    "ADMISIBLE",
-    "NO_ADMISIBLE",
-    "SELECCIONADA",
-    "EN_ESPERA",
-    "DESCARTADA",
+  // Estado de ingreso: solo Seleccionada (sin PER todavía), Lista de espera, y las que ya tienen PER.
+  const funnelSummary = [
+    { stage: "SELECCIONADAS SIN PER", count: candidates.filter((c) => !c.convertedToCaseId && c.status === "SELECCIONADA").length },
+    { stage: "LISTA DE ESPERA", count: candidates.filter((c) => !c.convertedToCaseId && c.status === "EN_ESPERA").length },
+    { stage: "CON PER ASIGNADO", count: candidates.filter((c) => Boolean(c.convertedToCaseId)).length },
   ];
-
-  const funnelSummary = stages.map((st) => ({
-    stage: st,
-    count: candidates.filter((c) => c.status === st).length,
-  }));
 
   // 2. Fetch regional task statistics for indicators
   const totalRegTasksCount = await prisma.task.count({ where: { regionId: user.regionId, isDemo } });
@@ -159,9 +148,9 @@ export default async function CoordinatorPage({
         {/* pre-selection funnel stage summary card */}
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
           <h3 className="font-bold text-sm text-slate-800 mb-4">
-            Distribución del Embudo de Preselección
+            Personas por estado de ingreso
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
             {funnelSummary.map((f) => (
               <div key={f.stage} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <span className="block text-lg font-extrabold text-blue-700">{f.count}</span>

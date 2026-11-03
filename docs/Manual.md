@@ -73,13 +73,13 @@ El programa PER se basa en una premisa transformadora: **las personas que han vi
 
 El pilotaje opera en **5 regiones** de Chile, cada una con su propia coordinación regional:
 
-| Región | Cuota de casos | Coordinador |
+| Región | Cuota de casos | Coordinador (usuario) |
 |---|---|---|
-| **Metropolitana** | 20 | `coord.metro@per2026.cl` |
-| **Valparaíso** | 8 | `coord.valpo@per2026.cl` |
-| **Tarapacá** | 6 | `coord.tarapaca@per2026.cl` |
-| **Biobío** | 4 | `coord.biobio@per2026.cl` |
-| **Los Ríos** | 11 | `coord.losrios@per2026.cl` |
+| **Metropolitana** | 20 | `coord.metro` |
+| **Valparaíso** | 8 | `coord.valpo` |
+| **Tarapacá** | 6 | `coord.tarapaca` |
+| **Biobío** | 4 | `coord.biobio` |
+| **Los Ríos** | 11 | `coord.losrios` |
 
 ---
 
@@ -142,13 +142,7 @@ El programa PER se organiza en **5 fases secuenciales** que estructuran todo el 
 
 **Objetivo**: Identificar y seleccionar a las personas que serán acompañadas.
 
-El flujo de ingreso sigue un *funnel* de **9 estados**:
-
-```
-Derivada → Contactada → Preinscrita → Entrevistada → Admisible → No Admisible → Seleccionada → En espera → Descartada
-```
-
-Cada persona pasa por estas etapas antes de ser asignada a un PER. Las personas no admisibles o descartadas también se registran para control estadístico.
+El estado de ingreso tiene solo **dos valores**: *Seleccionada* (se le puede asignar un PER) y *Lista de espera*. Una persona seleccionada pasa a tener PER cuando el coordinador se lo asigna.
 
 ### Fase 3 — Conformación de Duplas
 
@@ -550,7 +544,7 @@ No hace falta escribir ningún dominio de correo — el usuario plano (ej. `coor
 |---|---|
 | Usuario no existe | *"El usuario no está registrado o se encuentra inactivo"* |
 | Contraseña incorrecta | *"Contraseña incorrecta"* |
-| Falta usuario | *"Por favor, ingresa tu usuario o correo electrónico"* |
+| Falta usuario | *"Por favor, ingresa tu nombre de usuario"* |
 | Falta contraseña | *"Por favor, ingresa tu contraseña"* |
 | Cuenta de demostración usada en el formulario real | *"Esta es una cuenta de demostración. Ingresa con el Acceso Directo Demo, no con este formulario"* |
 | Cuenta demo fuera del listado permitido | *"Esta cuenta no está habilitada para el entorno demostrativo"* |
@@ -746,7 +740,7 @@ Si estás en terreno **sin señal**:
 Tu panel de resumen regional muestra:
 
 - **Estadísticas de tareas**: Pendientes, en revisión, completadas, atrasadas.
-- **Funnel de ingreso**: Estado de las candidatas en el pipeline de ingreso (9 estados, ver §16.2).
+- **Personas por estado de ingreso**: Seleccionadas sin PER, en lista de espera y con PER asignado (ver §16.2).
 - **Casos activos**: Distribución por etapa (Vinculación, Conexión, Finalización, Egreso).
 - **Casos que Requieren Apoyo Metodológico**: las alertas de atraso/inactividad ya no dependen de un botón — se recalculan solas cada vez que entras a este panel. Desde aquí mismo escribes la nota y las cierras.
 
@@ -754,23 +748,19 @@ Tu panel de resumen regional muestra:
 
 ### 16.2 Registro de ingresos de personas (`/coordinacion/candidatas`)
 
-Aquí gestionas el ingreso de nuevas personas al programa. La tabla lista **a toda la nómina**, no solo a quienes están listas para match.
+Aquí registras a las personas derivadas, les asignas un PER y ves el historial de todas (con o sin PER).
 
-#### Funnel de preselección (9 estados)
+#### Estado de ingreso
 
-```
-Derivada → Contactada → Preinscrita → Entrevistada → Admisible → No Admisible → Seleccionada → En espera → Descartada
-```
+Solo hay dos estados: **Seleccionada** y **Lista de espera**. Se elige al registrar a la persona y se puede cambiar después con la lista desplegable de la columna *Estado de ingreso* del historial (se guarda solo). Una vez que la persona tiene PER, el estado queda fijo ("Con PER asignado").
 
-Cada fila tiene un selector de estado editable con un clic — se guarda solo, y el embudo del Resumen Regional (§16.1) refleja el cambio de inmediato. Una vez que la persona se convierte en caso, el estado queda fijo ("Convertida a caso").
+#### Asignar un PER — en un solo paso
 
-#### Conformar una dupla — en un solo paso
+Primero registra a la persona con **Nombre / alias** (usa un alias, no el RUT) y su **Estado de Ingreso**. Después, en el cuadro **Asignar PER**:
 
-1. **Persona Acompañada Apta**: Selecciona a la persona de la lista (solo aparecen *Admisible* o *Seleccionada*).
+1. **Persona acompañada**: aparecen solo las personas en estado *Seleccionada* y sin PER; las de lista de espera no.
 2. **Acompañante PER**: Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
-3. **Tipo de Acompañamiento**: *Nuevo* o *Continuidad*.
-4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esa persona.
-5. Presiona **"Conformar Dupla"**.
+3. Presiona **"Asignar PER"**. El caso queda como *Nuevo*; no se pide tipo ni fundamentación.
 
 Al enviar el formulario, la plataforma aprovisiona de una vez la carpeta de Drive, el IAP, y deja el caso formalizado — no hay un paso de "propuesta" que alguien deba abrir y validar por separado más tarde. Si el aprovisionamiento en Drive falla, no se crea nada: se reintenta con el mismo formulario.
 
@@ -933,7 +923,7 @@ Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivad
 
 La tabla se ordena haciendo clic en los encabezados *Acompañante* (alfabético), *Región* o *Estado*; un segundo clic invierte el orden.
 
-> ⚠️ La cuenta `admin@per2026.cl` no puede ser desactivada.
+> ⚠️ La cuenta `admin` no puede ser desactivada.
 
 #### Editar un PER
 
@@ -1191,7 +1181,7 @@ Se registra como **Retiro Voluntario**. El caso se cierra y el cupo del PER qued
 |---|---|
 | **Problemas con tu usuario o contraseña** | Tu coordinador regional |
 | **Dudas sobre el uso de la app** | Tu coordinador regional |
-| **Problemas técnicos de la plataforma** | Administrador Nacional (`admin@per2026.cl`) |
+| **Problemas técnicos de la plataforma** | Administrador Nacional (usuario `admin`) |
 | **Dudas sobre el programa PER** | Tu coordinador regional o el equipo AVANZA Inclusión |
 | **Emergencias o situaciones de riesgo** | Tu supervisora clínica de forma inmediata |
 

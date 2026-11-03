@@ -289,23 +289,21 @@ Si una persona acompañada abandona el programa:
 
 **Ubicación en el menú**: 👥 Registro de Ingresos
 
-Aquí gestionas el ingreso de nuevas personas al programa. La pantalla tiene dos partes:
+Aquí registras a las personas derivadas, les asignas un PER y ves el historial de todas. La pantalla tiene tres partes:
 
-#### Tabla de la nómina (izquierda)
+#### 1. Registrar nueva persona derivada
 
-Muestra **a todas** las personas de tu nómina de preselección, no solo las aptas para match. Cada fila tiene un selector de estado (Derivada, Contactada, Preinscrita, Entrevistada, Admisible, No Admisible, Seleccionada, En Espera, Descartada) que puedes cambiar ahí mismo con un clic — se guarda solo, sin botón aparte. Una vez que la persona fue convertida a caso, el estado queda fijo ("Convertida a caso") y ya no se edita desde aquí.
+Escribe el **nombre o alias** de la persona (usa un alias, no el RUT) y elige su **Estado de Ingreso**: *Seleccionada* (se le puede asignar PER) o *Lista de espera*.
 
-#### Formulario "Registrar Dupla & Proponer Match" (derecha)
+#### 2. Asignar PER
 
-Para crear una nueva dupla de acompañamiento, **en un solo formulario y un solo envío**:
-
-1. **Persona Acompañada Apta**: Selecciona a la persona preseleccionada de la lista (solo aparecen las que están en *Admisible* o *Seleccionada*).
+1. **Persona acompañada**: aparecen solo las personas *Seleccionadas* que aún no tienen PER; las de lista de espera no.
 2. **Acompañante PER**: Selecciona al PER que la acompañará. Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (lo habitual es uno, pero no hay tope).
-3. **Tipo de Acompañamiento**:
-   - *Nuevo*: Primera vez que esta persona entra al programa.
-   - *Continuidad*: Persona que ya estuvo antes y vuelve a participar.
-4. **Fundamentación del Match**: Escribe por qué elegiste a ese PER para esta persona (afinidad territorial, experiencia, disponibilidad, etc.).
-5. Presiona **"Conformar Dupla"**.
+3. Presiona **"Asignar PER"**. No se pide tipo de acompañamiento ni fundamentación.
+
+#### 3. Historial de personas acompañadas
+
+Lista a **todas** las personas, con o sin PER: su nombre o alias, el PER (o *Sin PER*), el **estado de ingreso** —con lista desplegable para cambiarlo, se guarda solo— y el estado del caso. Cuando la persona ya tiene PER, el estado queda fijo ("Con PER asignado").
 
 Al enviar, la plataforma crea de una vez la carpeta del caso en Drive, el documento IAP y deja el caso formalizado — no existe un paso intermedio de "proponer" que alguien tenga que volver a abrir y aprobar por separado. Si algo falla al aprovisionar Drive, no se crea nada: vuelves a intentar con el mismo formulario.
 

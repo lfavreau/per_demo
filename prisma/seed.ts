@@ -166,15 +166,7 @@ async function main() {
     "Los Ríos": ["COSAM Valdivia", "COSAM La Unión"],
   };
 
-  const candidateStatuses = [
-    "DERIVADA",
-    "CONTACTADA",
-    "PREINSCRITA",
-    "ENTREVISTADA",
-    "ADMISIBLE",
-    "SELECCIONADA",
-    "EN_ESPERA",
-  ];
+  const candidateStatuses = ["SELECCIONADA", "EN_ESPERA"];
 
   const caseStatuses = [
     "VINCULACION",
@@ -300,7 +292,8 @@ async function main() {
       const candidate = await prisma.pACandidate.create({
         data: {
           regionId: reg.name,
-          sourceCenter: cosam,
+          // Nombre o alias con que se muestra a la persona acompañada (dato de demostración).
+          sourceCenter: `${cosam} · Persona ${c + 1}`,
           status: status,
           preRegistrationFormResponseRef: `ref_${reg.key}_cand_${c}`,
           gender: candGender,

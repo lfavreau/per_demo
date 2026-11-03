@@ -13,6 +13,7 @@ import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/ser
 import { syncPendingCaseDocuments } from "@/server/services/document-sync.service";
 import type { CaseStage } from "@/lib/instrument-itinerary";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
+import { normalizeCaseAlias } from "@/lib/nomenclatures";
 
 // Helper to abbreviate Chilean regions
 function getRegionAbbreviation(region: string): string {
@@ -54,6 +55,7 @@ interface ProvisionCaseInput {
   candidateId: string;
   perUserId: string;
   matchRationale: string;
+  alias?: string | null;
   genderSelfId: string | null;
   birthDate: Date | null;
   ageRange: string | null;
@@ -93,6 +95,7 @@ async function provisionAndPersistCase(input: ProvisionCaseInput) {
           status: "VINCULACION",
           matchStatus: "FORMALIZADO",
           matchRationale: input.matchRationale,
+          alias: input.alias ?? null,
           genderSelfId: input.genderSelfId,
           birthDate: input.birthDate,
           ageRange: input.ageRange,
@@ -226,6 +229,8 @@ export async function createCaseFromCandidate(
     candidateId,
     perUserId: per.userId,
     matchRationale,
+    // El nombre o alias con que se registró a la persona pasa a ser el alias del caso.
+    alias: normalizeCaseAlias(candidate.sourceCenter),
     genderSelfId: candidate.gender,
     birthDate: candidate.birthDate,
     ageRange: candidate.ageRange,
@@ -497,16 +502,16 @@ export async function transitionCaseStatus(
 
     // Forced Withdrawal: release PER active cupo and notify coordinator with candidates list
     if (["RETIRO_VOLUNTARIO", "DESERCION"].includes(toStatus)) {
-      const candidates = await tx.pACandidate.findMany({
+      // Solo el conteo: sourceCenter guarda el nombre o alias de la persona y no debe ir a auditoría.
+      const availableCount = await tx.pACandidate.count({
         where: {
           regionId: paCase.regionId,
-          status: { in: ["DERIVADA", "ADMISIBLE", "SELECCIONADA"] },
+          status: "SELECCIONADA",
+          convertedToCaseId: null,
           isDemo,
         },
-        select: { sourceCenter: true },
       });
-      const listStr = candidates.map((c) => c.sourceCenter).join(", ");
-      const newValueMsg = `Retiro registrado. Cupo liberado. Lista de preselección regional disponible: ${listStr || "Ninguno"}`;
+      const newValueMsg = `Retiro registrado. Cupo liberado. Personas seleccionadas esperando PER en la región: ${availableCount}`;
       
       await tx.auditLog.create({
         data: {
