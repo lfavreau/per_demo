@@ -55,3 +55,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Respaldos de bases (contienen datos reales de personas)
+respaldos/
