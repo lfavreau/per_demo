@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import {
   createCaseFromCandidate,
+  provisionCaseDrive,
   reassignCase,
   transitionCaseStatus,
 } from "@/server/services/cases.service";
@@ -441,6 +442,34 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
     });
     expect(record).not.toBeNull();
     expect(record?.stage).toBe("FINALIZACION");
+  });
+});
+
+describe("cases.service — Drive diferido", () => {
+  it("CASE-20: con deferDrive el caso nace sin tocar Drive y provisionCaseDrive lo completa (idempotente)", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: per } = await createPer(region);
+    const candidate = await createCandidate(region);
+
+    const paCase = await createCaseFromCandidate(candidate.id, per.id, "", "NUEVO", coord.id, true, { deferDrive: true });
+    expect(paCase.status).toBe("VINCULACION");
+    expect(paCase.driveFolderCaseId).toBeNull();
+    const iapBefore = await prisma.iAPRecord.findFirst({ where: { paCaseId: paCase.id } });
+    expect(iapBefore).not.toBeNull();
+    expect(iapBefore?.driveDocId).toBeNull();
+    // El PER ya tiene su primer paso del itinerario aunque Drive no esté listo.
+    expect(await prisma.task.count({ where: { paCaseId: paCase.id } })).toBeGreaterThan(0);
+
+    expect(await provisionCaseDrive(paCase.id)).toBe(true);
+    const done = await prisma.pACase.findUnique({ where: { id: paCase.id } });
+    expect(done?.driveFolderCaseId).toBeTruthy();
+    expect(done?.driveFolderVinculacionId).toBeTruthy();
+    const iapAfter = await prisma.iAPRecord.findFirst({ where: { paCaseId: paCase.id } });
+    expect(iapAfter?.driveDocId).toBeTruthy();
+
+    // Segunda llamada: no vuelve a aprovisionar.
+    expect(await provisionCaseDrive(paCase.id)).toBe(false);
   });
 });
 

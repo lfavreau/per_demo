@@ -2,13 +2,17 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
-import { createCaseAction, createCandidateAction } from "@/app/actions/coordinator";
+import { createCandidateAction, retryCaseDriveAction } from "@/app/actions/coordinator";
+import AssignPerForm from "@/components/coordinator/AssignPerForm";
+import PersonaEditModal from "@/components/coordinator/PersonaEditModal";
 import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
 import CaseName from "@/components/cases/CaseName";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
+// Asignar un PER en modo real completa Drive (carpetas + IAP) en segundo plano: darle margen.
+export const maxDuration = 60;
 
 export default async function CoordinatorCandidatasPage({
   searchParams,
@@ -158,58 +162,19 @@ export default async function CoordinatorCandidatasPage({
             </p>
           </div>
 
-          <form action={createCaseAction} className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs items-end">
-            <div>
-              <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Persona acompañada</label>
-              <select
-                name="candidateId"
-                required
-                className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
-              >
-                <option value="">-- Seleccionar --</option>
-                {assignable.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.sourceCenter || "Sin nombre"}
-                  </option>
-                ))}
-              </select>
-              {assignable.length === 0 && (
-                <p className="text-[10px] text-amber-600 mt-1">No hay personas seleccionadas esperando PER.</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-slate-500 mb-1.5 font-bold uppercase tracking-wider text-[10px]">Acompañante PER</label>
-              <select
-                name="perId"
-                required
-                className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
-              >
-                <option value="">-- Seleccionar --</option>
-                {perProfiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.user?.name || "PER"} ({p.cases.length} casos activos)
-                  </option>
-                ))}
-              </select>
-              {perProfiles.length === 0 && (
-                <p className="text-[10px] text-amber-600 mt-1">No hay PER activos en la región.</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition cursor-pointer"
-            >
-              Asignar PER
-            </button>
-          </form>
+          <AssignPerForm
+            persons={assignable.map((c) => ({ id: c.id, label: c.sourceCenter || "Sin nombre" }))}
+            pers={perProfiles.map((p) => ({
+              id: p.id,
+              label: `${p.user?.name || "PER"} (${p.cases.length} casos activos)`,
+            }))}
+          />
         </div>
 
-        {/* Historial: todas las personas acompañadas, con o sin PER */}
+        {/* Personas acompañadas: todas, con o sin PER */}
         <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-sm space-y-4">
           <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <span>🤝</span> Historial de personas acompañadas ({rows.length})
+            <span>🤝</span> Personas acompañadas ({rows.length})
           </h4>
           <div className="overflow-x-auto text-xs">
             <table className="w-full text-left border-collapse">
@@ -218,9 +183,6 @@ export default async function CoordinatorCandidatasPage({
                   <th className="pb-2">Persona acompañada</th>
                   <th className="pb-2">Acompañante PER</th>
                   <th className="pb-2">Estado de ingreso</th>
-                  <th className="pb-2">Estado Match</th>
-                  <th className="pb-2">Estado Caso</th>
-                  <th className="pb-2">Fórmula</th>
                   <th className="pb-2">Fecha</th>
                   <th className="pb-2">Acción</th>
                 </tr>
@@ -251,45 +213,47 @@ export default async function CoordinatorCandidatasPage({
                         <CandidateStatusSelect candidateId={cand.id} status={cand.status} />
                       )}
                     </td>
-                    <td className="py-3">
-                      {m ? (
-                        <span className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
-                          m.matchStatus === "FORMALIZADO"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                            : m.matchStatus === "VALIDADO"
-                              ? "bg-blue-50 text-blue-800 border border-blue-200"
-                              : "bg-amber-50 text-amber-800 border border-amber-200"
-                        }`}>
-                          {m.matchStatus || "PROPUESTO"}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 text-slate-600 font-medium">{m ? m.status : <span className="text-slate-300">—</span>}</td>
-                    <td className="py-3 text-slate-400">
-                      {cand.preRegistrationFormResponseRef ? "Formulario" : "Planilla"}
-                    </td>
                     <td className="py-3 text-slate-500">
                       {new Date(m ? m.createdAt : cand.updatedAt).toLocaleDateString("es-CL")}
                     </td>
                     <td className="py-3">
-                      {m ? (
-                        <a
-                          href={`/coordinacion/casos?caseCode=${m.code}`}
-                          className="px-3 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg text-[10px] inline-block shadow-sm transition"
-                        >
-                          👁️ Ver e Iniciar
-                        </a>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <PersonaEditModal
+                          candidateId={cand.id}
+                          name={cand.sourceCenter || ""}
+                          notes={cand.notes || ""}
+                          status={cand.status}
+                          hasCase={Boolean(m)}
+                        />
+                        {m && (
+                          <a
+                            href={`/coordinacion/casos?caseCode=${m.code}`}
+                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg text-[10px] inline-block shadow-sm transition"
+                          >
+                            👁️ Ver e Iniciar
+                          </a>
+                        )}
+                        {m && !isDemo && !m.driveFolderCaseId && (
+                          <form action={retryCaseDriveAction} className="inline-flex items-center gap-1">
+                            <input type="hidden" name="caseId" value={m.id} />
+                            <span className="text-[10px] text-amber-600 font-semibold" title="Las carpetas de Drive se están preparando">
+                              ⏳ Drive pendiente
+                            </span>
+                            <button
+                              type="submit"
+                              className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-[10px] cursor-pointer"
+                            >
+                              Reintentar
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-4 text-center text-slate-400">
+                    <td colSpan={5} className="py-4 text-center text-slate-400">
                       No hay personas registradas aún en esta región.
                     </td>
                   </tr>

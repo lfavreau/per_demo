@@ -301,11 +301,13 @@ Escribe el **nombre o alias** de la persona (usa un alias, no el RUT) y elige su
 2. **Acompañante PER**: Selecciona al PER que la acompañará. Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (lo habitual es uno, pero no hay tope).
 3. Presiona **"Asignar PER"**. No se pide tipo de acompañamiento ni fundamentación.
 
-#### 3. Historial de personas acompañadas
+#### 3. Personas acompañadas
 
-Lista a **todas** las personas, con o sin PER: su nombre o alias, el PER (o *Sin PER*), el **estado de ingreso** —con lista desplegable para cambiarlo, se guarda solo— y el estado del caso. Cuando la persona ya tiene PER, el estado queda fijo ("Con PER asignado").
+Lista a **todas** las personas, con o sin PER: su nombre o alias, el PER (o *Sin PER*), el **estado de ingreso** —con lista desplegable para cambiarlo, se guarda solo— y la fecha. Cuando la persona ya tiene PER, el estado queda fijo ("Con PER asignado").
 
-Al enviar, la plataforma crea de una vez la carpeta del caso en Drive, el documento IAP y deja el caso formalizado — no existe un paso intermedio de "proponer" que alguien tenga que volver a abrir y aprobar por separado. Si algo falla al aprovisionar Drive, no se crea nada: vuelves a intentar con el mismo formulario.
+Cada fila tiene un botón **✏️ Editar** que abre una ventana para cambiar el nombre o alias, las notas y, si aún no tiene PER, el estado de ingreso. **No pide contraseña.** Si la persona ya tiene PER, también tiene el botón **👁️ Ver e Iniciar**, que abre su ficha de caso.
+
+Al presionar el botón la asignación es inmediata: el caso queda formalizado, el PER ya ve su itinerario, y **te quedas en la misma pantalla** con un aviso de confirmación. La carpeta de Drive y el documento IAP se terminan de crear en segundo plano; mientras tanto la fila muestra "⏳ Drive pendiente". Si no se completan, aparece el botón **Reintentar**.
 
 > **¿Y si me equivoqué de PER, o el acompañante ya no puede seguir?** En la ficha del caso (sección 7.1) hay una tarjeta **"Reasignar Acompañante"** — cambia el PER a cargo, libera el cupo del anterior y notifica a ambos.
 

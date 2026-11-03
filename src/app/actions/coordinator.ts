@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { isNextRedirect } from "@/lib/next-errors";
-import { createCaseFromCandidate, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
+import { createCaseFromCandidate, provisionCaseDrive, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert } from "@/server/services/alerts.service";
 import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
@@ -11,48 +12,82 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
-import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
+import { CASE_ALIAS_MAX_LENGTH, normalizeCaseAlias } from "@/lib/nomenclatures";
 
-export async function createCaseAction(formData: FormData): Promise<void> {
+export interface ActionResult {
+  status: "idle" | "success" | "error";
+  message: string;
+}
+
+/**
+ * Asigna un PER a una persona acompañada. No redirige: devuelve el resultado para mostrarlo en la
+ * misma pantalla. En modo real, Drive (carpetas + IAP) se completa en segundo plano para no
+ * hacer esperar al coordinador; el caso y el itinerario del PER quedan listos de inmediato.
+ */
+export async function assignPerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
   }
   if (user.role !== "COORDINATOR" && user.role !== "ADMIN") {
-    throw new Error("No autorizado");
+    return { status: "error", message: "No autorizado" };
   }
 
-  const candidateId = formData.get("candidateId") as string;
-  const perId = formData.get("perId") as string;
-  // La vista solo asigna un PER a una persona acompañada: sin tipo ni fundamentación.
-  // Si algún formulario aún los envía, se respetan; si no, el caso queda como NUEVO.
-  const matchRationale = String(formData.get("matchRationale") || "");
-  const type = formData.get("type") === "CONTINUIDAD" ? "CONTINUIDAD" : "NUEVO";
-
+  const candidateId = String(formData.get("candidateId") || "");
+  const perId = String(formData.get("perId") || "");
   if (!candidateId || !perId) {
-    return;
+    return { status: "error", message: "Selecciona la persona y el PER." };
   }
 
   try {
-    const newCase = await createCaseFromCandidate(
-      candidateId,
-      perId,
-      matchRationale,
-      type,
-      user.id,
-      user.isDemo
-    );
+    // El tipo (nuevo / continuidad) y la fundamentación no se piden: el caso queda como NUEVO.
+    const newCase = await createCaseFromCandidate(candidateId, perId, "", "NUEVO", user.id, user.isDemo, {
+      deferDrive: !user.isDemo,
+    });
+    if (!user.isDemo) {
+      after(async () => {
+        try {
+          await provisionCaseDrive(newCase.id);
+        } catch (error) {
+          console.error(`Drive pendiente para el caso ${newCase.code}:`, error);
+        }
+      });
+    }
     revalidatePath("/coordinacion");
     revalidatePath("/coordinacion/casos");
     revalidatePath("/coordinacion/candidatas");
     revalidatePath("/per");
     revalidatePath("/admin");
-    redirect(`/coordinacion/casos?caseCode=${encodeURIComponent(newCase.code)}&highlightCaseId=${newCase.id}&workspace=created`);
+    return { status: "success", message: `PER asignado. Caso ${newCase.code} creado.` };
   } catch (err: any) {
-    if (isNextRedirect(err)) throw err;
     console.error("Error creating case:", err);
-    redirect(`/coordinacion/candidatas?error=${encodeURIComponent(err.message || "Error al crear caso")}`);
+    return { status: "error", message: err.message || "No se pudo asignar el PER." };
   }
+}
+
+/** Reintenta el aprovisionamiento de Drive de un caso que quedó sin carpeta (modo real). */
+export async function retryCaseDriveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    throw new Error("No autorizado");
+  }
+  const caseId = String(formData.get("caseId") || "");
+  const paCase = caseId ? await prisma.pACase.findUnique({ where: { id: caseId } }) : null;
+  if (!paCase || Boolean(paCase.isDemo) !== Boolean(user.isDemo)) {
+    throw new Error("Caso no encontrado en el modo de trabajo actual");
+  }
+  if (user.role !== "ADMIN" && paCase.regionId !== user.regionId) {
+    throw new Error("No autorizado para operar casos de esta región");
+  }
+  after(async () => {
+    try {
+      await provisionCaseDrive(caseId);
+      revalidatePath("/coordinacion/candidatas");
+    } catch (error) {
+      console.error(`Drive pendiente para el caso ${paCase.code}:`, error);
+    }
+  });
+  revalidatePath("/coordinacion/candidatas");
 }
 
 export async function reassignCaseAction(formData: FormData): Promise<void> {
@@ -579,6 +614,74 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
 // Los estados anteriores (Derivada, Admisible, etc.) pueden seguir en datos antiguos, pero ya no se ofrecen.
 const INTAKE_STATUSES = ["SELECCIONADA", "EN_ESPERA"];
 const CANDIDATE_STATUSES = INTAKE_STATUSES;
+
+/**
+ * Edita una persona acompañada: nombre o alias, notas y (si aún no tiene PER) estado de ingreso.
+ * No pide contraseña. Si ya tiene caso, el alias del caso sigue al nombre o alias de la persona.
+ * La auditoría no guarda el texto del nombre o alias (privacidad).
+ */
+export async function updatePersonaAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    return { status: "error", message: "No autorizado" };
+  }
+
+  const candidateId = String(formData.get("candidateId") || "");
+  const candidate = candidateId ? await prisma.pACandidate.findUnique({ where: { id: candidateId } }) : null;
+  if (!candidate) return { status: "error", message: "Persona no encontrada." };
+  if (user.role !== "ADMIN" && candidate.regionId !== user.regionId) {
+    return { status: "error", message: "No autorizado para operar la nómina de esta región." };
+  }
+  if (Boolean(candidate.isDemo) !== Boolean(user.isDemo)) {
+    return { status: "error", message: "La persona no pertenece al modo de trabajo actual." };
+  }
+
+  const name = String(formData.get("sourceCenter") || "").trim().slice(0, CASE_ALIAS_MAX_LENGTH);
+  if (REQUIRE_TEXT_FIELDS && !name) return { status: "error", message: "Ingresa el nombre o alias." };
+  const sourceCenter = name || "Sin nombre";
+  const notes = String(formData.get("notes") || "");
+
+  const data: { sourceCenter: string; notes: string; status?: string } = { sourceCenter, notes };
+  const requestedStatus = formData.get("status");
+  if (!candidate.convertedToCaseId && requestedStatus != null) {
+    const status = String(requestedStatus);
+    if (!INTAKE_STATUSES.includes(status)) return { status: "error", message: "Estado de ingreso inválido." };
+    data.status = status;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.pACandidate.update({ where: { id: candidateId }, data });
+      if (candidate.convertedToCaseId) {
+        await tx.pACase.update({
+          where: { id: candidate.convertedToCaseId },
+          data: { alias: normalizeCaseAlias(sourceCenter) },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          role: user.role,
+          action: "UPDATE_CANDIDATE",
+          entityType: "PACandidate",
+          entityId: candidateId,
+          previousValue: candidate.status,
+          newValue: data.status ?? candidate.status,
+          isDemo: Boolean(user.isDemo),
+        },
+      });
+    });
+  } catch (err: any) {
+    console.error("Error updating persona:", err);
+    return { status: "error", message: err.message || "No se pudo guardar." };
+  }
+
+  revalidatePath("/coordinacion/candidatas");
+  revalidatePath("/coordinacion/casos");
+  revalidatePath("/coordinacion");
+  revalidatePath("/per", "layout");
+  return { status: "success", message: "Cambios guardados." };
+}
 
 export async function updateCandidateStatusAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();

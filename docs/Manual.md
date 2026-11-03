@@ -762,7 +762,9 @@ Primero registra a la persona con **Nombre / alias** (usa un alias, no el RUT) y
 2. **Acompañante PER**: Aparecen los PER activos de tu región, con cuántos casos activos lleva cada uno (no hay tope; lo habitual es uno).
 3. Presiona **"Asignar PER"**. El caso queda como *Nuevo*; no se pide tipo ni fundamentación.
 
-Al enviar el formulario, la plataforma aprovisiona de una vez la carpeta de Drive, el IAP, y deja el caso formalizado — no hay un paso de "propuesta" que alguien deba abrir y validar por separado más tarde. Si el aprovisionamiento en Drive falla, no se crea nada: se reintenta con el mismo formulario.
+Al presionar el botón la asignación es inmediata: el caso queda formalizado y el PER ya ve su itinerario, sin salir de la pantalla (aparece un aviso de confirmación). En modo real, la carpeta de Drive y el IAP se terminan de crear en segundo plano; mientras tanto la fila muestra "⏳ Drive pendiente" y, si no se completan, un botón **Reintentar**.
+
+La lista **Personas acompañadas** (todas, con o sin PER) tiene en cada fila un botón **✏️ Editar** que abre una ventana para cambiar nombre o alias, notas y —si aún no tiene PER— el estado de ingreso. No pide contraseña.
 
 > La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación), que se materializa sola en Drive apenas se valida (ver §22).
 
