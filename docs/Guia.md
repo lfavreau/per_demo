@@ -423,7 +423,7 @@ Como administrador nacional, tienes acceso a las siguientes secciones:
 Aquí creas y administras las cuentas de los acompañantes PER.
 
 - **Crear**: Presiona **"➕ Crear Acompañante PER"**, ingresa nombre, usuario y la coordinación regional a la que se asigna. Nace **Activo** — se asume que la contratación ya se resolvió fuera de la app.
-- **Estado**: la columna *Estado* muestra si el PER está **Activo** o **Inactivo**. Con el botón **Desactivar / Activar** lo cambias; un PER inactivo no puede iniciar sesión ni recibir casos. Úsalo como excepción para suspender a alguien.
+- **Estado**: la columna *Estado* muestra si el PER está **Activo** o **Inactivo**. Con el botón **Desactivar / Activar** lo cambias; un PER inactivo no puede iniciar sesión ni recibir casos. Úsalo como excepción para suspender a alguien. **Orden**: haz clic en los encabezados *Acompañante* (alfabético), *Región* o *Estado* (activos primero o inactivos primero) para ordenar la tabla; un segundo clic invierte el orden.
 - **Activar / Desactivar**: Un botón junto a cada PER. Uno desactivado no puede iniciar sesión.
 - **Editar**: Cambia nombre, usuario o región. Te va a pedir la **contraseña de administrador** para confirmar.
 - **Eliminar**: Si el PER tiene casos asociados, el sistema **no te deja eliminarlo** (para no dejar casos sin dueño) — desactívalo en su lugar. Si no tiene casos, te pide la contraseña de administrador y lo elimina de forma permanente.

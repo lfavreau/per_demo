@@ -931,6 +931,8 @@ Módulo para **crear y administrar cuentas de usuarios PER**.
 
 Cada PER tiene un botón **"Desactivar"** o **"Activar"**. Un usuario desactivado (*Inactivo*) no puede iniciar sesión ni recibir casos; la columna *Estado* muestra si está *Activo* o *Inactivo*.
 
+La tabla se ordena haciendo clic en los encabezados *Acompañante* (alfabético), *Región* o *Estado*; un segundo clic invierte el orden.
+
 > ⚠️ La cuenta `admin@per2026.cl` no puede ser desactivada.
 
 #### Editar un PER

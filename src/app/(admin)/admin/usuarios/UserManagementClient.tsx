@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   createPERUserAction,
   toggleUserStatusAction,
@@ -23,6 +23,9 @@ interface UserWithProfile {
   } | null;
 }
 
+type PerSortKey = "name" | "region" | "status";
+type SortDir = "asc" | "desc";
+
 interface UserManagementClientProps {
   users: UserWithProfile[];
   successMsg?: string | null;
@@ -42,7 +45,46 @@ export default function UserManagementClient({
 
   const admins = users.filter((u) => u.role === "ADMIN");
   const coordinators = users.filter((u) => u.role === "COORDINATOR");
-  const pers = users.filter((u) => u.role === "PER");
+  const pers = useMemo(() => users.filter((u) => u.role === "PER"), [users]);
+
+  // Orden de la tabla de PER: se cambia haciendo clic en el encabezado de la columna.
+  const [sort, setSort] = useState<{ key: PerSortKey; dir: SortDir } | null>(null);
+  const toggleSort = (key: PerSortKey) =>
+    setSort((cur) => (cur?.key === key ? { key, dir: cur.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+
+  const sortedPers = useMemo(() => {
+    if (!sort) return pers;
+    const text = (a: string, b: string) => a.localeCompare(b, "es", { sensitivity: "base" });
+    const sign = sort.dir === "asc" ? 1 : -1;
+    return [...pers].sort((a, b) => {
+      let diff = 0;
+      if (sort.key === "name") diff = text(a.name, b.name);
+      else if (sort.key === "region") diff = text(a.regionId || "", b.regionId || "");
+      else diff = Number(b.active) - Number(a.active); // asc = Activos primero
+      return diff * sign || text(a.name, b.name);
+    });
+  }, [pers, sort]);
+
+  const sortHeader = (key: PerSortKey, label: string, align: "left" | "center" = "left") => (
+    <th
+      className={`py-3 px-4 ${align === "center" ? "text-center" : ""}`}
+      aria-sort={sort?.key === key ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => toggleSort(key)}
+        title="Ordenar por esta columna"
+        className={`inline-flex items-center gap-1 font-bold uppercase tracking-wider cursor-pointer hover:text-slate-900 transition ${
+          sort?.key === key ? "text-slate-900" : ""
+        }`}
+      >
+        {label}
+        <span aria-hidden className="text-[9px]">
+          {sort?.key === key ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
 
   return (
     <div className="space-y-6">
@@ -138,15 +180,15 @@ export default function UserManagementClient({
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider bg-slate-50/50">
-                  <th className="py-3 px-4">Acompañante</th>
+                  {sortHeader("name", "Acompañante")}
                   <th className="py-3 px-4">Usuario / Email</th>
-                  <th className="py-3 px-4">Región / Coordinador</th>
-                  <th className="py-3 px-4 text-center">Estado</th>
+                  {sortHeader("region", "Región / Coordinador")}
+                  {sortHeader("status", "Estado", "center")}
                   <th className="py-3 px-4 text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pers.map((per) => (
+                {sortedPers.map((per) => (
                   <tr key={per.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-bold text-slate-900">{per.name}</td>
                     <td className="py-3 px-4 font-mono text-slate-600">{per.email.replace("@per2026.cl", "")}</td>
