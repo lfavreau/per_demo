@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { updatePersonaAction } from "@/app/actions/coordinator";
+import { deletePersonaAction, updatePersonaAction } from "@/app/actions/coordinator";
 import type { ActionResult } from "@/app/actions/coordinator";
 import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
@@ -14,6 +14,10 @@ interface PersonaEditModalProps {
   status: string;
   /** Con PER asignado el estado de ingreso queda fijo. */
   hasCase: boolean;
+  /** Código del caso, si la persona ya tiene PER: hay que escribirlo para confirmar el borrado. */
+  caseCode?: string | null;
+  /** Actividad real del caso (tareas ya trabajadas + bitácoras), para advertir antes de borrar. */
+  activity?: number;
 }
 
 const INITIAL: ActionResult = { status: "idle", message: "" };
@@ -32,8 +36,37 @@ function SaveButton() {
 }
 
 /** Botón + modal para editar una persona acompañada. No pide contraseña. */
-export default function PersonaEditModal({ candidateId, name, notes, status, hasCase }: PersonaEditModalProps) {
+function DeleteButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed text-white font-bold text-xs cursor-pointer"
+    >
+      {pending ? "Eliminando…" : "Eliminar definitivamente"}
+    </button>
+  );
+}
+
+export default function PersonaEditModal({
+  candidateId,
+  name,
+  notes,
+  status,
+  hasCase,
+  caseCode = null,
+  activity = 0,
+}: PersonaEditModalProps) {
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [typedCode, setTypedCode] = useState("");
+  const [deleteResult, deleteAction] = useActionState(async (prev: ActionResult, formData: FormData) => {
+    const next = await deletePersonaAction(prev, formData);
+    if (next.status === "success") setOpen(false);
+    return next;
+  }, INITIAL);
+  const codeOk = !hasCase || (caseCode !== null && typedCode.trim().toUpperCase() === caseCode.toUpperCase());
   const [result, formAction] = useActionState(async (prev: ActionResult, formData: FormData) => {
     const next = await updatePersonaAction(prev, formData);
     if (next.status === "success") setOpen(false);
@@ -54,7 +87,7 @@ export default function PersonaEditModal({ candidateId, name, notes, status, has
 
       {open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md flex flex-col text-slate-800 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col text-slate-800">
             <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <h3 className="font-extrabold text-base text-slate-900">Editar persona acompañada</h3>
               <button
@@ -129,6 +162,68 @@ export default function PersonaEditModal({ candidateId, name, notes, status, has
                 <SaveButton />
               </div>
             </form>
+
+            {/* Zona de peligro: borrar la persona */}
+            <div className="px-5 pb-5 text-xs">
+              <div className="pt-4 border-t border-red-100 space-y-3">
+                {!confirming ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs cursor-pointer"
+                  >
+                    🗑️ Eliminar persona
+                  </button>
+                ) : (
+                  <form action={deleteAction} className="space-y-3 p-3 rounded-xl bg-red-50 border border-red-200">
+                    <input type="hidden" name="candidateId" value={candidateId} />
+                    <p className="font-bold text-red-900">¿Eliminar a esta persona? No se puede deshacer.</p>
+                    {hasCase ? (
+                      <>
+                        <p className="text-red-800 leading-relaxed">
+                          Se borrarán también su caso <strong>{caseCode}</strong> y todo lo que tiene: tareas, IAP, historial,
+                          bitácoras y avisos.
+                          {activity > 0 && (
+                            <> Ya tiene <strong>{activity}</strong> registro(s) de trabajo (tareas trabajadas o bitácoras) que se perderían.</>
+                          )}
+                        </p>
+                        <div>
+                          <label className="block text-red-900 mb-1 font-bold text-[10px] uppercase">
+                            Escribe {caseCode} para confirmar
+                          </label>
+                          <input
+                            type="text"
+                            name="confirmCode"
+                            value={typedCode}
+                            onChange={(e) => setTypedCode(e.target.value)}
+                            autoComplete="off"
+                            className="w-full p-2.5 bg-white border border-red-200 rounded-xl outline-none focus:border-red-500"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-red-800">Esta persona aún no tiene PER ni caso.</p>
+                    )}
+                    {deleteResult.status === "error" && (
+                      <p role="alert" className="font-semibold text-red-700">⚠️ {deleteResult.message}</p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirming(false);
+                          setTypedCode("");
+                        }}
+                        className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <DeleteButton disabled={!codeOk} />
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -61,6 +61,13 @@ export default async function CoordinatorCandidatasPage({
       per: {
         include: { user: true },
       },
+      // Actividad real del caso (para advertir antes de borrar): tareas ya trabajadas + bitácoras.
+      _count: {
+        select: {
+          sessionLogs: true,
+          tasks: { where: { status: { notIn: ["PENDIENTE", "CANCELADA"] } } },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -222,6 +229,8 @@ export default async function CoordinatorCandidatasPage({
                           notes={cand.notes || ""}
                           status={cand.status}
                           hasCase={Boolean(m)}
+                          caseCode={m?.code ?? null}
+                          activity={m ? m._count.sessionLogs + m._count.tasks : 0}
                         />
                         {m && (
                           <a

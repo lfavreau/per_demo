@@ -764,7 +764,7 @@ Primero registra a la persona con **Nombre / alias** (usa un alias, no el RUT) y
 
 Al presionar el botón la asignación es inmediata: el caso queda formalizado y el PER ya ve su itinerario, sin salir de la pantalla (aparece un aviso de confirmación).
 
-La lista **Personas acompañadas** (todas, con o sin PER) tiene en cada fila un botón **✏️ Editar** que abre una ventana para cambiar nombre o alias, notas y —si aún no tiene PER— el estado de ingreso. No pide contraseña.
+La lista **Personas acompañadas** (todas, con o sin PER) tiene en cada fila un botón **✏️ Editar** que abre una ventana para cambiar nombre o alias, notas y —si aún no tiene PER— el estado de ingreso. No pide contraseña. Al final del mismo modal está **🗑️ Eliminar persona**: pide confirmar; si la persona ya tiene PER, hay que escribir el código de su caso, y se borran también el caso y todo lo que tiene (tareas, IAP, historial, bitácoras y avisos). **No se puede deshacer.** Pueden hacerlo el coordinador de la región y el administrador.
 
 > La app ya no exige un Acta de Primer Encuentro para formalizar la dupla: la validez del match es responsabilidad de Dirección/Coordinación, no algo que la app deba verificar con un archivo externo. El registro real del primer encuentro sigue existiendo — es la Reflexión del PER (itinerario de Vinculación).
 

@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import {
   createCaseFromCandidate,
+  deletePersona,
   reassignCase,
   transitionCaseStatus,
 } from "@/server/services/cases.service";
@@ -383,6 +384,71 @@ describe("cases.service — una persona, un solo caso", () => {
 
     const ok = await createCaseFromCandidate(candidate.id, goodPer.id, "", "NUEVO", coord.id, true);
     expect(ok.candidateId).toBe(candidate.id);
+  });
+});
+
+describe("cases.service — borrar persona acompañada", () => {
+  it("DEL-01: borra la persona, su caso y todo lo que cuelga; exige el código; respeta región y deja a las demás intactas", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const outsider = await createCoordinator(testRegion());
+    const { user: perUser, profile: per } = await createPer(region);
+    const target = await createCandidate(region);
+    const other = await createCandidate(region);
+    const targetCase = await createCaseFromCandidate(target.id, per.id, "", "NUEVO", coord.id, true);
+    const otherCase = await createCaseFromCandidate(other.id, per.id, "", "NUEVO", coord.id, true);
+    await prisma.sessionLog.create({
+      data: {
+        paCaseId: targetCase.id,
+        perId: perUser.id,
+        regionId: region,
+        sessionNumber: 1,
+        stage: "VINCULACION",
+        date: new Date(),
+        modality: "PRESENCIAL",
+        attendance: "REALIZADA",
+        summary: "x",
+        isDemo: true,
+      },
+    });
+
+    // Sin el código del caso no se borra; un coordinador de otra región tampoco puede.
+    await expect(deletePersona(target.id, coord.id, true)).rejects.toThrow(/código del caso/);
+    await expect(deletePersona(target.id, coord.id, true, "PA-XXX-999")).rejects.toThrow(/código del caso/);
+    await expect(deletePersona(target.id, outsider.id, true, targetCase.code)).rejects.toThrow(/No autorizado/);
+    expect(await prisma.pACandidate.count({ where: { id: target.id } })).toBe(1);
+
+    const result = await deletePersona(target.id, coord.id, true, targetCase.code.toLowerCase());
+    expect(result.deletedCases).toBe(1);
+    expect(result.deletedSessions).toBe(1);
+    expect(result.deletedTasks).toBeGreaterThan(0);
+
+    expect(await prisma.pACandidate.count({ where: { id: target.id } })).toBe(0);
+    expect(await prisma.pACase.count({ where: { id: targetCase.id } })).toBe(0);
+    expect(await prisma.task.count({ where: { paCaseId: targetCase.id } })).toBe(0);
+    expect(await prisma.iAPRecord.count({ where: { paCaseId: targetCase.id } })).toBe(0);
+    expect(await prisma.sessionLog.count({ where: { paCaseId: targetCase.id } })).toBe(0);
+    expect(await prisma.notification.count({ where: { link: { contains: targetCase.id } } })).toBe(0);
+
+    // La otra persona y su caso siguen intactos.
+    expect(await prisma.pACandidate.count({ where: { id: other.id } })).toBe(1);
+    expect(await prisma.pACase.count({ where: { id: otherCase.id } })).toBe(1);
+    expect(await prisma.task.count({ where: { paCaseId: otherCase.id } })).toBeGreaterThan(0);
+
+    // La auditoría registra el borrado sin el nombre o alias de la persona.
+    const audit = await prisma.auditLog.findFirst({ where: { entityId: target.id, action: "DELETE_PERSONA" } });
+    expect(audit).not.toBeNull();
+    expect(audit?.newValue).not.toContain(target.sourceCenter ?? "__none__");
+  });
+
+  it("DEL-02: una persona sin PER se borra sin pedir código", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const candidate = await createCandidate(region);
+
+    const result = await deletePersona(candidate.id, coord.id, true);
+    expect(result.deletedCases).toBe(0);
+    expect(await prisma.pACandidate.count({ where: { id: candidate.id } })).toBe(0);
   });
 });
 

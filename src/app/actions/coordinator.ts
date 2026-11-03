@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isNextRedirect } from "@/lib/next-errors";
-import { createCaseFromCandidate, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
+import { createCaseFromCandidate, deletePersona, reassignCase, transitionCaseStatus } from "@/server/services/cases.service";
 import { validateSession, returnSession } from "@/server/services/sessions.service";
 import { resolveAlert } from "@/server/services/alerts.service";
 import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
@@ -569,6 +569,31 @@ export async function createCandidateAction(formData: FormData): Promise<void> {
 // Los estados anteriores (Derivada, Admisible, etc.) pueden seguir en datos antiguos, pero ya no se ofrecen.
 const INTAKE_STATUSES = ["SELECCIONADA", "EN_ESPERA"];
 const CANDIDATE_STATUSES = INTAKE_STATUSES;
+
+/** Borra una persona acompañada (y su caso, si lo tiene). No pide contraseña; con caso exige escribir su código. */
+export async function deletePersonaAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    return { status: "error", message: "No autorizado" };
+  }
+  const candidateId = String(formData.get("candidateId") || "");
+  if (!candidateId) return { status: "error", message: "Persona no encontrada." };
+
+  try {
+    const result = await deletePersona(candidateId, user.id, Boolean(user.isDemo), String(formData.get("confirmCode") || ""));
+    revalidatePath("/coordinacion/candidatas");
+    revalidatePath("/coordinacion/casos");
+    revalidatePath("/coordinacion");
+    revalidatePath("/per", "layout");
+    revalidatePath("/admin");
+    return {
+      status: "success",
+      message: result.deletedCases ? `Persona y caso eliminados (${result.deletedTasks} tareas).` : "Persona eliminada.",
+    };
+  } catch (err: any) {
+    return { status: "error", message: err.message || "No se pudo eliminar." };
+  }
+}
 
 /**
  * Edita una persona acompañada: nombre o alias, notas y (si aún no tiene PER) estado de ingreso.

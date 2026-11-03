@@ -211,6 +211,89 @@ export async function createCaseFromCandidate(
   }
 }
 
+export interface DeletePersonaResult {
+  deletedCases: number;
+  deletedTasks: number;
+  deletedSessions: number;
+}
+
+/**
+ * Borra una persona acompañada y todo lo que cuelga de ella: sus casos, tareas, IAP, historiales,
+ * bitácoras, alertas, documentos y los avisos que apuntaban a esos casos. No se puede deshacer.
+ * Si la persona tiene caso, hay que escribir su código (confirmCode) para confirmar.
+ * La auditoría guarda solo conteos y el código del caso, nunca el nombre o alias.
+ */
+export async function deletePersona(
+  candidateId: string,
+  actorId: string,
+  isDemo: boolean,
+  confirmCode?: string
+): Promise<DeletePersonaResult> {
+  const candidate = await prisma.pACandidate.findUnique({ where: { id: candidateId } });
+  if (!candidate) throw new Error("Persona no encontrada");
+  if (candidate.isDemo !== isDemo) throw new Error("La persona no pertenece al modo de trabajo actual");
+  const actor = await prisma.user.findUnique({ where: { id: actorId } });
+  if (!actor || (actor.role !== "ADMIN" && !(actor.role === "COORDINATOR" && actor.regionId === candidate.regionId))) {
+    throw new Error("No autorizado para borrar personas de esta región");
+  }
+
+  const cases = await prisma.pACase.findMany({ where: { candidateId }, select: { id: true, code: true } });
+  if (cases.length > 0) {
+    const typed = (confirmCode || "").trim().toUpperCase();
+    if (!cases.some((c) => c.code.toUpperCase() === typed)) {
+      throw new Error("Escribe el código del caso para confirmar el borrado.");
+    }
+  }
+  const caseIds = cases.map((c) => c.id);
+
+  return prisma.$transaction(async (tx) => {
+    const tasks = await tx.task.findMany({ where: { paCaseId: { in: caseIds } }, select: { id: true } });
+    const taskIds = tasks.map((t) => t.id);
+    const iaps = await tx.iAPRecord.findMany({ where: { paCaseId: { in: caseIds } }, select: { id: true } });
+    const iapIds = iaps.map((i) => i.id);
+    const sessions = await tx.sessionLog.count({ where: { paCaseId: { in: caseIds } } });
+
+    if (caseIds.length > 0) {
+      await tx.taskEvent.deleteMany({ where: { taskId: { in: taskIds } } });
+      await tx.feedback.deleteMany({
+        where: { OR: [{ taskId: { in: taskIds } }, { entityId: { in: [...caseIds, ...taskIds] } }] },
+      });
+      await tx.iAPDomainMap.deleteMany({ where: { OR: [{ iapRecordId: { in: iapIds } }, { taskId: { in: taskIds } }] } });
+      await tx.iAPGoal.deleteMany({ where: { OR: [{ iapRecordId: { in: iapIds } }, { taskId: { in: taskIds } }] } });
+      await tx.sessionLog.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.alert.deleteMany({ where: { OR: [{ paCaseId: { in: caseIds } }, { taskId: { in: taskIds } }] } });
+      await tx.documentRecord.deleteMany({ where: { caseId: { in: caseIds } } });
+      await tx.networkActivation.deleteMany({ where: { caseId: { in: caseIds } } });
+      await tx.calendarEventRef.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.task.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.iAPRecord.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.caseStatusHistory.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.caseStageHistory.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      await tx.contactAttempt.deleteMany({ where: { paCaseId: { in: caseIds } } });
+      // Avisos cuyo enlace apunta a alguno de estos casos (quedarían rotos).
+      await tx.notification.deleteMany({
+        where: { OR: caseIds.map((id) => ({ link: { contains: id } })) },
+      });
+      await tx.pACase.deleteMany({ where: { id: { in: caseIds } } });
+    }
+    await tx.pACandidate.delete({ where: { id: candidateId } });
+
+    await tx.auditLog.create({
+      data: {
+        userId: actorId,
+        role: actor.role,
+        action: "DELETE_PERSONA",
+        entityType: "PACandidate",
+        entityId: candidateId,
+        newValue: JSON.stringify({ cases: cases.map((c) => c.code), tasks: taskIds.length, sessions }),
+        isDemo,
+      },
+    });
+
+    return { deletedCases: caseIds.length, deletedTasks: taskIds.length, deletedSessions: sessions };
+  });
+}
+
 export async function reassignCase(
   caseId: string,
   newPerId: string,

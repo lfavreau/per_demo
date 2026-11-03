@@ -305,7 +305,9 @@ Escribe el **nombre o alias** de la persona (usa un alias, no el RUT) y elige su
 
 Lista a **todas** las personas, con o sin PER: su nombre o alias, el PER (o *Sin PER*), el **estado de ingreso** —con lista desplegable para cambiarlo, se guarda solo— y la fecha. Cuando la persona ya tiene PER, el estado queda fijo ("Con PER asignado").
 
-Cada fila tiene un botón **✏️ Editar** que abre una ventana para cambiar el nombre o alias, las notas y, si aún no tiene PER, el estado de ingreso. **No pide contraseña.** Si la persona ya tiene PER, también tiene el botón **👁️ Ver e Iniciar**, que abre su ficha de caso.
+Cada fila tiene un botón **✏️ Editar** que abre una ventana para cambiar el nombre o alias, las notas y, si aún no tiene PER, el estado de ingreso. **No pide contraseña.** Al final del mismo modal está **🗑️ Eliminar persona**: pide confirmar; si la persona ya tiene PER, hay que escribir el código de su caso, y se borran también el caso y todo lo que tiene (tareas, IAP, historial, bitácoras y avisos). **No se puede deshacer.** Pueden hacerlo el coordinador de la región y el administrador.
+
+Si la persona ya tiene PER, también tiene el botón **👁️ Ver e Iniciar**, que abre su ficha de caso.
 
 Al presionar el botón la asignación es inmediata: el caso queda formalizado, el PER ya ve su itinerario, y **te quedas en la misma pantalla** con un aviso de confirmación.
 
