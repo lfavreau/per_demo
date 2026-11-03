@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { transitionCaseStatusAction } from "@/app/actions/coordinator";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 interface StageAdvanceButtonProps {
   caseId: string;
@@ -66,7 +67,7 @@ export default function StageAdvanceButton({
           <input type="hidden" name="forceAdvance" value="on" />
           <textarea
             name="reason"
-            required
+            required={REQUIRE_TEXT_FIELDS}
             value={forceReason}
             onChange={(e) => setForceReason(e.target.value)}
             rows={2}

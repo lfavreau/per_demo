@@ -244,7 +244,7 @@ GoogleAppsScript.gs   Web App: carpetas Drive, copia IAP, Calendar, Sheets
 | **Cloudflare (OpenNext)** | Alternativa: `wrangler.json`, adaptador D1 |
 
 ### Variables de entorno
-`AUTH_SESSION_SECRET` (≥ 32) · `REAL_MODE_PASSWORD` · `TURSO_DATABASE_URL` · `TURSO_AUTH_TOKEN` · `GOOGLE_APPS_SCRIPT_URL` (termina en `/exec`) · `GOOGLE_APPS_SCRIPT_SECRET` (= `API_SHARED_SECRET` de Apps Script) · `NEXT_PUBLIC_VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT`.
+`AUTH_SESSION_SECRET` (≥ 32) · `REAL_MODE_PASSWORD` · `TURSO_DATABASE_URL` · `TURSO_AUTH_TOKEN` · `GOOGLE_APPS_SCRIPT_URL` (termina en `/exec`) · `GOOGLE_APPS_SCRIPT_SECRET` (= `API_SHARED_SECRET` de Apps Script) · `NEXT_PUBLIC_VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT`. Opcional: `NEXT_PUBLIC_REQUIRE_TEXT_FIELDS=true` vuelve a exigir los textos obligatorios (motivos, observaciones, enlaces, descripciones); por defecto está apagado y se aplica al construir (en Vercel, redeploy).
 
 Apps Script: propiedades `ROOT_FOLDER_ID`, `TEMPLATE_DOC_ID` (IAP oficial), `SPREADSHEET_ID`, `CALENDAR_ID`, `API_SHARED_SECRET`; ejecutar `authorizeWorkspace` una vez; desplegar nueva versión.
 

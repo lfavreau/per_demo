@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { logSessionAction, syncOfflineSessionsAction } from "@/app/actions/per";
 import { mapDomainToLabel } from "@/lib/nomenclatures";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 interface GoalOption {
   id: string;
@@ -297,7 +298,7 @@ export default function RegistroAcompanamientoForm({
                 name="summary"
                 value={formData.summary}
                 onChange={handleChange}
-                required
+                required={REQUIRE_TEXT_FIELDS}
                 rows={3}
                 placeholder="Principales temas conversados, avances, hitos..."
                 className="w-full p-2.5 bg-background border border-border rounded-xl outline-none resize-none focus:border-primary"

@@ -5,6 +5,7 @@ import AppShell from "@/components/shell/AppShell";
 import { logSupervisionAction } from "@/app/actions/coordinator";
 import { SUPERVISION_ALERT_DAYS } from "@/lib/program-config";
 import { isPerHabilitado } from "@/lib/nomenclatures";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -288,7 +289,7 @@ export default async function CoordinatorSupervisionesPage({
                 <label className="font-bold text-slate-700 block">Temario y Acuerdos:</label>
                 <textarea 
                   name="topic" 
-                  required 
+                  required={REQUIRE_TEXT_FIELDS} 
                   rows={4} 
                   placeholder="Escribe los temas abordados, dificultades y compromisos de la dupla..."
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none focus:border-blue-600 resize-none"

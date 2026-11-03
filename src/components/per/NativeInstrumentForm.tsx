@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { submitItineraryStepAction, syncOfflineItineraryStepsAction } from "@/app/actions/itinerary";
 import { RECOVERY_DOMAINS, type ItineraryFieldDef } from "@/lib/instrument-itinerary";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 interface DomainRow {
   recoveryDomainId: string;
@@ -214,7 +215,7 @@ export default function NativeInstrumentForm({
                         <textarea
                           value={flatValues[field.key] || ""}
                           onChange={(e) => setFlatValues({ ...flatValues, [field.key]: e.target.value })}
-                          required={field.required}
+                          required={field.required && REQUIRE_TEXT_FIELDS}
                           rows={3}
                           className="w-full p-2.5 bg-background border border-border rounded-xl outline-none resize-none focus:border-primary"
                         />
@@ -223,7 +224,7 @@ export default function NativeInstrumentForm({
                           type={field.type === "date" ? "date" : "text"}
                           value={flatValues[field.key] || ""}
                           onChange={(e) => setFlatValues({ ...flatValues, [field.key]: e.target.value })}
-                          required={field.required}
+                          required={field.required && (field.type === "date" || REQUIRE_TEXT_FIELDS)}
                           className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
                         />
                       )}
@@ -320,7 +321,7 @@ export default function NativeInstrumentForm({
                   <input
                     type="text"
                     placeholder="Objetivo"
-                    required
+                    required={REQUIRE_TEXT_FIELDS}
                     value={row.objective}
                     onChange={(e) => {
                       const next = [...goalRows];

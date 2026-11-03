@@ -10,6 +10,7 @@ import { ensureWithdrawalStep } from "@/server/services/itinerary.service";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createNotificationWithPush } from "@/server/services/push.service";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export async function createCaseAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -25,7 +26,7 @@ export async function createCaseAction(formData: FormData): Promise<void> {
   const matchRationale = formData.get("matchRationale") as string;
   const type = formData.get("type") as "NUEVO" | "CONTINUIDAD";
 
-  if (!candidateId || !perId || !matchRationale || !type) {
+  if (!candidateId || !perId || !type || (REQUIRE_TEXT_FIELDS && !matchRationale)) {
     return;
   }
 
@@ -108,7 +109,7 @@ export async function returnSessionAction(formData: FormData): Promise<void> {
   const sessionId = formData.get("sessionId") as string;
   const feedback = formData.get("feedback") as string;
 
-  if (!sessionId || !feedback) {
+  if (!sessionId || (REQUIRE_TEXT_FIELDS && !feedback)) {
     return;
   }
 
@@ -139,7 +140,7 @@ export async function resolveAlertAction(formData: FormData): Promise<void> {
   const alertId = formData.get("alertId") as string;
   const note = formData.get("note") as string;
 
-  if (!alertId || !note) {
+  if (!alertId || (REQUIRE_TEXT_FIELDS && !note)) {
     return;
   }
 
@@ -227,7 +228,7 @@ export async function createDirectContinuityCaseAction(formData: FormData): Prom
   const educationLevel = formData.get("educationLevel") as string;
   const employmentStatus = formData.get("employmentStatus") as string;
 
-  if (!perId || !matchRationale || !gender || !ageRange || !educationLevel || !employmentStatus) {
+  if (!perId || !gender || !ageRange || !educationLevel || !employmentStatus || (REQUIRE_TEXT_FIELDS && !matchRationale)) {
     throw new Error("Faltan campos obligatorios para el ingreso directo");
   }
 
@@ -338,7 +339,7 @@ export async function logSupervisionAction(formData: FormData): Promise<void> {
   const durationMinutesStr = formData.get("durationMinutes") as string;
   const topic = formData.get("topic") as string;
 
-  if (!perId || !dateStr || !durationMinutesStr || !topic) {
+  if (!perId || !dateStr || !durationMinutesStr || (REQUIRE_TEXT_FIELDS && !topic)) {
     throw new Error("Todos los campos son obligatorios");
   }
 
@@ -427,7 +428,7 @@ export async function registerNetworkDeviceAction(formData: FormData): Promise<v
   const type = formData.get("type") as string;
   const contactPerson = formData.get("contactPerson") as string;
 
-  if (!name || !type) {
+  if (!type || (REQUIRE_TEXT_FIELDS && !name)) {
     throw new Error("El nombre y el tipo de dispositivo son obligatorios");
   }
 
@@ -465,7 +466,7 @@ export async function logNetworkActivationAction(formData: FormData): Promise<vo
   const description = formData.get("description") as string;
   const driveDocId = formData.get("driveDocId") as string;
 
-  if (!networkDeviceId || !dateStr || !description) {
+  if (!networkDeviceId || !dateStr || (REQUIRE_TEXT_FIELDS && !description)) {
     throw new Error("El dispositivo, fecha y descripción son obligatorios");
   }
 
@@ -510,7 +511,7 @@ export async function registerPhase5RecordAction(formData: FormData): Promise<vo
   const driveUrl = formData.get("driveUrl") as string;
   const notes = formData.get("notes") as string;
 
-  if (!type || !dateStr || !participantsCountStr || !driveUrl) {
+  if (!type || !dateStr || !participantsCountStr || (REQUIRE_TEXT_FIELDS && !driveUrl)) {
     throw new Error("Tipo, fecha, cantidad de participantes y URL son obligatorios");
   }
 

@@ -5,6 +5,7 @@ import { logSession, CreateSessionLogInput } from "@/server/services/sessions.se
 import { updateTaskStatus } from "@/server/services/tasks.service";
 import { getCurrentUser } from "@/lib/auth";
 import { extractGoogleDriveFileId } from "@/lib/google-resource";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export async function logSessionAction(data: Omit<CreateSessionLogInput, "perId" | "sessionNumber" | "regionId" | "date"> & { date: string }) {
   const user = await getCurrentUser();
@@ -32,12 +33,12 @@ export async function submitTaskAction(taskId: string, googleUrl: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "PER") throw new Error("No autorizado");
 
-  if (!googleUrl) {
+  if (REQUIRE_TEXT_FIELDS && !googleUrl) {
     return { error: "Por favor, ingresa el enlace del documento de Google Drive" };
   }
 
   try {
-    const googleFileId = user.isDemo ? undefined : extractGoogleDriveFileId(googleUrl);
+    const googleFileId = user.isDemo || !googleUrl ? undefined : extractGoogleDriveFileId(googleUrl);
     await updateTaskStatus({
       taskId,
       toStatus: "ENVIADA",

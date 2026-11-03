@@ -12,6 +12,7 @@ import { createNotificationWithPush } from "@/server/services/push.service";
 import { assertStageAdvanceAllowed, ensureCurrentStageTasks } from "@/server/services/itinerary.service";
 import { syncPendingCaseDocuments } from "@/server/services/document-sync.service";
 import type { CaseStage } from "@/lib/instrument-itinerary";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 // Helper to abbreviate Chilean regions
 function getRegionAbbreviation(region: string): string {
@@ -264,7 +265,7 @@ export async function reassignCase(
     if (newPerId === paCase.perId) {
       throw new Error("El caso ya está asignado a ese PER");
     }
-    if (!reason || !reason.trim()) {
+    if (REQUIRE_TEXT_FIELDS && (!reason || !reason.trim())) {
       throw new Error("La reasignación requiere un motivo");
     }
 
@@ -399,7 +400,7 @@ export async function transitionCaseStatus(
             `Bloqueo de avance de etapa: faltan instrumentos por validar (${missingTitles}). Puedes forzar el avance indicando un motivo.`
           );
         }
-        if (!reason || !reason.trim()) {
+        if (REQUIRE_TEXT_FIELDS && (!reason || !reason.trim())) {
           throw new Error("Forzar el avance de etapa requiere un motivo.");
         }
         await tx.auditLog.create({

@@ -13,6 +13,7 @@ import { getItineraryState } from "@/server/services/itinerary.service";
 import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
 import StageAdvanceButton from "@/components/coordinator/StageAdvanceButton";
 import WithdrawalGate from "@/components/coordinator/WithdrawalGate";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -362,7 +363,7 @@ export default async function CoordinatorCasosPage({
                       <label className="font-semibold text-xs text-slate-700 block">Motivo de la reasignación</label>
                       <textarea
                         name="reason"
-                        required
+                        required={REQUIRE_TEXT_FIELDS}
                         rows={2}
                         placeholder="Ej. Retiro del PER, sobrecarga, cambio de dupla acordado..."
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs resize-none"
@@ -490,7 +491,7 @@ export default async function CoordinatorCasosPage({
                   <label className="font-bold text-slate-700">Justificación del Emparejamiento:</label>
                   <textarea 
                     name="matchRationale" 
-                    required 
+                    required={REQUIRE_TEXT_FIELDS} 
                     rows={2} 
                     placeholder="Escribe el motivo del emparejamiento..."
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none resize-none"

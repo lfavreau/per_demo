@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitTaskAction } from "@/app/actions/per";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 interface ExternalLinkStepFormProps {
   taskId: string;
@@ -44,7 +45,7 @@ export default function ExternalLinkStepForm({ taskId, title }: ExternalLinkStep
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 text-xs">
         <input
           type="url"
-          required
+          required={REQUIRE_TEXT_FIELDS}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="Pegar enlace del formulario de Google..."

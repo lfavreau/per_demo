@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi } from "vitest";
+﻿import { describe, it, expect, vi, afterEach } from "vitest";
 import { prisma } from "@/lib/db";
 import {
   createCaseFromCandidate,
@@ -6,6 +6,22 @@ import {
   transitionCaseStatus,
 } from "@/server/services/cases.service";
 import { createAdmin, createCoordinator, createPer, createCandidate, testRegion } from "../helpers/fixtures";
+
+// Interruptor de textos obligatorios (src/lib/program-config.ts): apagado por defecto; los tests de
+// "motivo obligatorio" lo encienden y afterEach lo vuelve a apagar.
+const textRules = vi.hoisted(() => ({ require: false }));
+vi.mock("@/lib/program-config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/program-config")>();
+  return {
+    ...actual,
+    get REQUIRE_TEXT_FIELDS() {
+      return textRules.require;
+    },
+  };
+});
+afterEach(() => {
+  textRules.require = false;
+});
 
 // Los mocks de Drive en modo demo (isDemo: true) son deterministas y no hacen red — se dejan
 // pasar tal cual (importOriginal). Solo se sobreescribe createIapDocument puntualmente en el
@@ -248,7 +264,8 @@ describe("cases.service — reassignCase", () => {
     expect(moved.perId).toBe(perB.id);
   });
 
-  it("reasignar sin motivo está prohibido", async () => {
+  it("reasignar sin motivo está prohibido (con REQUIRE_TEXT_FIELDS activo)", async () => {
+    textRules.require = true;
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: perA } = await createPer(region);
@@ -289,7 +306,8 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
     ).rejects.toThrow(/Bloqueo de avance de etapa/);
   });
 
-  it("CASE-11: forzar sin motivo está prohibido; con motivo queda auditado", async () => {
+  it("CASE-11: con REQUIRE_TEXT_FIELDS activo, forzar sin motivo está prohibido; con motivo queda auditado", async () => {
+    textRules.require = true;
     const region = testRegion();
     const coord = await createCoordinator(region);
     const { profile: per } = await createPer(region);
@@ -423,5 +441,23 @@ describe("cases.service — transitionCaseStatus (puerta de avance de etapa)", (
     });
     expect(record).not.toBeNull();
     expect(record?.stage).toBe("FINALIZACION");
+  });
+});
+
+describe("cases.service — textos opcionales (REQUIRE_TEXT_FIELDS apagado)", () => {
+  it("CASE-18: reasignar y forzar avance funcionan sin motivo escrito", async () => {
+    const region = testRegion();
+    const coord = await createCoordinator(region);
+    const { profile: perA } = await createPer(region);
+    const { profile: perB } = await createPer(region);
+    const candidate = await createCandidate(region);
+
+    const paCase = await createCaseFromCandidate(candidate.id, perA.id, "", "NUEVO", coord.id, true);
+
+    const moved = await reassignCase(paCase.id, perB.id, "", coord.id, true);
+    expect(moved.perId).toBe(perB.id);
+
+    const advanced = await transitionCaseStatus(paCase.id, "CONEXION", "", coord.id, true, true);
+    expect(advanced.status).toBe("CONEXION");
   });
 });

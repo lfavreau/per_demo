@@ -8,6 +8,7 @@ import {
   type ItineraryStepDef,
 } from "@/lib/instrument-itinerary";
 import { MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION } from "@/lib/program-config";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -261,7 +262,9 @@ export async function submitItineraryStep({
   if (!step) throw new Error("Instrumento sin catálogo de itinerario asociado");
 
   for (const field of step.fields || []) {
-    if (field.required && !fieldValues[field.key]) {
+    // Las fechas siguen siendo obligatorias; los textos solo si REQUIRE_TEXT_FIELDS está activo.
+    const mustFill = field.required && (field.type === "date" || REQUIRE_TEXT_FIELDS);
+    if (mustFill && !fieldValues[field.key]) {
       throw new Error(`El campo "${field.label}" es obligatorio`);
     }
   }

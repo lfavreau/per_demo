@@ -11,6 +11,7 @@ import {
   markStepNotApplicable,
   triggerIntermediateEvaluation,
 } from "@/server/services/itinerary.service";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 function revalidateItineraryPaths() {
   revalidatePath("/per", "layout");
@@ -123,7 +124,7 @@ export async function returnItineraryStepAction(formData: FormData): Promise<voi
 
   const taskId = formData.get("taskId") as string;
   const feedback = formData.get("feedback") as string;
-  if (!taskId || !feedback) return;
+  if (!taskId || (REQUIRE_TEXT_FIELDS && !feedback)) return;
 
   try {
     await returnItineraryStep(taskId, user.id, user.isDemo, feedback);

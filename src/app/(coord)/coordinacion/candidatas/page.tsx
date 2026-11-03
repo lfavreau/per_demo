@@ -6,6 +6,7 @@ import { createCaseAction, createCandidateAction } from "@/app/actions/coordinat
 import CandidateStatusSelect from "@/components/coordinator/CandidateStatusSelect";
 import CaseName from "@/components/cases/CaseName";
 import { isPerHabilitado } from "@/lib/nomenclatures";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,7 @@ export default async function CoordinatorCandidatasPage({
               <input
                 type="text"
                 name="sourceCenter"
-                required
+                required={REQUIRE_TEXT_FIELDS}
                 placeholder="Ej: CESFAM San Rafael, COSAM, Derivación Directa..."
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
               />
@@ -254,7 +255,7 @@ export default async function CoordinatorCandidatasPage({
                 <textarea
                   name="matchRationale"
                   placeholder="Justificar según afinidad territorial, especialidad, etc..."
-                  required
+                  required={REQUIRE_TEXT_FIELDS}
                   rows={4}
                   className="w-full p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary resize-none"
                 ></textarea>

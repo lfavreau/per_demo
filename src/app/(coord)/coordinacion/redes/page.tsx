@@ -9,6 +9,7 @@ import {
   logNetworkActivationAction, 
   registerPhase5RecordAction 
 } from "@/app/actions/coordinator";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -230,7 +231,7 @@ export default async function CoordinatorRedesPage() {
                   <input
                     type="text"
                     name="name"
-                    required
+                    required={REQUIRE_TEXT_FIELDS}
                     placeholder="Ej. COSAM Valparaíso"
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600"
                   />
@@ -324,7 +325,7 @@ export default async function CoordinatorRedesPage() {
                   <input 
                     type="text" 
                     name="description" 
-                    required
+                    required={REQUIRE_TEXT_FIELDS}
                     placeholder="Ej. Envío de ficha derivación médica"
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
                   />
@@ -401,7 +402,7 @@ export default async function CoordinatorRedesPage() {
                   <input 
                     type="url" 
                     name="driveUrl" 
-                    required 
+                    required={REQUIRE_TEXT_FIELDS} 
                     placeholder="https://drive.google.com/..."
                     className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-600" 
                   />

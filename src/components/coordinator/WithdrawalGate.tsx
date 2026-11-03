@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { ensureWithdrawalStepAction, transitionCaseStatusAction } from "@/app/actions/coordinator";
 import { validateItineraryStepAction, returnItineraryStepAction } from "@/app/actions/itinerary";
 import { getStepByActivityKey } from "@/lib/instrument-itinerary";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 interface WithdrawalStepView {
   activityKey: string;
@@ -137,7 +138,7 @@ export default function WithdrawalGate({ caseId, withdrawalStep }: WithdrawalGat
         <textarea
           name="reason"
           rows={2}
-          required
+          required={REQUIRE_TEXT_FIELDS}
           placeholder="Especifica el motivo de la salida..."
           className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none resize-none"
         ></textarea>

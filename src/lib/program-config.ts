@@ -25,3 +25,9 @@ export const SUPERVISION_ALERT_DAYS = {
   YELLOW: 15,
   RED: 30,
 } as const;
+
+// Interruptor de los campos de texto obligatorios (textareas, motivos, enlaces, nombres libres).
+// Apagado por defecto: ningún texto libre es obligatorio, ni en el formulario ni en el servidor.
+// Para volver a exigirlos: NEXT_PUBLIC_REQUIRE_TEXT_FIELDS=true (se lee al construir la app).
+// No afecta credenciales (login, alta de usuarios) ni selects, fechas, radios o números.
+export const REQUIRE_TEXT_FIELDS = process.env.NEXT_PUBLIC_REQUIRE_TEXT_FIELDS === "true";

@@ -5,6 +5,7 @@ import AppShell from "@/components/shell/AppShell";
 import { resolveAlertAction } from "@/app/actions/coordinator";
 import { checkAllAlertRules } from "@/server/services/alerts.service";
 import { mapAlertTypeToLabel } from "@/lib/nomenclatures";
+import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
 
 export const dynamic = "force-dynamic";
 
@@ -191,7 +192,7 @@ export default async function CoordinatorPage({
                   <textarea
                     name="note"
                     placeholder="Registrar notas de apoyo o resolución..."
-                    required
+                    required={REQUIRE_TEXT_FIELDS}
                     rows={3}
                     className="w-full p-2 bg-white border border-slate-200 rounded-lg text-[10px] outline-none focus:border-primary resize-none"
                   ></textarea>
