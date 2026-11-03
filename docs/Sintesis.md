@@ -273,3 +273,20 @@ npx next lint               # lint
 - La app no burocratiza el vínculo: libera tiempo del PER para acompañar.
 - Coordinación ve a tiempo qué caso se enfría y qué PER necesita supervisión.
 - SENDA recibe indicadores verificables, con trazabilidad y evidencia en Drive.
+
+## Limpiar datos reales y dejar solo lo demo
+
+`scripts/limpiar-datos-reales.ts` borra todo lo real (`isDemo = false`) y conserva lo demo, las cuentas demo, los administradores y coordinadores, el catálogo de instrumentos y la configuración. Se borran los PER reales (usuario y perfil) y todo lo que cuelga de datos reales: casos, candidatas, tareas, bitácoras, supervisiones, alertas, documentos, redes, notificaciones, auditoría y snapshots de reportes. Corre en una sola transacción, así que si falla no se borra nada.
+
+Por defecto solo **simula** y muestra qué borraría:
+
+```bash
+npx tsx scripts/limpiar-datos-reales.ts --local            # simula sobre dev.db
+npx tsx scripts/limpiar-datos-reales.ts --local --aplicar  # borra en dev.db
+
+# Producción (Turso): sacar respaldo antes
+TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npx tsx scripts/limpiar-datos-reales.ts --turso
+TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... npx tsx scripts/limpiar-datos-reales.ts --turso --aplicar --confirmar-produccion
+```
+
+Si algo demo quedara apuntando a un PER o caso real, el script avisa y no aplica nada. El test `SCR-01` cubre el borrado completo.
