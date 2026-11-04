@@ -640,7 +640,8 @@ export async function updatePersonaAction(_prev: ActionResult, formData: FormDat
 
   const data: { sourceCenter: string; notes: string; status?: string } = { sourceCenter, notes };
   const requestedStatus = formData.get("status");
-  if (!candidate.convertedToCaseId && requestedStatus != null) {
+  // Vacío = sin cambio (estado anterior que el modal no ofrece).
+  if (!candidate.convertedToCaseId && requestedStatus) {
     const status = String(requestedStatus);
     if (!INTAKE_STATUSES.includes(status)) return { status: "error", message: "Estado de ingreso inválido." };
     data.status = status;
@@ -680,34 +681,44 @@ export async function updatePersonaAction(_prev: ActionResult, formData: FormDat
   return { status: "success", message: "Cambios guardados." };
 }
 
-export async function updateCandidateStatusAction(formData: FormData): Promise<void> {
+/**
+ * Cambia el estado de ingreso desde la lista desplegable de la tabla. Devuelve el resultado
+ * (no lanza) para que la tabla muestre el error junto a la lista y vuelva al valor anterior.
+ */
+export async function updateCandidateStatusAction(
+  candidateId: string,
+  status: string
+): Promise<{ ok: boolean; message: string }> {
   const user = await getCurrentUser();
   if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
-    throw new Error("No autorizado");
+    return { ok: false, message: "No autorizado" };
   }
-
-  const candidateId = String(formData.get("candidateId") || "");
-  const status = String(formData.get("status") || "");
-
   if (!candidateId || !CANDIDATE_STATUSES.includes(status)) {
-    throw new Error("Estado de nómina inválido");
+    return { ok: false, message: "Estado de ingreso inválido." };
   }
 
   const candidate = await prisma.pACandidate.findUnique({ where: { id: candidateId } });
-  if (!candidate) throw new Error("Persona no encontrada en la nómina");
+  if (!candidate) return { ok: false, message: "Persona no encontrada." };
   if (user.role !== "ADMIN" && candidate.regionId !== user.regionId) {
-    throw new Error("No autorizado para operar la nómina de esta región");
+    return { ok: false, message: "No autorizado para operar la nómina de esta región." };
   }
   if (Boolean(candidate.isDemo) !== Boolean(user.isDemo)) {
-    throw new Error("La persona no pertenece al modo de trabajo actual");
+    return { ok: false, message: "La persona no pertenece al modo de trabajo actual." };
   }
   if (candidate.convertedToCaseId) {
-    throw new Error("Ya fue convertida a un acompañamiento; el estado se administra desde el caso");
+    return { ok: false, message: "Ya tiene PER asignado; el estado se administra desde el caso." };
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.pACandidate.update({ where: { id: candidateId }, data: { status } });
-    await tx.auditLog.create({
+  try {
+    // Solo si sigue sin PER: evita pisar una asignación hecha en paralelo.
+    const updated = await prisma.pACandidate.updateMany({
+      where: { id: candidateId, convertedToCaseId: null },
+      data: { status },
+    });
+    if (updated.count === 0) {
+      return { ok: false, message: "Ya tiene PER asignado; el estado se administra desde el caso." };
+    }
+    await prisma.auditLog.create({
       data: {
         userId: user.id,
         role: user.role,
@@ -719,9 +730,13 @@ export async function updateCandidateStatusAction(formData: FormData): Promise<v
         isDemo: Boolean(user.isDemo),
       },
     });
-  });
+  } catch (err) {
+    console.error("Error updating candidate status:", err);
+    return { ok: false, message: "No se pudo guardar el estado." };
+  }
 
   revalidatePath("/coordinacion/candidatas");
   revalidatePath("/coordinacion");
+  return { ok: true, message: "Estado actualizado." };
 }
 

@@ -73,7 +73,9 @@ export default function PersonaEditModal({
     return next;
   }, INITIAL);
 
-  const editableStatus = status === "EN_ESPERA" ? "EN_ESPERA" : "SELECCIONADA";
+  // Un estado anterior (Derivada, Admisible…) no se ofrece: queda sin cambio hasta que se elija uno de los dos.
+  const isLegacyStatus = status !== "EN_ESPERA" && status !== "SELECCIONADA";
+  const editableStatus = isLegacyStatus ? "" : status;
 
   return (
     <>
@@ -128,6 +130,7 @@ export default function PersonaEditModal({
                     defaultValue={editableStatus}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
                   >
+                    {isLegacyStatus && <option value="">(estado anterior — elige uno)</option>}
                     <option value="SELECCIONADA">Seleccionada (se le puede asignar PER)</option>
                     <option value="EN_ESPERA">Lista de espera</option>
                   </select>

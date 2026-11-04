@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptimistic, useState, useTransition } from "react";
 import { updateCandidateStatusAction } from "@/app/actions/coordinator";
 
 // Estado de ingreso: solo estas dos opciones. Los estados anteriores (Derivada, Admisible, etc.)
@@ -26,26 +27,42 @@ export default function CandidateStatusSelect({
   candidateId: string;
   status: string;
 }) {
-  const isLegacy = !INTAKE_OPTIONS.some((o) => o.value === status);
+  // El valor mostrado sigue siempre al dato del servidor (también cuando cambia desde el modal de
+  // edición); mientras guarda se muestra el valor elegido y, si falla, vuelve al anterior.
+  const [shown, setShown] = useOptimistic(status);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const isLegacy = !INTAKE_OPTIONS.some((o) => o.value === shown);
   const tone =
-    status === "SELECCIONADA"
+    shown === "SELECCIONADA"
       ? "bg-emerald-50 text-emerald-800"
-      : status === "EN_ESPERA"
+      : shown === "EN_ESPERA"
       ? "bg-amber-50 text-amber-800"
       : "bg-slate-100 text-slate-600";
 
+  function change(next: string) {
+    if (next === status) return;
+    setError(null);
+    startTransition(async () => {
+      setShown(next);
+      const result = await updateCandidateStatusAction(candidateId, next);
+      if (!result.ok) setError(result.message);
+    });
+  }
+
   return (
-    <form action={updateCandidateStatusAction}>
-      <input type="hidden" name="candidateId" value={candidateId} />
+    <div className="space-y-1">
       <select
-        name="status"
-        defaultValue={status}
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className={`px-2 py-0.5 rounded-lg font-semibold text-[10px] border border-slate-200 outline-none cursor-pointer ${tone}`}
+        value={shown}
+        disabled={isPending}
+        onChange={(e) => change(e.target.value)}
+        aria-label="Estado de ingreso"
+        className={`px-2 py-0.5 rounded-lg font-semibold text-[10px] border border-slate-200 outline-none cursor-pointer disabled:opacity-60 disabled:cursor-wait ${tone}`}
       >
         {isLegacy && (
-          <option value={status} disabled>
-            {LEGACY_LABELS[status] ?? status} (anterior)
+          <option value={shown} disabled>
+            {LEGACY_LABELS[shown] ?? shown} (anterior)
           </option>
         )}
         {INTAKE_OPTIONS.map((o) => (
@@ -54,6 +71,12 @@ export default function CandidateStatusSelect({
           </option>
         ))}
       </select>
-    </form>
+      {isPending && <p className="text-[10px] text-slate-400">Guardando…</p>}
+      {error && (
+        <p role="alert" className="text-[10px] font-semibold text-red-700 max-w-[200px]">
+          ⚠️ {error}
+        </p>
+      )}
+    </div>
   );
 }
