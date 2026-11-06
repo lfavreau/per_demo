@@ -149,7 +149,7 @@ Panel de control enfocado en el monitoreo diario de casos, validación metodoló
 
 ### C. Vista del Par Especialista en Recuperación (`(per)/per`)
 
-Aplicación móvil PWA (diseño de un toque y carga veloz) pensada para el trabajo en terreno de los acompañantes PER. Navegación fija de **2 pestañas**: **Mi Agenda** (`/per`) y **Avisos** (`/per/avisos`). Lo habitual es que un PER lleve un solo acompañamiento: en ese caso `/per` lo lleva directo a su itinerario, por eso no existe una pestaña ni ruta "Casos Activos". Si lleva más de uno, `/per` muestra la lista para elegir (alias y código).
+Aplicación móvil PWA (diseño de un toque y carga veloz) pensada para el trabajo en terreno de los acompañantes PER. Navegación fija de **2 pestañas**: **Mi Agenda** (`/per`) y **Avisos** (`/per/avisos`). Lo habitual es que un PER lleve un solo acompañamiento: en ese caso `/per` lo lleva directo a su itinerario, por eso no existe una pestaña ni ruta "Casos Activos". Si lleva más de uno, `/per` muestra "Mis casos" (alias y código) con una vista previa por caso (`getCaseAgendaPreview`/`summarizeCaseAgenda` en `itinerary.service.ts`: etapa, avance y la actividad a corregir, siguiente o en revisión; ordenados por urgencia). La pantalla de etapa muestra "← Mis casos" solo cuando hay más de un caso activo (con uno, `/per` redirige de vuelta y sería un bucle).
 
 #### 1. Mi Agenda
 * **Función**: `/per` resuelve directo a la etapa del único caso activo del PER (`redirect`) o muestra el estado vacío "No tienes un acompañamiento activo asignado" si no tiene ninguno. Las notificaciones que traen `?highlightCaseId=` o `?highlightSessionId=` se resuelven aquí mismo al caso correspondiente antes de redirigir, para no perder el destino aunque el PER tenga cero o un caso.

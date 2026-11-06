@@ -677,7 +677,7 @@ Tu vista se organiza en **2 pestañas fijas** abajo de la pantalla — lo habitu
 
 | Pestaña | Ruta | ¿Para qué sirve? |
 |---|---|---|
-| 📅 **Mi Agenda** | `/per` | Pantalla de entrada. Redirige directo a la etapa de tu acompañamiento activo, o muestra el estado vacío si no tienes ninguno |
+| 📅 **Mi Agenda** | `/per` | Pantalla de entrada. Redirige directo a la etapa de tu acompañamiento activo, o muestra el estado vacío si no tienes ninguno. Si llevas más de un caso, muestra "Mis casos": cada uno con su nombre, etapa, avance y qué te toca (corregir, siguiente actividad o en revisión), con lo urgente primero. Dentro de un caso, el botón "← Mis casos" vuelve a esa lista |
 | 🔔 **Avisos** | `/per/avisos` | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
 `/per` resuelve directo a tu **pantalla de etapa** (`/per/casos/[id]/etapa`), que es donde realmente se trabaja: ahí ves el itinerario de la etapa actual y el formulario del paso pendiente, con el código y alias del caso en el encabezado. Ver la [sección 5](#5-el-itinerario-de-acompañamiento-personalizado-iap) para entender cómo funciona ese itinerario.

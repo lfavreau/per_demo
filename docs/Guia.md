@@ -159,7 +159,7 @@ Cuando entras a la app, tu vista tiene **2 pestañas fijas** abajo de la pantall
 
 | Pestaña | ¿Para qué sirve? |
 | ---------| -------------------|
-| **📅 Mi Agenda** | Pantalla de entrada. Te lleva directo a trabajar en tu acompañamiento activo; si llevas más de uno, primero ves la lista para elegir |
+| **📅 Mi Agenda** | Pantalla de entrada. Te lleva directo a trabajar en tu acompañamiento activo; si llevas más de uno, primero ves la lista "Mis casos" para elegir, con la etapa de cada caso y la actividad que te toca (en rosa si hay algo que corregir). Dentro de un caso, el botón **← Mis casos** te devuelve a esa lista |
 | **🔔 Avisos** | Retroalimentación de tu coordinador y tus supervisiones registradas |
 
 Al entrar a la app llegas directo a la pantalla de trabajo de tu caso, donde está el itinerario del caso (ver [sección 6.2](#62-completar-el-itinerario-de-un-caso)). Si no tienes ningún acompañamiento asignado todavía, Mi Agenda te lo indica ahí mismo.

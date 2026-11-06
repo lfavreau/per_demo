@@ -285,6 +285,57 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
   };
 }
 
+export interface CaseAgendaPreview {
+  stage: CaseStage;
+  /** Actividades obligatorias de la etapa ya completadas, y el total de la etapa. */
+  done: number;
+  total: number;
+  /** Qué hay que hacer en el caso, de lo más urgente a lo menos. */
+  kind: "RETIRO" | "CORREGIR" | "SIGUIENTE" | "REVISION" | "COMPLETA";
+  /** Actividad a la que se refiere `kind` (vacío si la etapa está completa). */
+  title: string | null;
+  /** Etapa de esa actividad cuando es de una anterior (una reabierta). */
+  activityStage: CaseStage | null;
+}
+
+type ItineraryStateForAgenda = Pick<Awaited<ReturnType<typeof getItineraryState>>, "stage" | "steps" | "pendingWithdrawalStep">;
+
+/** Resume en una línea qué le toca hacer al PER en un caso. Pura: solo mira el estado del itinerario. */
+export function summarizeCaseAgenda(state: ItineraryStateForAgenda): CaseAgendaPreview {
+  const stageSteps = state.steps.filter((s) => s.stage === state.stage && !s.optional);
+  const base = {
+    stage: state.stage,
+    done: stageSteps.filter((s) => s.kind === "COMPLETED").length,
+    total: stageSteps.length,
+  };
+  const about = (step: ItineraryStepState | undefined, kind: CaseAgendaPreview["kind"]): CaseAgendaPreview => ({
+    ...base,
+    kind,
+    title: step?.title ?? null,
+    activityStage: step && step.stage !== state.stage ? step.stage : null,
+  });
+
+  if (state.pendingWithdrawalStep && state.pendingWithdrawalStep.status !== "VALIDADA") {
+    const submitted = state.pendingWithdrawalStep.status === "ENVIADA";
+    return { ...base, kind: submitted ? "REVISION" : "RETIRO", title: state.pendingWithdrawalStep.title, activityStage: null };
+  }
+  const current = state.steps.filter((s) => s.kind === "CURRENT");
+  const returned = current.find((s) => s.status === "DEVUELTA");
+  if (returned) return about(returned, "CORREGIR");
+  const toDo = current.find((s) => s.status !== "ENVIADA");
+  if (toDo) return about(toDo, "SIGUIENTE");
+  const inReview = current.find((s) => s.status === "ENVIADA");
+  if (inReview) return about(inReview, "REVISION");
+  const upcoming = state.steps.find((s) => s.kind === "UPCOMING" && !s.optional);
+  if (upcoming) return about(upcoming, "SIGUIENTE");
+  return about(undefined, "COMPLETA");
+}
+
+/** Vista previa del itinerario de un caso para el selector de casos del PER. */
+export async function getCaseAgendaPreview(paCaseId: string, isDemo: boolean): Promise<CaseAgendaPreview> {
+  return summarizeCaseAgenda(await getItineraryState(paCaseId, isDemo));
+}
+
 interface SubmitFieldValues {
   [key: string]: unknown;
 }

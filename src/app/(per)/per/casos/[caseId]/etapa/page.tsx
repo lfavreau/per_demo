@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -95,9 +96,22 @@ export default async function PERCaseStagePage({
 
   const isCaseHighlighted = highlightCaseId === paCase.id;
 
+  // Con un solo caso activo /per redirige acá mismo, así que el botón solo tiene sentido si hay más de uno.
+  const activeCaseCount = await prisma.pACase.count({
+    where: { perId: profile.id, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
+  });
+
   return (
     <AppShell user={user}>
       <div className="space-y-6">
+        {activeCaseCount > 1 && (
+          <Link
+            href="/per"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50"
+          >
+            ← Mis casos
+          </Link>
+        )}
         {state.pendingWithdrawalStep && state.pendingWithdrawalStep.status !== "VALIDADA" && (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3 text-xs">
             <div>

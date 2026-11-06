@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import CaseName from "@/components/cases/CaseName";
-import { mapCaseStatusToLabel } from "@/lib/nomenclatures";
+import { formatStageHeading, mapCaseStatusToLabel } from "@/lib/nomenclatures";
+import { getCaseAgendaPreview, type CaseAgendaPreview } from "@/server/services/itinerary.service";
 
 export default async function PERDashboardPage({
   searchParams,
@@ -66,25 +67,55 @@ export default async function PERDashboardPage({
     redirect(`/per/casos/${activeCases[0].id}/etapa`);
   }
 
+  // Qué le toca hacer en cada caso: lo que hay que corregir va primero, luego lo que sigue.
+  const URGENCY: Record<CaseAgendaPreview["kind"], number> = { RETIRO: 0, CORREGIR: 1, SIGUIENTE: 2, REVISION: 3, COMPLETA: 4 };
+  const cases = (
+    await Promise.all(
+      activeCases.map(async (c) => {
+        let preview: CaseAgendaPreview | null = null;
+        try {
+          preview = await getCaseAgendaPreview(c.id, isDemo);
+        } catch {
+          // Si un caso no se puede resumir, igual aparece en la lista (sin vista previa).
+        }
+        return { ...c, preview };
+      })
+    )
+  ).sort((a, b) => (a.preview ? URGENCY[a.preview.kind] : 5) - (b.preview ? URGENCY[b.preview.kind] : 5));
+
   return (
     <AppShell user={user}>
       <div className="space-y-6">
         <div className="p-6 bg-card border border-border rounded-2xl shadow-sm">
-          <h3 className="font-bold text-sm text-slate-800 mb-3">Mi Agenda</h3>
-          {activeCases.length === 0 ? (
+          <h3 className="font-bold text-sm text-slate-800 mb-3">Mis casos</h3>
+          {cases.length === 0 ? (
             <p className="text-slate-400 text-center py-4 text-xs">No tienes un acompañamiento activo asignado.</p>
           ) : (
             <div className="space-y-2 text-xs">
-              {activeCases.map((c) => (
+              {cases.map((c) => (
                 <Link
                   key={c.id}
                   href={`/per/casos/${c.id}/etapa`}
-                  className="flex justify-between items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-100 transition"
+                  className="block p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-100 transition space-y-1.5"
                 >
-                  <CaseName code={c.code} alias={c.alias} className="font-bold text-slate-800" />
-                  <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px] shrink-0">
-                    {mapCaseStatusToLabel(c.status)}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <CaseName code={c.code} alias={c.alias} className="font-bold text-slate-800" />
+                    {c.preview ? (
+                      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">
+                        {formatStageHeading(c.preview.stage)}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold text-[10px]">
+                        {mapCaseStatusToLabel(c.status)}
+                      </span>
+                    )}
+                    {c.preview && c.preview.total > 0 && (
+                      <span className="text-[10px] text-slate-400">
+                        {c.preview.done} de {c.preview.total} actividades
+                      </span>
+                    )}
+                  </div>
+                  {c.preview && <AgendaLine preview={c.preview} />}
                 </Link>
               ))}
             </div>
@@ -93,4 +124,21 @@ export default async function PERDashboardPage({
       </div>
     </AppShell>
   );
+}
+
+function AgendaLine({ preview }: { preview: CaseAgendaPreview }) {
+  const from = preview.activityStage ? ` (${formatStageHeading(preview.activityStage)})` : "";
+  const title = `${preview.title ?? ""}${from}`;
+  switch (preview.kind) {
+    case "RETIRO":
+      return <p className="font-semibold text-amber-800">⚠️ Completar formulario de abandono</p>;
+    case "CORREGIR":
+      return <p className="font-semibold text-pink-700">✏️ Corregir: {title}</p>;
+    case "SIGUIENTE":
+      return <p className="font-semibold text-slate-700">➡️ Siguiente: {title}</p>;
+    case "REVISION":
+      return <p className="text-blue-700">📤 En revisión de coordinación: {title}</p>;
+    default:
+      return <p className="text-emerald-700">✔ Etapa completa, coordinación revisa el avance</p>;
+  }
 }
