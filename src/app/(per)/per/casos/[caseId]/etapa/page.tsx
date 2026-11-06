@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { ensureCurrentStageTasks, getItineraryState, getCurrentGoalsForCase } from "@/server/services/itinerary.service";
+import {
+  ensureCurrentStageTasks,
+  getItineraryState,
+  getCurrentGoalsForCase,
+  getCaseActivityHistory,
+  getDomainPriorities,
+} from "@/server/services/itinerary.service";
 import { getStepByActivityKey, RECOVERY_DOMAINS } from "@/lib/instrument-itinerary";
 import { mapStageToLabel, formatCaseLabel } from "@/lib/nomenclatures";
 
@@ -12,6 +18,7 @@ import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import RegistroAcompanamientoForm from "@/components/per/RegistroAcompanamientoForm";
 import SessionHighlightModal from "@/components/per/SessionHighlightModal";
 import ModalButton from "@/components/shared/ModalButton";
+import ActivityHistoryViewer from "@/components/shared/ActivityHistoryViewer";
 
 function daysAgo(date: Date | null): string {
   if (!date) return "sin registro";
@@ -52,6 +59,10 @@ export default async function PERCaseStagePage({
 
   await ensureCurrentStageTasks(paCase.id, user.id, isDemo);
   const state = await getItineraryState(paCase.id, isDemo);
+  const [history, domainPriorities] = await Promise.all([
+    getCaseActivityHistory(paCase.id, isDemo),
+    getDomainPriorities(paCase.id),
+  ]);
 
   const metaLine = `Iniciada ${daysAgo(paCase.startDate)} · Última sesión ${daysAgo(paCase.lastSessionDate)}`;
 
@@ -123,8 +134,11 @@ export default async function PERCaseStagePage({
             stageLabel={mapStageToLabel(state.stage)}
             metaLine={metaLine}
             steps={state.steps}
+            domainPriorities={domainPriorities}
           />
         </div>
+
+        <ActivityHistoryViewer mode="PER" caseId={paCase.id} items={history} domainPriorities={domainPriorities} />
 
         {state.continuousStep && (
           <div className="space-y-4">

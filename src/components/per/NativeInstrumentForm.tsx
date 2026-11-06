@@ -3,21 +3,104 @@
 import React, { useState, useEffect } from "react";
 import { submitItineraryStepAction, syncOfflineItineraryStepsAction } from "@/app/actions/itinerary";
 import { RECOVERY_DOMAINS, type ItineraryFieldDef } from "@/lib/instrument-itinerary";
-import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
+import { MAX_PLAN_WEEK, REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
+import { PRIORITY_LEVELS, getPriority, priorityRank, type PriorityValue } from "@/lib/priority";
 
 interface DomainRow {
   recoveryDomainId: string;
   needs: string;
   strengths: string;
-  importance: "ALTO" | "MEDIO" | "BAJO";
+  importance: PriorityValue;
 }
 
 interface GoalRow {
+  /** Id del objetivo ya guardado; se conserva al editar para no duplicarlo ni soltar sus registros. */
+  id?: string;
   recoveryDomainId: string;
   objective: string;
   resources: string;
   activities: string;
-  deadline: string;
+  /** Semana del acompañamiento (texto del campo numérico; vacío = sin semana). */
+  targetWeek: string;
+}
+
+function emptyGoalRow(): GoalRow {
+  return { recoveryDomainId: RECOVERY_DOMAINS[0], objective: "", resources: "", activities: "", targetWeek: "" };
+}
+
+function initialGoalRows(existing: any): GoalRow[] {
+  if (!Array.isArray(existing?.goals) || existing.goals.length === 0) return [emptyGoalRow()];
+  return existing.goals.map((g: any) => ({
+    id: g.id,
+    recoveryDomainId: g.recoveryDomainId,
+    objective: g.objective ?? "",
+    resources: g.resources ?? "",
+    activities: g.activities ?? "",
+    targetWeek: g.targetWeek != null ? String(g.targetWeek) : "",
+  }));
+}
+
+/** Prioridad de un ámbito: tres opciones con color y texto (Alta roja, Media amarilla, Baja verde). */
+function PriorityPicker({ value, onChange, name }: { value: PriorityValue; onChange: (v: PriorityValue) => void; name: string }) {
+  return (
+    <div role="radiogroup" aria-label={`Prioridad de ${name}`} className="flex gap-1.5">
+      {PRIORITY_LEVELS.map((level) => {
+        const active = value === level.value;
+        return (
+          <button
+            key={level.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(level.value)}
+            className={`flex-1 px-2 py-2 rounded-lg border font-bold text-[11px] cursor-pointer transition ${
+              active ? level.selected : level.chip
+            }`}
+          >
+            Prioridad {level.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Elige el ámbito de un objetivo mostrando la prioridad de cada uno; los de prioridad alta van primero. */
+function DomainChoice({
+  value,
+  priorities,
+  onChange,
+}: {
+  value: string;
+  priorities: Record<string, string>;
+  onChange: (v: string) => void;
+}) {
+  const ordered = [...RECOVERY_DOMAINS].sort((a, b) => priorityRank(priorities[a]) - priorityRank(priorities[b]));
+  return (
+    <div role="radiogroup" aria-label="Ámbito de recuperación" className="flex flex-wrap gap-1.5">
+      {ordered.map((domain) => {
+        const priority = getPriority(priorities[domain]);
+        const active = value === domain;
+        return (
+          <button
+            key={domain}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(domain)}
+            title={priority ? `Prioridad ${priority.label}` : "Sin prioridad definida"}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer transition ${
+              active ? "bg-slate-800 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${priority ? priority.dot : "bg-slate-300"}`} aria-hidden="true" />
+            {domain}
+            {priority && <span className="text-[9px] opacity-80">· {priority.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 interface OfflineStep {
@@ -45,6 +128,12 @@ interface NativeInstrumentFormProps {
   fields: ItineraryFieldDef[];
   /** contentJson de un envío anterior (ej. tras DEVUELTA), para precargar el formulario. */
   existingContentJson?: string | null;
+  /** Prioridad de cada ámbito según la Actividad 3; colorea el selector de ámbito de la Actividad 4. */
+  domainPriorities?: Record<string, string>;
+  /** Se llama poco después de un envío exitoso (por ejemplo para cerrar el modal en que se edita). */
+  onSubmitted?: () => void;
+  /** Texto del botón de envío (por defecto "Enviar a Coordinación"). */
+  submitLabel?: string;
 }
 
 export default function NativeInstrumentForm({
@@ -54,6 +143,9 @@ export default function NativeInstrumentForm({
   contentTarget,
   fields,
   existingContentJson,
+  domainPriorities = {},
+  onSubmitted,
+  submitLabel = "Enviar a Coordinación",
 }: NativeInstrumentFormProps) {
   const existing = existingContentJson ? safeParse(existingContentJson) : null;
 
@@ -63,11 +155,8 @@ export default function NativeInstrumentForm({
   const [domainRows, setDomainRows] = useState<DomainRow[]>(
     contentTarget === "IAP_DOMAIN_MAP" && Array.isArray(existing?.domains) ? existing.domains : defaultDomainRows()
   );
-  const [goalRows, setGoalRows] = useState<GoalRow[]>(
-    contentTarget === "IAP_GOAL" && Array.isArray(existing?.goals)
-      ? existing.goals
-      : [{ recoveryDomainId: RECOVERY_DOMAINS[0], objective: "", resources: "", activities: "", deadline: "" }]
-  );
+  const [goalRows, setGoalRows] = useState<GoalRow[]>(contentTarget === "IAP_GOAL" ? initialGoalRows(existing) : [emptyGoalRow()]);
+  const [mapDate, setMapDate] = useState<string>(typeof existing?.date === "string" ? existing.date : "");
 
   const [isOnline, setIsOnline] = useState(true);
   const [offlineDrafts, setOfflineDrafts] = useState<OfflineStep[]>([]);
@@ -94,8 +183,10 @@ export default function NativeInstrumentForm({
   }, [storageKey]);
 
   function buildFieldValues(): Record<string, unknown> {
-    if (contentTarget === "IAP_DOMAIN_MAP") return { domains: domainRows };
-    if (contentTarget === "IAP_GOAL") return { goals: goalRows };
+    if (contentTarget === "IAP_DOMAIN_MAP") return { date: mapDate, domains: domainRows };
+    if (contentTarget === "IAP_GOAL") {
+      return { goals: goalRows.map((r) => ({ ...r, targetWeek: r.targetWeek === "" ? null : Number(r.targetWeek) })) };
+    }
     return flatValues;
   }
 
@@ -122,6 +213,7 @@ export default function NativeInstrumentForm({
 
     if (res.success) {
       setMsg({ type: "success", text: "Instrumento enviado a coordinación exitosamente" });
+      if (onSubmitted) setTimeout(onSubmitted, 900);
     } else {
       setMsg({ type: "error", text: res.error || "Error al enviar el instrumento" });
     }
@@ -237,13 +329,27 @@ export default function NativeInstrumentForm({
 
           {contentTarget === "IAP_DOMAIN_MAP" && (
             <div className="space-y-3 overflow-x-auto">
+              <div>
+                <label className="block text-slate-500 mb-1.5">Fecha</label>
+                <input
+                  type="date"
+                  value={mapDate}
+                  onChange={(e) => setMapDate(e.target.value)}
+                  required
+                  className="w-full sm:w-56 p-2.5 bg-background border border-border rounded-xl outline-none focus:border-primary"
+                />
+              </div>
               <p className="text-[10px] text-slate-400">
-                Completa necesidades, fortalezas e importancia para cada ámbito de recuperación.
+                Completa necesidades, fortalezas y prioridad (Alta, Media o Baja) para cada ámbito de recuperación. La
+                prioridad marca con color qué ámbitos conviene atender primero.
               </p>
               {domainRows.map((row, i) => (
                 <div key={row.recoveryDomainId} className="p-3 border border-border rounded-xl space-y-2">
-                  <div className="font-bold text-slate-700">{row.recoveryDomainId}</div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="font-bold text-slate-700 flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${getPriority(row.importance)?.dot ?? "bg-slate-300"}`} aria-hidden="true" />
+                    {row.recoveryDomainId}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <input
                       type="text"
                       placeholder="Necesidades"
@@ -266,20 +372,16 @@ export default function NativeInstrumentForm({
                       }}
                       className="p-2 bg-background border border-border rounded-lg outline-none"
                     />
-                    <select
-                      value={row.importance}
-                      onChange={(e) => {
-                        const next = [...domainRows];
-                        next[i] = { ...row, importance: e.target.value as DomainRow["importance"] };
-                        setDomainRows(next);
-                      }}
-                      className="p-2 bg-background border border-border rounded-lg outline-none"
-                    >
-                      <option value="ALTO">Importancia: Alto</option>
-                      <option value="MEDIO">Importancia: Medio</option>
-                      <option value="BAJO">Importancia: Bajo</option>
-                    </select>
                   </div>
+                  <PriorityPicker
+                    name={row.recoveryDomainId}
+                    value={row.importance}
+                    onChange={(importance) => {
+                      const next = [...domainRows];
+                      next[i] = { ...row, importance };
+                      setDomainRows(next);
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -288,26 +390,21 @@ export default function NativeInstrumentForm({
           {contentTarget === "IAP_GOAL" && (
             <div className="space-y-3">
               <p className="text-[10px] text-slate-400">
-                Agrega un objetivo por cada ámbito que se vaya a trabajar.
+                Agrega un objetivo por cada ámbito que se vaya a trabajar. Los ámbitos llevan el color de la prioridad que
+                se definió en la Actividad 3. En «Semana» indica en qué semana del acompañamiento se espera lograrlo.
               </p>
               {goalRows.map((row, i) => (
                 <div key={i} className="p-3 border border-border rounded-xl space-y-2">
-                  <div className="flex justify-between items-center">
-                    <select
+                  <div className="flex justify-between items-start gap-2">
+                    <DomainChoice
                       value={row.recoveryDomainId}
-                      onChange={(e) => {
+                      priorities={domainPriorities}
+                      onChange={(recoveryDomainId) => {
                         const next = [...goalRows];
-                        next[i] = { ...row, recoveryDomainId: e.target.value };
+                        next[i] = { ...row, recoveryDomainId };
                         setGoalRows(next);
                       }}
-                      className="p-2 bg-background border border-border rounded-lg outline-none font-bold"
-                    >
-                      {RECOVERY_DOMAINS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                    />
                     {goalRows.length > 1 && (
                       <button
                         type="button"
@@ -354,11 +451,17 @@ export default function NativeInstrumentForm({
                       className="p-2 bg-background border border-border rounded-lg outline-none"
                     />
                     <input
-                      type="date"
-                      value={row.deadline}
+                      type="number"
+                      min={1}
+                      max={MAX_PLAN_WEEK}
+                      step={1}
+                      inputMode="numeric"
+                      placeholder="Semana del acompañamiento"
+                      aria-label="Semana del acompañamiento"
+                      value={row.targetWeek}
                       onChange={(e) => {
                         const next = [...goalRows];
-                        next[i] = { ...row, deadline: e.target.value };
+                        next[i] = { ...row, targetWeek: e.target.value };
                         setGoalRows(next);
                       }}
                       className="p-2 bg-background border border-border rounded-lg outline-none"
@@ -369,10 +472,7 @@ export default function NativeInstrumentForm({
               <button
                 type="button"
                 onClick={() =>
-                  setGoalRows([
-                    ...goalRows,
-                    { recoveryDomainId: RECOVERY_DOMAINS[0], objective: "", resources: "", activities: "", deadline: "" },
-                  ])
+                  setGoalRows([...goalRows, emptyGoalRow()])
                 }
                 className="text-primary text-[10px] font-bold cursor-pointer"
               >
@@ -394,7 +494,7 @@ export default function NativeInstrumentForm({
               disabled={!isOnline || isSubmitting}
               className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/95 disabled:bg-slate-800 disabled:text-slate-500 transition cursor-pointer"
             >
-              {isSubmitting ? "Enviando..." : "Enviar a Coordinación"}
+              {isSubmitting ? "Enviando..." : submitLabel}
             </button>
           </div>
         </form>

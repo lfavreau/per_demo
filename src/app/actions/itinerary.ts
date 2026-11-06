@@ -8,6 +8,7 @@ import {
   submitItineraryStep,
   validateItineraryStep,
   returnItineraryStep,
+  reopenValidation,
   markStepNotApplicable,
   triggerIntermediateEvaluation,
 } from "@/server/services/itinerary.service";
@@ -93,6 +94,31 @@ export async function validateItineraryStepAction(taskId: string): Promise<void>
     if (isNextRedirect(err)) throw err;
     const message = err instanceof Error ? err.message : "No se pudo validar el instrumento";
     redirect(`/coordinacion/casos?error=${encodeURIComponent(message)}`);
+  }
+}
+
+/**
+ * Corrige una validación hecha por error: la deja de nuevo en revisión ("REVIEW") o se la pide editar
+ * al PER ("REQUEST_EDIT"). Devuelve el resultado para mostrarlo en el mismo modal.
+ */
+export async function reopenValidationAction(
+  taskId: string,
+  mode: "REVIEW" | "REQUEST_EDIT",
+  reason: string
+): Promise<{ ok: boolean; message: string }> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    return { ok: false, message: "No autorizado" };
+  }
+  try {
+    await reopenValidation({ taskId, mode, reason, actorId: user.id, isDemo: Boolean(user.isDemo) });
+    revalidateItineraryPaths();
+    return {
+      ok: true,
+      message: mode === "REVIEW" ? "La actividad volvió a revisión." : "Se le pidió al PER que edite la actividad.",
+    };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "No se pudo corregir la validación." };
   }
 }
 

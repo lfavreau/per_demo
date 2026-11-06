@@ -70,8 +70,12 @@ export default async function AdminAuditoriaPage() {
                     </td>
                     <td className="py-3 font-semibold text-slate-800">{log.action}</td>
                     <td className="py-3 text-slate-500">{log.entityType} ({log.entityId})</td>
-                    <td className="py-3 text-slate-600 truncate max-w-xs" title={log.newValue || log.previousValue || ""}>
+                    <td
+                      className="py-3 text-slate-600 truncate max-w-xs"
+                      title={[log.previousValue && `Antes: ${log.previousValue}`, log.newValue && `Después: ${log.newValue}`, log.reason && `Motivo: ${log.reason}`].filter(Boolean).join(" | ")}
+                    >
                       {log.newValue || log.previousValue || "Sin detalles adicionales"}
+                      {log.reason && <span className="block text-[10px] text-slate-400">Motivo: {log.reason}</span>}
                     </td>
                   </tr>
                 ))}

@@ -197,7 +197,7 @@ export function buildInstrumentCatalog(createdByUserId: string) {
     },
     {
       name: "Actividad 3: Mapa de recursos y necesidades",
-      description: "Necesidades, fortalezas e importancia por cada uno de los 9 ámbitos de recuperación",
+      description: "Fecha, necesidades, fortalezas y prioridad por cada uno de los 9 ámbitos de recuperación",
       type: "MANUAL_TASK",
       googleUrl: null,
       phaseId: "FASE_4",
@@ -222,7 +222,7 @@ export function buildInstrumentCatalog(createdByUserId: string) {
     },
     {
       name: "Actividad 4: Planificación de objetivos y acciones",
-      description: "Objetivos, recursos, actividades y plazos por ámbito de recuperación",
+      description: "Objetivos, recursos, actividades y semana del acompañamiento por ámbito de recuperación",
       type: "MANUAL_TASK",
       googleUrl: null,
       phaseId: "FASE_4",

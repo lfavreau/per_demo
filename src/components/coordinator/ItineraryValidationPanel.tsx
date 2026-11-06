@@ -37,7 +37,8 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
   const [isPending, startTransition] = useTransition();
 
   const completed = steps.filter((s) => s.kind === "COMPLETED");
-  const current = steps.find((s) => s.kind === "CURRENT");
+  // Primero lo que espera revisión (también una actividad editada tras validarse); si no hay, la activa.
+  const current = steps.find((s) => s.kind === "CURRENT" && s.status === "ENVIADA") ?? steps.find((s) => s.kind === "CURRENT");
   const upcoming = steps.filter((s) => s.kind === "UPCOMING");
   const pendingIntermediateEval = upcoming.find((s) => s.activityKey === "ACTIVIDAD_5_INTERMEDIA");
   const validatedSessions = continuousStep?.validatedSessionLogCount ?? 0;

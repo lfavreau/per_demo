@@ -19,6 +19,9 @@ export const REGION_NAMES = REGIONS.map((r) => r.name);
 // si a su criterio ya corresponde — ver triggerIntermediateEvaluation en itinerary.service.ts.
 export const MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION = 5;
 
+// Actividad 4: la meta de cada objetivo se expresa como semana del acompañamiento (1 = primera).
+export const MAX_PLAN_WEEK = 52;
+
 // Días sin supervisión técnica antes de que la dotación PER pase a amarillo/rojo
 // en /coordinacion/supervisiones.
 export const SUPERVISION_ALERT_DAYS = {

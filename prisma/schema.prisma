@@ -266,7 +266,8 @@ model IAPGoal {
   objective        String
   resources        String?
   activities       String?
-  deadline         DateTime?
+  deadline         DateTime? // legado: antes el plazo era una fecha; hoy se usa targetWeek
+  targetWeek       Int?      // semana del acompañamiento en que se espera lograr el objetivo (1 = primera semana)
   result           String?   // "LOGRADO", "MEDIANAMENTE_LOGRADO", "NO_LOGRADO"
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

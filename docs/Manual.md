@@ -263,8 +263,12 @@ La plataforma no muestra todos los instrumentos del IAP a la vez. Cada caso avan
 | 1 | Primer encuentro. Reflexión personal del PER | Reflexión del PER sobre el primer encuentro con la persona acompañada |
 | 2 | Actividad 1: Motivaciones y expectativas del acompañado | Motivaciones y expectativas frente al proceso |
 | 3 | Actividad 2: Guía para la exploración de antecedentes y contexto personal | 13 preguntas en 5 secciones (presentación, intereses, experiencias, preferencias, cierre). Incluye el **alias** — ver más abajo |
-| 4 | Actividad 3: Mapa de recursos y necesidades | Necesidades, fortalezas e importancia por cada uno de los 9 ámbitos de recuperación |
-| 5 | Actividad 4: Planificación de objetivos y acciones | Uno o más objetivos concretos, con recursos, actividades y plazo, por ámbito trabajado |
+| 4 | Actividad 3: Mapa de recursos y necesidades | **Fecha** del mapa y, por cada uno de los 9 ámbitos, necesidades, fortalezas y **prioridad** (Alta en rojo, Media en amarillo, Baja en verde) |
+| 5 | Actividad 4: Planificación de objetivos y acciones | Uno o más objetivos concretos, con recursos, actividades y **semana del acompañamiento** (1, 2, 3…) en que se espera lograrlos. No lleva fecha. Al elegir el ámbito de cada objetivo se ven los colores de prioridad definidos en la Actividad 3, con los de prioridad alta primero |
+
+> **Historial, edición y correcciones.** En tu pantalla del caso, el **Historial del proceso** tiene dos listas (etapa y actividad) y el botón **Cargar**: abre la actividad con lo que se registró y su historial de estados. Desde ahí puedes **✏️ Editar** una actividad ya enviada (sigue en revisión y coordinación recibe un aviso) o ya validada (vuelve a revisión de coordinación). Si coordinación te **pide una edición**, aparece primero y con fondo rosa, antes de tu actividad activa: conviene atenderla para estar al día.
+>
+> Coordinación, en el mismo historial, puede **corregir una validación hecha por error**: dejarla de nuevo *en revisión* (el PER no recibe aviso) o *pedir al PER que la edite*. Siempre se escribe un motivo. Toda edición y corrección queda en la bitácora de auditoría del administrador (qué campos cambiaron, no el texto).
 
 **Etapa Conexión**:
 

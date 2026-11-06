@@ -7,6 +7,7 @@ export async function updateTaskStatus({
   actorId,
   isDemo,
   contentJson,
+  eventNote,
 }: {
   taskId: string;
   toStatus:
@@ -23,6 +24,11 @@ export async function updateTaskStatus({
   isDemo: boolean;
   /** Payload JSON de instrumentos nativos (submissionMode NATIVE_FORM) — se persiste en Task.contentJson. */
   contentJson?: string;
+  /**
+   * Texto solo para el historial (TaskEvent y auditoría) cuando `note` no aplica. En ENVIADA, `note`
+   * se guarda además como enlace entregado, así que una nota de historial no debe viajar por ahí.
+   */
+  eventNote?: string;
 }) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
@@ -105,7 +111,7 @@ export async function updateTaskStatus({
         fromStatus: current.status,
         toStatus,
         byUserId: actorId,
-        note,
+        note: eventNote ?? note,
       },
     });
 
@@ -118,7 +124,7 @@ export async function updateTaskStatus({
         entityId: taskId,
         previousValue: current.status,
         newValue: JSON.stringify({ status: toStatus }),
-        reason: note,
+        reason: eventNote ?? note,
         isDemo,
       },
     });

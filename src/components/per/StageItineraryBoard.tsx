@@ -5,6 +5,7 @@ import { getStepByActivityKey } from "@/lib/instrument-itinerary";
 import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import ExternalLinkStepForm from "@/components/per/ExternalLinkStepForm";
 import CompletedStepSummary from "@/components/per/CompletedStepSummary";
+import ModalButton from "@/components/shared/ModalButton";
 
 export interface ItineraryStepStateView {
   activityKey: string;
@@ -15,6 +16,9 @@ export interface ItineraryStepStateView {
   contentJson?: string | null;
   submissionMode: "EXTERNAL_LINK" | "NATIVE_FORM";
   optional: boolean;
+  /** Ya estuvo validada y se volvió a abrir: se muestra destacada antes de la actividad activa. */
+  reopened?: boolean;
+  returnNote?: string | null;
 }
 
 interface StageItineraryBoardProps {
@@ -23,13 +27,23 @@ interface StageItineraryBoardProps {
   stageLabel: string;
   metaLine: string;
   steps: ItineraryStepStateView[];
+  domainPriorities?: Record<string, string>;
 }
 
-export default function StageItineraryBoard({ caseId, caseCode, stageLabel, metaLine, steps }: StageItineraryBoardProps) {
+export default function StageItineraryBoard({
+  caseId,
+  caseCode,
+  stageLabel,
+  metaLine,
+  steps,
+  domainPriorities = {},
+}: StageItineraryBoardProps) {
   const [showCompleted, setShowCompleted] = useState(false);
 
   const completed = steps.filter((s) => s.kind === "COMPLETED");
-  const current = steps.find((s) => s.kind === "CURRENT");
+  // Las actividades reabiertas van aparte y primero: son ediciones que hay que atender para estar al día.
+  const reopened = steps.filter((s) => s.kind === "CURRENT" && s.reopened);
+  const current = steps.find((s) => s.kind === "CURRENT" && !s.reopened);
   const upcoming = steps.filter((s) => s.kind === "UPCOMING");
 
   return (
@@ -62,6 +76,43 @@ export default function StageItineraryBoard({ caseId, caseCode, stageLabel, meta
         </div>
       )}
 
+      {reopened.map((s) => {
+        const stepDef = getStepByActivityKey(s.activityKey);
+        if (s.status === "DEVUELTA") {
+          return (
+            <div key={s.activityKey} className="p-4 bg-pink-50 border-2 border-pink-300 rounded-2xl text-xs space-y-2">
+              <p className="font-bold text-pink-900">✏️ Edición solicitada: {s.title}</p>
+              {s.returnNote && <p className="text-pink-800 leading-relaxed">{s.returnNote}</p>}
+              <p className="text-pink-700 text-[10px]">Atiéndela antes de seguir con tu actividad activa.</p>
+              {s.submissionMode === "NATIVE_FORM" && (
+                <ModalButton
+                  label="✏️ Editar ahora"
+                  title={s.title}
+                  buttonClassName="py-2 px-4 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  <NativeInstrumentForm
+                    taskId={s.taskId!}
+                    caseId={caseId}
+                    title={s.title}
+                    contentTarget={stepDef?.contentTarget ?? "TASK_JSON"}
+                    fields={stepDef?.fields ?? []}
+                    existingContentJson={s.contentJson}
+                    domainPriorities={domainPriorities}
+                    submitLabel="Guardar cambios"
+                  />
+                </ModalButton>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div key={s.activityKey} className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-700">
+            <p className="font-bold">📤 {s.title}</p>
+            <p className="mt-1">Editada y enviada de nuevo; coordinación la está revisando.</p>
+          </div>
+        );
+      })}
+
       {current &&
         (() => {
           if (current.status === "ENVIADA") {
@@ -85,6 +136,7 @@ export default function StageItineraryBoard({ caseId, caseCode, stageLabel, meta
               contentTarget={stepDef?.contentTarget ?? "TASK_JSON"}
               fields={stepDef?.fields ?? []}
               existingContentJson={current.status === "DEVUELTA" ? current.contentJson : null}
+              domainPriorities={domainPriorities}
             />
           );
         })()}
@@ -106,7 +158,7 @@ export default function StageItineraryBoard({ caseId, caseCode, stageLabel, meta
         </div>
       )}
 
-      {!current && upcoming.length === 0 && completed.length > 0 && (
+      {!current && reopened.length === 0 && upcoming.length === 0 && completed.length > 0 && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-700 font-semibold text-center">
           🎉 Todos los instrumentos de esta etapa están completos. La coordinación revisará el avance de etapa.
         </div>

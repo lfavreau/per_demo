@@ -9,7 +9,8 @@ import {
   createDirectContinuityCaseAction,
   reassignCaseAction,
 } from "@/app/actions/coordinator";
-import { getItineraryState } from "@/server/services/itinerary.service";
+import { getCaseActivityHistory, getItineraryState } from "@/server/services/itinerary.service";
+import ActivityHistoryViewer from "@/components/shared/ActivityHistoryViewer";
 import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
 import StageAdvanceButton from "@/components/coordinator/StageAdvanceButton";
 import WithdrawalModal from "@/components/coordinator/WithdrawalModal";
@@ -75,6 +76,7 @@ export default async function CoordinatorCasosPage({
   // "Al día" o "Atrasado" del caso, según tareas vencidas sin entregar y alertas abiertas de atraso.
   let isUpToDate = true;
   let itineraryState: Awaited<ReturnType<typeof getItineraryState>> | null = null;
+  let activityHistory: Awaited<ReturnType<typeof getCaseActivityHistory>> = [];
 
   const targetCode = params.caseCode || (regionalCases.length > 0 ? regionalCases[0].code : null);
 
@@ -119,6 +121,7 @@ export default async function CoordinatorCasosPage({
       if (["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCase.status)) {
         itineraryState = await getItineraryState(selectedCase.id, isDemo);
       }
+      activityHistory = await getCaseActivityHistory(selectedCase.id, isDemo);
 
       // Map Status History
       selectedCase.statusHistory.forEach((h) => {
@@ -365,6 +368,9 @@ export default async function CoordinatorCasosPage({
                   continuousStep={itineraryState.continuousStep}
                 />
               )}
+
+              {/* Historial del proceso: ver lo registrado y corregir una validación hecha por error */}
+              <ActivityHistoryViewer mode="COORD" caseId={selectedCaseDetails.id} items={activityHistory} />
 
               {/* Status Transition Actions */}
               {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) && itineraryState && (

@@ -358,15 +358,15 @@ Casos protagonistas del video:
 ## E19 · Actividades 3 y 4: el IAP propiamente tal (16:15 – 17:15)
 
 **Acciones**:
-1. Validar Actividad 2 → aparece **Actividad 3: Mapa de recursos y necesidades**: una fila por cada uno de los **9 ámbitos de recuperación**, con *necesidades*, *fortalezas* e *importancia*.
+1. Validar Actividad 2 → aparece **Actividad 3: Mapa de recursos y necesidades**: una fila por cada uno de los **9 ámbitos de recuperación**, con *necesidades*, *fortalezas* y *prioridad* (alta en rojo, media en amarillo, baja en verde), más la fecha del mapa.
 2. Completar 2–3 ámbitos y enviar. Validar desde la ventana A.
-3. Aparece **Actividad 4: Planificación de objetivos y acciones**: filas dinámicas con ámbito, objetivo, recursos, actividades y plazo. Agregar un objetivo: *«Vincularse a un taller comunitario del CESFAM»* (ámbito *Apoyo social*).
+3. Aparece **Actividad 4: Planificación de objetivos y acciones**: filas dinámicas con ámbito (con los colores de prioridad de la Actividad 3), objetivo, recursos, actividades y semana del acompañamiento. Agregar un objetivo: *«Vincularse a un taller comunitario del CESFAM»* (ámbito *Apoyo social*).
 4. Enviar y validar.
 5. Mostrar el mensaje final del tablero: *«🎉 Todos los instrumentos de esta etapa están completos. La coordinación revisará el avance de etapa.»*
 
 **Locución**:
 > «Las actividades 3 y 4 son el IAP propiamente tal. La Actividad 3 mapea los nueve ámbitos de recuperación —apoyo social, ciudadanía, tiempo libre, empleo, situación judicial, educación, habitabilidad, situación financiera y salud— registrando para cada uno las necesidades, las fortalezas y qué tan importante es para la persona.
-> La Actividad 4 convierte ese mapa en objetivos concretos, con sus recursos, sus actividades y su plazo. Esto no queda como texto suelto: se guarda como objetivos versionados, y en un momento van a ver por qué eso importa.»
+> La Actividad 4 convierte ese mapa en objetivos concretos, con sus recursos, sus actividades y la semana en que se espera lograrlo. Esto no queda como texto suelto: se guarda como objetivos versionados, y en un momento van a ver por qué eso importa.»
 
 **🧪 Respaldo**: `ITIN-09`, `ITIN-10`, `ITIN-11`
 
