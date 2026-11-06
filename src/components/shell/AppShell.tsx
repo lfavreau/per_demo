@@ -285,6 +285,15 @@ export default function AppShell({ children, user }: AppShellProps) {
                   ? "Panel de Control"
                   : currentMenu.find((m) => m.path === pathname)?.name || "Detalle"}
               </h2>
+              {/* Tras "PER APP" en móvil y tras el título de la vista en escritorio. */}
+              {user.isDemo && (
+                <span
+                  title="Los datos de prueba vuelven a su estado inicial tras 5 minutos de uso"
+                  className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs whitespace-nowrap"
+                >
+                  <span>🧪</span> Modo Demo
+                </span>
+              )}
             </div>
 
             {/* Profile Status & Global Logout */}
@@ -376,11 +385,6 @@ export default function AppShell({ children, user }: AppShellProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                {user.isDemo && (
-                  <span title="Los datos de prueba vuelven a su estado inicial tras 5 minutos de uso" className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs">
-                    <span>🧪</span> Modo Demo
-                  </span>
-                )}
                 <div className="text-right hidden sm:block">
                   <p className="text-xs font-bold text-slate-900">{user.name}</p>
                   <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-tight">
