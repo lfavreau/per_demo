@@ -34,6 +34,23 @@ export async function submitItineraryStepAction(taskId: string, fieldValues: Rec
   }
 }
 
+/**
+ * Coordinación (o administración) edita directamente una actividad enviada o validada. La actividad queda en
+ * revisión (hay que revalidarla) y el PER recibe un aviso.
+ */
+export async function editItineraryStepAsStaffAction(taskId: string, fieldValues: Record<string, unknown>) {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) return { error: "No autorizado" };
+
+  try {
+    await submitItineraryStep({ taskId, actorId: user.id, isDemo: Boolean(user.isDemo), fieldValues });
+    revalidateItineraryPaths();
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message };
+  }
+}
+
 export async function syncOfflineItineraryStepsAction(
   steps: Array<{ id: string; taskId: string; fieldValues: Record<string, unknown> }>
 ) {

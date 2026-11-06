@@ -8,11 +8,13 @@ import {
   triggerIntermediateEvaluationAction,
 } from "@/app/actions/itinerary";
 import { MIN_SESSIONS_FOR_INTERMEDIATE_EVALUATION } from "@/lib/program-config";
+import { formatStageHeading } from "@/lib/nomenclatures";
 import { renderInstrumentContent } from "./renderInstrumentContent";
 
 export interface ItineraryStepStateView {
   activityKey: string;
   title: string;
+  stage?: string;
   kind: "COMPLETED" | "CURRENT" | "UPCOMING";
   taskId?: string;
   status?: string;
@@ -25,11 +27,13 @@ export interface ItineraryStepStateView {
 interface ItineraryValidationPanelProps {
   caseId: string;
   stageLabel: string;
+  /** Etapa actual del caso: una actividad de otra etapa (reabierta) se rotula aparte. */
+  stageKey?: string;
   steps: ItineraryStepStateView[];
   continuousStep?: { activityKey: string; title: string; validatedSessionLogCount?: number } | null;
 }
 
-export default function ItineraryValidationPanel({ caseId, stageLabel, steps, continuousStep }: ItineraryValidationPanelProps) {
+export default function ItineraryValidationPanel({ caseId, stageLabel, stageKey, steps, continuousStep }: ItineraryValidationPanelProps) {
   const [feedbackByTask, setFeedbackByTask] = useState<Record<string, string>>({});
   const [notApplicableReasonByTask, setNotApplicableReasonByTask] = useState<Record<string, string>>({});
   const [showNotApplicableForm, setShowNotApplicableForm] = useState(false);
@@ -94,7 +98,12 @@ export default function ItineraryValidationPanel({ caseId, stageLabel, steps, co
       {current ? (
         <div className="p-4 border border-blue-200 bg-blue-50/30 rounded-xl space-y-3 text-xs">
           <div className="flex justify-between items-center">
-            <span className="font-bold text-slate-800">{current.title}</span>
+            <span className="font-bold text-slate-800">
+              {current.title}
+              {current.stage && current.stage !== stageKey && (
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-pink-100 text-pink-800 text-[9px]">{formatStageHeading(current.stage)}</span>
+              )}
+            </span>
             <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[9px] font-bold text-slate-500">
               {current.status}
             </span>

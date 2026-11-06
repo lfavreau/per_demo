@@ -270,6 +270,12 @@ La plataforma no muestra todos los instrumentos del IAP a la vez. Cada caso avan
 >
 > Coordinación (y el administrador, desde **Acompañamientos** en su menú) puede **devolverle una actividad al PER con un texto que indique qué falta**, esté enviada o ya validada: en el historial carga la actividad y escribe la corrección. El PER ve el texto dentro de la actividad y en un aviso; si estaba validada le aparece destacada en rosa.
 >
+> **Historial cronológico (coordinación).** Cada cambio de estado de una actividad lleva un menú de tres puntos (⋮) con **Ver** y **Editar**; ambos abren un modal. *Ver* muestra toda la información de la actividad y su historial, sin poder cambiar nada. *Editar* abre el formulario completo: **Guardar edición** deja la actividad *en revisión* (hay que revalidarla desde el panel de validación) y avisa al PER sin mostrarle el texto; **Reenviar al PER para edición** se la devuelve con un texto. Solo se edita lo *enviado* o *validado*.
+>
+> **Actividad 4 reformulada.** Cuando el PER envía la *Reformulación de la Actividad 4*, la versión anterior queda solo para consulta (no se edita ni se devuelve); más adelante solo la verá administración. Mientras la reformulación no se envíe, la Actividad 4 sigue vigente y editable.
+>
+> **Actividades de una etapa anterior.** Si coordinación reabre una actividad de una etapa anterior (por ejemplo la Actividad 3 estando el caso en Conexión), el PER la ve destacada en rosa con la etiqueta de su etapa, y el caso no puede avanzar de etapa hasta que se revalide.
+>
 > Coordinación, en el mismo historial, puede **corregir una validación hecha por error**: dejarla de nuevo *en revisión* (el PER no recibe aviso) o *pedir al PER que la edite*. Siempre se escribe un motivo. Toda edición y corrección queda en la bitácora de auditoría del administrador (qué campos cambiaron, no el texto).
 
 **Etapa Conexión**:

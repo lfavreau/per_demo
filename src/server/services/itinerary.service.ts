@@ -15,6 +15,8 @@ type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 interface ItineraryStepState {
   activityKey: string;
   title: string;
+  /** Etapa a la que pertenece la actividad (puede ser anterior a la actual si se reabrió). */
+  stage: CaseStage;
   kind: "COMPLETED" | "CURRENT" | "UPCOMING";
   taskId?: string;
   status?: string;
@@ -33,6 +35,23 @@ async function findTaskForStep(tx: TxClient, paCaseId: string, activityKey: stri
     where: { paCaseId, instrument: { activityKey } },
     orderBy: { createdAt: "desc" },
   });
+}
+
+/**
+ * La Actividad 4 queda reemplazada cuando su reformulación ya se envió: desde ahí rigen los objetivos de la
+ * reformulación y la versión anterior ya no se edita (solo la verá administración, más adelante).
+ */
+async function isPlanSuperseded(tx: TxClient, paCaseId: string) {
+  const reformulation = await findTaskForStep(tx, paCaseId, "REFORMULAR_ACTIVIDAD_4");
+  return !!reformulation && !["NO_APLICA", "CANCELADA"].includes(reformulation.status) && reformulation.contentJson != null;
+}
+
+const SUPERSEDED_MESSAGE = "Esta actividad fue reformulada: la versión anterior ya no se edita.";
+
+async function assertNotSuperseded(task: { paCaseId: string | null; instrument: { activityKey: string | null } | null }) {
+  if (task.instrument?.activityKey === "ACTIVIDAD_4_PLANIFICACION" && task.paCaseId && (await isPlanSuperseded(prisma, task.paCaseId))) {
+    throw new Error(SUPERSEDED_MESSAGE);
+  }
 }
 
 interface UnlockablePACase {
@@ -186,8 +205,7 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
   const returnNoteByTask = new Map<string, string | null>();
   for (const e of events) if (e.toStatus === "DEVUELTA") returnNoteByTask.set(e.taskId, e.note);
 
-  const stepStates: ItineraryStepState[] = sequentialSteps.map((step) => {
-    const task = taskByActivityKey.get(step.activityKey);
+  const toStepState = (step: ItineraryStepDef, task: (typeof tasks)[number] | undefined): ItineraryStepState => {
     const kind: ItineraryStepState["kind"] =
       task && ["VALIDADA", "NO_APLICA"].includes(task.status)
         ? "COMPLETED"
@@ -197,6 +215,7 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
     return {
       activityKey: step.activityKey,
       title: step.title,
+      stage: step.stage,
       kind,
       taskId: task?.id,
       status: task?.status,
@@ -207,7 +226,22 @@ export async function getItineraryState(paCaseId: string, isDemo: boolean) {
       reopened: kind === "CURRENT" && !!task && reopenedTaskIds.has(task.id),
       returnNote: task && task.status === "DEVUELTA" ? (returnNoteByTask.get(task.id) ?? null) : null,
     };
-  });
+  };
+
+  // Una actividad de una etapa anterior que se reabrió (p. ej. la Actividad 3 estando en Conexión) sigue
+  // pendiente: se suma al principio para que el PER la vea destacada y coordinación pueda revalidarla.
+  const carriedOver: ItineraryStepState[] = [];
+  for (const task of tasks) {
+    const step = getStepByActivityKey(task.instrument!.activityKey as string);
+    if (!step || step.stage === stage || step.triggerCondition !== "SEQUENTIAL") continue;
+    if (!reopenedTaskIds.has(task.id) || ["VALIDADA", "NO_APLICA", "CANCELADA"].includes(task.status)) continue;
+    carriedOver.push(toStepState(step, task));
+  }
+
+  const stepStates: ItineraryStepState[] = [
+    ...carriedOver,
+    ...sequentialSteps.map((step) => toStepState(step, taskByActivityKey.get(step.activityKey))),
+  ];
 
   const continuousStep = steps.find((s) => s.triggerCondition === "CONTINUOUS");
   let sessionLogCount: number | undefined;
@@ -398,12 +432,31 @@ export async function submitItineraryStep({
 
   const actor = await prisma.user.findUnique({ where: { id: actorId } });
   if (!actor) throw new Error("Usuario no encontrado");
-  // Antes de escribir mapas o planes del caso: solo el PER asignado puede enviar o editar.
-  if (actor.role === "PER" && task.assignedToUserId !== actorId) {
-    throw new Error("La tarea no está asignada al PER autenticado");
+  // Antes de escribir mapas o planes del caso: solo el PER asignado puede enviar o editar; coordinación de la
+  // región (o administración) solo puede editar lo ya enviado o validado.
+  const byStaff = actor.role === "COORDINATOR" || actor.role === "ADMIN";
+  if (actor.role === "PER") {
+    if (task.assignedToUserId !== actorId) throw new Error("La tarea no está asignada al PER autenticado");
+  } else if (byStaff) {
+    if (actor.role === "COORDINATOR" && (!actor.regionId || actor.regionId !== task.regionId)) {
+      throw new Error("No autorizado para operar tareas de esta región");
+    }
+    if (!["ENVIADA", "VALIDADA"].includes(task.status)) {
+      throw new Error("Coordinación solo puede editar una actividad enviada o validada.");
+    }
+  } else {
+    throw new Error("No autorizado");
   }
   if (["CANCELADA", "NO_APLICA"].includes(task.status)) {
     throw new Error("Esta actividad ya no admite cambios.");
+  }
+  if (
+    step.activityKey === "ACTIVIDAD_4_PLANIFICACION" &&
+    ["ENVIADA", "VALIDADA"].includes(task.status) &&
+    task.paCaseId &&
+    (await isPlanSuperseded(prisma, task.paCaseId))
+  ) {
+    throw new Error(SUPERSEDED_MESSAGE);
   }
 
   for (const field of step.fields || []) {
@@ -461,11 +514,12 @@ export async function submitItineraryStep({
 
   const contentJson = JSON.stringify(storedValues);
   const isEdit = previousStatus === "ENVIADA" || previousStatus === "VALIDADA";
+  const author = byStaff ? "coordinación" : "el PER";
   const eventNote =
     previousStatus === "VALIDADA"
-      ? "Editada por el PER después de validarse"
+      ? `Editada por ${author} después de validarse`
       : previousStatus === "ENVIADA"
-        ? "Modificada por el PER antes de la revisión"
+        ? `Modificada por ${author} antes de la revisión`
         : undefined;
 
   const updated = await updateTaskStatus({ taskId, toStatus: "ENVIADA", actorId, isDemo, contentJson, eventNote });
@@ -485,13 +539,29 @@ export async function submitItineraryStep({
           isDemo,
         },
       });
-      await notifyRegionCoordinators(tx, {
-        regionId: task.regionId,
-        isDemo,
-        title: previousStatus === "VALIDADA" ? "Actividad editada tras validarse" : "Actividad modificada antes de revisar",
-        message: `Caso ${task.paCase?.code ?? ""}: ${step.title}. Requiere nueva revisión.`,
-        link: `/coordinacion/casos?caseCode=${task.paCase?.code ?? ""}`,
-      });
+      if (byStaff) {
+        // Coordinación editó: el PER se entera (sin el texto) y la actividad vuelve a su revisión.
+        if (task.assignedToUserId) {
+          await createNotificationWithPush(
+            {
+              userId: task.assignedToUserId,
+              title: "Coordinación modificó tu actividad",
+              message: `Caso ${task.paCase?.code ?? ""}: «${step.title}». Coordinación hizo cambios y la dejó en revisión.`,
+              link: `/per/casos/${task.paCaseId}/etapa`,
+              isDemo,
+            },
+            tx
+          );
+        }
+      } else {
+        await notifyRegionCoordinators(tx, {
+          regionId: task.regionId,
+          isDemo,
+          title: previousStatus === "VALIDADA" ? "Actividad editada tras validarse" : "Actividad modificada antes de revisar",
+          message: `Caso ${task.paCase?.code ?? ""}: ${step.title}. Requiere nueva revisión.`,
+          link: `/coordinacion/casos?caseCode=${task.paCase?.code ?? ""}`,
+        });
+      }
     });
   }
 
@@ -520,10 +590,11 @@ export async function reopenValidation({
   const trimmed = reason.trim();
   if (!trimmed) throw new Error("Escribe el motivo de la corrección.");
 
-  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { paCase: true } });
+  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { paCase: true, instrument: true } });
   if (!task) throw new Error("Tarea no encontrada");
   if (task.isDemo !== isDemo) throw new Error("La tarea no pertenece al modo de trabajo actual");
   if (task.status !== "VALIDADA") throw new Error("Solo se puede corregir una actividad validada.");
+  await assertNotSuperseded(task);
 
   const actor = await prisma.user.findUnique({ where: { id: actorId } });
   if (!actor || (actor.role !== "ADMIN" && !(actor.role === "COORDINATOR" && actor.regionId === task.regionId))) {
@@ -585,9 +656,10 @@ export async function requestCorrection({
   const trimmed = reason.trim();
   if (!trimmed) throw new Error("Escribe qué hay que corregir.");
 
-  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { paCase: true } });
+  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { paCase: true, instrument: true } });
   if (!task) throw new Error("Tarea no encontrada");
   if (task.isDemo !== isDemo) throw new Error("La tarea no pertenece al modo de trabajo actual");
+  await assertNotSuperseded(task);
 
   if (task.status === "VALIDADA") {
     return reopenValidation({ taskId, mode: "REQUEST_EDIT", reason: trimmed, actorId, isDemo });
@@ -666,6 +738,23 @@ export async function assertStageAdvanceAllowed(
     const satisfied = task && ["VALIDADA", "NO_APLICA"].includes(task.status);
     if (!satisfied) missing.push(step);
   }
+
+  // Una actividad de una etapa anterior que se reabrió y aún no se revalida también frena el avance.
+  const reopened = await prisma.task.findMany({
+    where: {
+      paCaseId,
+      status: { notIn: ["VALIDADA", "NO_APLICA", "CANCELADA"] },
+      instrument: { activityKey: { not: null } },
+      events: { some: { fromStatus: "VALIDADA" } },
+    },
+    include: { instrument: true },
+  });
+  for (const task of reopened) {
+    const step = getStepByActivityKey(task.instrument!.activityKey as string);
+    if (step && step.stage !== paCase.stage && step.triggerCondition === "SEQUENTIAL" && !missing.some((m) => m.activityKey === step.activityKey)) {
+      missing.push(step);
+    }
+  }
   return { satisfied: missing.length === 0, missing };
 }
 
@@ -682,6 +771,8 @@ export interface ActivityHistoryItem {
   googleUrl: string | null;
   /** Estuvo validada y se reabrió. */
   reopened: boolean;
+  /** Reemplazada por su reformulación: se puede ver, pero ya no se edita ni se devuelve. */
+  superseded: boolean;
   events: Array<{ at: string; by: "PER" | "COORDINATOR" | "ADMIN" | "SISTEMA"; fromStatus: string; toStatus: string; note: string | null }>;
 }
 
@@ -705,6 +796,7 @@ export async function getCaseActivityHistory(paCaseId: string, isDemo: boolean):
     select: { id: true, role: true },
   });
   const roleById = new Map(actors.map((a) => [a.id, a.role]));
+  const planSuperseded = await isPlanSuperseded(prisma, paCaseId);
 
   const items: ActivityHistoryItem[] = [];
   for (const task of tasks) {
@@ -722,6 +814,7 @@ export async function getCaseActivityHistory(paCaseId: string, isDemo: boolean):
       contentJson: task.contentJson,
       googleUrl: task.googleUrl,
       reopened: task.events.some((e) => e.fromStatus === "VALIDADA"),
+      superseded: planSuperseded && step.activityKey === "ACTIVIDAD_4_PLANIFICACION",
       events: task.events.map((e) => ({
         at: e.at.toISOString(),
         by: (roleById.get(e.byUserId) as ActivityHistoryItem["events"][number]["by"]) ?? "SISTEMA",

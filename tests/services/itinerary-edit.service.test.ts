@@ -2,12 +2,14 @@ import { describe, it, expect } from "vitest";
 import { prisma } from "@/lib/db";
 import { createCaseFromCandidate } from "@/server/services/cases.service";
 import {
+  assertStageAdvanceAllowed,
   getCaseActivityHistory,
   getDomainPriorities,
   getItineraryState,
   reopenValidation,
   requestCorrection,
   submitItineraryStep,
+  validateItineraryStep,
 } from "@/server/services/itinerary.service";
 import { createAdmin, createCoordinator, createPer, createCandidate, testRegion } from "../helpers/fixtures";
 
@@ -316,5 +318,120 @@ describe("itinerary.service — pedir una corrección con texto", () => {
     await expect(requestCorrection({ taskId: pending.id, reason: "x", actorId: coord.id, isDemo: true })).rejects.toThrow(/enviada o validada/);
     await expect(requestCorrection({ taskId: sent.id, reason: "x", actorId: outsider.id, isDemo: true })).rejects.toThrow(/No autorizado/);
     expect((await prisma.task.findUniqueOrThrow({ where: { id: sent.id } })).status).toBe("ENVIADA");
+  });
+});
+
+describe("itinerary.service — coordinación edita directamente", () => {
+  const edited = { date: "2026-03-01", motivations: "texto privado de coordinación", expectations: "e" };
+
+  it("ED-15: coordinación edita una validada: queda en revisión, audita sin texto y avisa al PER", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const task = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_1_MOTIVACIONES", "VALIDADA");
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { contentJson: JSON.stringify({ date: "2026-03-01", motivations: "viejo", expectations: "e" }) },
+    });
+
+    await submitItineraryStep({ taskId: task.id, actorId: coord.id, isDemo: true, fieldValues: edited });
+
+    const after = await prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+    expect(after.status).toBe("ENVIADA"); // hay que revalidarla
+    const audit = await prisma.auditLog.findFirstOrThrow({ where: { entityId: task.id, action: "EDIT_ITINERARY_STEP" } });
+    expect(audit.role).toBe("COORDINATOR");
+    expect(JSON.parse(audit.newValue!).changedFields).toEqual(["motivations"]);
+    expect(audit.newValue).not.toContain("texto privado");
+    const event = await prisma.taskEvent.findFirstOrThrow({ where: { taskId: task.id, fromStatus: "VALIDADA" } });
+    expect(event.note).toMatch(/Editada por coordinación/);
+
+    const notice = await prisma.notification.findFirstOrThrow({ where: { userId: perUser.id, title: "Coordinación modificó tu actividad" } });
+    expect(notice.message).not.toContain("texto privado");
+    // Quien edita no se avisa a sí mismo.
+    expect(await prisma.notification.count({ where: { userId: coord.id, title: { contains: "editada" } } })).toBe(0);
+
+    // La coordinación revalida y la actividad vuelve a quedar validada.
+    await validateItineraryStep(task.id, coord.id, true);
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).status).toBe("VALIDADA");
+  });
+
+  it("ED-16: solo se edita lo enviado o validado, y solo en su región (el administrador, en cualquiera)", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const outsider = await createCoordinator(testRegion());
+    const admin = await createAdmin();
+    const sent = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_1_MOTIVACIONES", "ENVIADA");
+    const pending = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_2_ANTECEDENTES", "PENDIENTE");
+    const returned = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_6_REFLEXION_FINAL", "DEVUELTA");
+
+    await expect(submitItineraryStep({ taskId: sent.id, actorId: outsider.id, isDemo: true, fieldValues: edited })).rejects.toThrow(/No autorizado/);
+    await expect(submitItineraryStep({ taskId: pending.id, actorId: coord.id, isDemo: true, fieldValues: edited })).rejects.toThrow(/enviada o validada/);
+    await expect(submitItineraryStep({ taskId: returned.id, actorId: coord.id, isDemo: true, fieldValues: edited })).rejects.toThrow(/enviada o validada/);
+
+    await submitItineraryStep({ taskId: sent.id, actorId: admin.id, isDemo: true, fieldValues: edited });
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: sent.id } })).status).toBe("ENVIADA");
+    expect(await prisma.auditLog.count({ where: { entityId: sent.id, action: "EDIT_ITINERARY_STEP", role: "ADMIN" } })).toBe(1);
+  });
+});
+
+describe("itinerary.service — Actividad 4 reformulada", () => {
+  async function planWithReformulation(reformulationSent: boolean) {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const plan = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_4_PLANIFICACION", "VALIDADA");
+    await prisma.task.update({ where: { id: plan.id }, data: { contentJson: JSON.stringify({ goals: [] }) } });
+    const reformulation = await taskFor(paCase, perUser.id, coord.id, "REFORMULAR_ACTIVIDAD_4", reformulationSent ? "ENVIADA" : "PENDIENTE");
+    if (reformulationSent) await prisma.task.update({ where: { id: reformulation.id }, data: { contentJson: JSON.stringify({ goals: [] }) } });
+    return { coord, perUser, paCase, plan };
+  }
+
+  it("ED-17: una vez enviada la reformulación, la versión anterior no se edita ni se devuelve", async () => {
+    const { coord, perUser, paCase, plan } = await planWithReformulation(true);
+
+    await expect(submitItineraryStep({ taskId: plan.id, actorId: coord.id, isDemo: true, fieldValues: { goals: goalRows("x") } })).rejects.toThrow(/reformulada/);
+    await expect(submitItineraryStep({ taskId: plan.id, actorId: perUser.id, isDemo: true, fieldValues: { goals: goalRows("x") } })).rejects.toThrow(/reformulada/);
+    await expect(reopenValidation({ taskId: plan.id, mode: "REQUEST_EDIT", reason: "x", actorId: coord.id, isDemo: true })).rejects.toThrow(/reformulada/);
+    await expect(requestCorrection({ taskId: plan.id, reason: "x", actorId: coord.id, isDemo: true })).rejects.toThrow(/reformulada/);
+
+    const history = await getCaseActivityHistory(paCase.id, true);
+    expect(history.find((h) => h.activityKey === "ACTIVIDAD_4_PLANIFICACION")?.superseded).toBe(true);
+    expect(history.find((h) => h.activityKey === "REFORMULAR_ACTIVIDAD_4")?.superseded).toBe(false);
+  });
+
+  it("ED-18: mientras la reformulación no se envía, la Actividad 4 sigue vigente y editable", async () => {
+    const { coord, paCase, plan } = await planWithReformulation(false);
+
+    await submitItineraryStep({ taskId: plan.id, actorId: coord.id, isDemo: true, fieldValues: { goals: goalRows("Ajustado") } });
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: plan.id } })).status).toBe("ENVIADA");
+    const history = await getCaseActivityHistory(paCase.id, true);
+    expect(history.find((h) => h.activityKey === "ACTIVIDAD_4_PLANIFICACION")?.superseded).toBe(false);
+  });
+});
+
+describe("itinerary.service — actividad reabierta de una etapa anterior", () => {
+  it("ED-19: estando en Conexión, la Actividad 3 reabierta aparece destacada, frena el avance y se revalida", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    await prisma.pACase.update({ where: { id: paCase.id }, data: { stage: "CONEXION", status: "CONEXION" } });
+    const task = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_3_MAPA_RECURSOS", "VALIDADA");
+
+    await reopenValidation({ taskId: task.id, mode: "REQUEST_EDIT", reason: "Revisar prioridades", actorId: coord.id, isDemo: true });
+
+    const state = await getItineraryState(paCase.id, true);
+    const carried = state.steps.find((s) => s.activityKey === "ACTIVIDAD_3_MAPA_RECURSOS");
+    expect(carried?.stage).toBe("VINCULACION");
+    expect(carried?.kind).toBe("CURRENT");
+    expect(carried?.reopened).toBe(true);
+    expect(carried?.returnNote).toMatch(/Revisar prioridades/);
+
+    const gate = await assertStageAdvanceAllowed(paCase.id, true);
+    expect(gate.missing.map((m) => m.activityKey)).toContain("ACTIVIDAD_3_MAPA_RECURSOS");
+
+    // El PER la edita, coordinación la revalida y deja de aparecer.
+    await submitItineraryStep({
+      taskId: task.id,
+      actorId: perUser.id,
+      isDemo: true,
+      fieldValues: { date: "2026-03-02", domains: [{ recoveryDomainId: "Empleo", importance: "ALTO" }] },
+    });
+    await validateItineraryStep(task.id, coord.id, true);
+    const after = await getItineraryState(paCase.id, true);
+    expect(after.steps.some((s) => s.activityKey === "ACTIVIDAD_3_MAPA_RECURSOS")).toBe(false);
+    expect((await assertStageAdvanceAllowed(paCase.id, true)).missing.map((m) => m.activityKey)).not.toContain("ACTIVIDAD_3_MAPA_RECURSOS");
   });
 });

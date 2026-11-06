@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AppShell from "@/components/shell/AppShell";
 import ActivityHistoryViewer from "@/components/shared/ActivityHistoryViewer";
-import { getCaseActivityHistory } from "@/server/services/itinerary.service";
+import RowActionsMenu from "@/components/shared/RowActionsMenu";
+import { getCaseActivityHistory, getDomainPriorities } from "@/server/services/itinerary.service";
 import { formatCaseLabel, mapStageToLabel } from "@/lib/nomenclatures";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export default async function AdminCasosPage({ searchParams }: { searchParams: P
   });
   const selected = cases.find((c) => c.code === caseCode) ?? null;
   const history = selected ? await getCaseActivityHistory(selected.id, isDemo) : [];
+  const domainPriorities = selected ? await getDomainPriorities(selected.id) : {};
 
   return (
     <AppShell user={user}>
@@ -58,12 +60,10 @@ export default async function AdminCasosPage({ searchParams }: { searchParams: P
                   <td className="py-2.5 text-slate-600">{mapStageToLabel(c.stage)}</td>
                   <td className="py-2.5 text-slate-600">{c.status}</td>
                   <td className="py-2.5 text-right">
-                    <a
-                      href={`/admin/casos?caseCode=${c.code}`}
-                      className="px-2.5 py-1 rounded-lg font-bold text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-                    >
-                      Ver actividades
-                    </a>
+                    <RowActionsMenu
+                      label={`Acciones de ${c.code}`}
+                      actions={[{ label: "Ver actividades", icon: "👁️", href: `/admin/casos?caseCode=${c.code}` }]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -78,7 +78,7 @@ export default async function AdminCasosPage({ searchParams }: { searchParams: P
           </table>
         </div>
 
-        {selected && <ActivityHistoryViewer mode="COORD" caseId={selected.id} items={history} />}
+        {selected && <ActivityHistoryViewer mode="COORD" caseId={selected.id} items={history} domainPriorities={domainPriorities} />}
       </div>
     </AppShell>
   );

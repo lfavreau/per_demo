@@ -6,10 +6,13 @@ import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import ExternalLinkStepForm from "@/components/per/ExternalLinkStepForm";
 import CompletedStepSummary from "@/components/per/CompletedStepSummary";
 import ModalButton from "@/components/shared/ModalButton";
+import { formatStageHeading } from "@/lib/nomenclatures";
 
 export interface ItineraryStepStateView {
   activityKey: string;
   title: string;
+  /** Etapa de la actividad; si no es la etapa en curso, se rotula como de una etapa anterior. */
+  stage?: string;
   kind: "COMPLETED" | "CURRENT" | "UPCOMING";
   taskId?: string;
   status?: string;
@@ -25,6 +28,8 @@ interface StageItineraryBoardProps {
   caseId: string;
   caseCode: string;
   stageLabel: string;
+  /** Etapa en curso del caso. */
+  stageKey?: string;
   metaLine: string;
   steps: ItineraryStepStateView[];
   domainPriorities?: Record<string, string>;
@@ -34,6 +39,7 @@ export default function StageItineraryBoard({
   caseId,
   caseCode,
   stageLabel,
+  stageKey,
   metaLine,
   steps,
   domainPriorities = {},
@@ -81,7 +87,12 @@ export default function StageItineraryBoard({
         if (s.status === "DEVUELTA") {
           return (
             <div key={s.activityKey} className="p-4 bg-pink-50 border-2 border-pink-300 rounded-2xl text-xs space-y-2">
-              <p className="font-bold text-pink-900">✏️ Edición solicitada: {s.title}</p>
+              <p className="font-bold text-pink-900">
+                ✏️ Edición solicitada: {s.title}
+                {s.stage && stageKey && s.stage !== stageKey && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded bg-pink-200 text-pink-900 text-[9px]">{formatStageHeading(s.stage)}</span>
+                )}
+              </p>
               {s.returnNote && <p className="text-pink-800 leading-relaxed">{s.returnNote}</p>}
               <p className="text-pink-700 text-[10px]">Atiéndela antes de seguir con tu actividad activa.</p>
               {s.submissionMode === "NATIVE_FORM" && (
@@ -108,7 +119,7 @@ export default function StageItineraryBoard({
         return (
           <div key={s.activityKey} className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-700">
             <p className="font-bold">📤 {s.title}</p>
-            <p className="mt-1">Editada y enviada de nuevo; coordinación la está revisando.</p>
+            <p className="mt-1">Ya está en revisión de coordinación.</p>
           </div>
         );
       })}

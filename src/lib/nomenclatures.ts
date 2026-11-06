@@ -38,6 +38,12 @@ export function mapStageToLabel(stage: string): string {
   }
 }
 
+/** "Etapa 1 · Vinculación", "Etapa 2 · Conexión", "Etapa 3 · Finalización". */
+export function formatStageHeading(stage: string): string {
+  const number = ["VINCULACION", "CONEXION", "FINALIZACION"].indexOf(stage) + 1;
+  return number > 0 ? `Etapa ${number} · ${mapStageToLabel(stage)}` : mapStageToLabel(stage);
+}
+
 /**
  * Combina el alias/trato preferido de la persona acompañada con el código correlativo del caso
  * ("Alias (PA-VAL-008)"; solo el código si no hay alias). Nunca incluye nombre legal ni RUN

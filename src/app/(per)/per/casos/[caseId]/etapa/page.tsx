@@ -132,6 +132,7 @@ export default async function PERCaseStagePage({
             caseId={paCase.id}
             caseCode={formatCaseLabel(paCase.code, paCase.alias)}
             stageLabel={mapStageToLabel(state.stage)}
+            stageKey={state.stage}
             metaLine={metaLine}
             steps={state.steps}
             domainPriorities={domainPriorities}

@@ -9,8 +9,9 @@ import {
   createDirectContinuityCaseAction,
   reassignCaseAction,
 } from "@/app/actions/coordinator";
-import { getCaseActivityHistory, getItineraryState } from "@/server/services/itinerary.service";
+import { getCaseActivityHistory, getDomainPriorities, getItineraryState } from "@/server/services/itinerary.service";
 import ActivityHistoryViewer from "@/components/shared/ActivityHistoryViewer";
+import CaseTimeline, { type TimelineEntry } from "@/components/coordinator/CaseTimeline";
 import ItineraryValidationPanel from "@/components/coordinator/ItineraryValidationPanel";
 import StageAdvanceButton from "@/components/coordinator/StageAdvanceButton";
 import WithdrawalModal from "@/components/coordinator/WithdrawalModal";
@@ -70,7 +71,10 @@ export default async function CoordinatorCasosPage({
     description: string;
     type: "status" | "contact" | "session" | "task";
     badgeColor: string;
+    key: string;
+    task?: TimelineEntry["task"];
   }> = [];
+  let domainPriorities: Record<string, string> = {};
 
   let selectedCaseDetails = null;
   // "Al día" o "Atrasado" del caso, según tareas vencidas sin entregar y alertas abiertas de atraso.
@@ -122,10 +126,12 @@ export default async function CoordinatorCasosPage({
         itineraryState = await getItineraryState(selectedCase.id, isDemo);
       }
       activityHistory = await getCaseActivityHistory(selectedCase.id, isDemo);
+      domainPriorities = await getDomainPriorities(selectedCase.id);
 
       // Map Status History
       selectedCase.statusHistory.forEach((h) => {
         timelineEvents.push({
+          key: `status-${h.id}`,
           date: h.at,
           title: `Cambio de Fase: ${mapCaseStatusToLabel(h.toStatus)}`,
           description: `Transición desde ${mapCaseStatusToLabel(h.fromStatus)}. Motivo: ${h.reason || "No especificado"}`,
@@ -137,6 +143,7 @@ export default async function CoordinatorCasosPage({
       // Map Contact Attempts
       selectedCase.contactAttempts.forEach((c) => {
         timelineEvents.push({
+          key: `contact-${c.id}`,
           date: c.date,
           title: `Intento de Contacto (${c.channel})`,
           description: `Resultado: ${c.outcome}. Nota: ${c.note || "Ninguna"}`,
@@ -148,6 +155,7 @@ export default async function CoordinatorCasosPage({
       // Map Sessions
       selectedCase.sessionLogs.forEach((s) => {
         timelineEvents.push({
+          key: `session-${s.id}`,
           date: s.date,
           title: `Registro de Acompañamiento - Sesión #${s.sessionNumber} (${s.modality})`,
           description: `Asistencia: ${s.attendance}. Resumen: ${s.summary}. Estado emocional registrado en IAP: ${mapEmotionToLabel(s.perEmotion || "BIEN")}. Acuerdos: ${s.agreements || "Ninguno"}`,
@@ -160,11 +168,13 @@ export default async function CoordinatorCasosPage({
       selectedCase.tasks.forEach((t) => {
         t.events.forEach((ev) => {
           timelineEvents.push({
+            key: `task-${ev.id}`,
             date: ev.at,
-            title: `Hito: ${t.title}`,
-            description: `Transición de estado: ${ev.fromStatus} ➡️ ${ev.toStatus}. ${ev.note ? `Comentario: ${ev.note}` : ""}`,
+            title: t.title,
+            description: "",
             type: "task",
             badgeColor: "bg-slate-50 text-slate-700 border border-slate-200",
+            task: { taskId: t.id, fromStatus: ev.fromStatus, toStatus: ev.toStatus, note: ev.note },
           });
         });
       });
@@ -217,33 +227,20 @@ export default async function CoordinatorCasosPage({
             <div className="lg:col-span-2 p-6 bg-card border border-border rounded-2xl shadow-sm space-y-6">
               <h4 className="font-bold text-sm text-slate-800">Historial Cronológico de Hitos</h4>
               
-              <div className="relative border-l border-slate-200 pl-6 ml-3 space-y-6">
-                {timelineEvents.map((ev, index) => (
-                  <div key={index} className="relative">
-                    {/* Node Bullet */}
-                    <span className="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                    </span>
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-bold text-xs text-slate-900">{ev.title}</h4>
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${ev.badgeColor}`}>
-                          {ev.type.toUpperCase()}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {ev.date.toLocaleString("es-CL")}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {ev.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {timelineEvents.length === 0 && (
-                  <p className="text-xs text-slate-400 py-4">No se han registrado hitos en el Registro de Acompañamiento de este caso.</p>
-                )}
-              </div>
+              <CaseTimeline
+                caseId={selectedCaseDetails.id}
+                items={activityHistory}
+                domainPriorities={domainPriorities}
+                entries={timelineEvents.map((ev) => ({
+                  key: ev.key,
+                  at: ev.date.toISOString(),
+                  type: ev.type,
+                  title: ev.title,
+                  description: ev.description,
+                  badgeColor: ev.badgeColor,
+                  task: ev.task,
+                }))}
+              />
             </div>
 
             {/* Case Details Card & Actions (Right side, takes 1 col) */}
@@ -364,13 +361,14 @@ export default async function CoordinatorCasosPage({
                 <ItineraryValidationPanel
                   caseId={selectedCaseDetails.id}
                   stageLabel={mapStageToLabel(itineraryState.stage)}
+                  stageKey={itineraryState.stage}
                   steps={itineraryState.steps}
                   continuousStep={itineraryState.continuousStep}
                 />
               )}
 
               {/* Historial del proceso: ver lo registrado y corregir una validación hecha por error */}
-              <ActivityHistoryViewer mode="COORD" caseId={selectedCaseDetails.id} items={activityHistory} />
+              <ActivityHistoryViewer mode="COORD" caseId={selectedCaseDetails.id} items={activityHistory} domainPriorities={domainPriorities} />
 
               {/* Status Transition Actions */}
               {["VINCULACION", "CONEXION", "FINALIZACION"].includes(selectedCaseDetails.status) && itineraryState && (

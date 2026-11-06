@@ -222,25 +222,16 @@ export default async function CoordinatorCandidatasPage({
                       {new Date(m ? m.createdAt : cand.updatedAt).toLocaleDateString("es-CL")}
                     </td>
                     <td className="py-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <PersonaEditModal
-                          candidateId={cand.id}
-                          name={cand.sourceCenter || ""}
-                          notes={cand.notes || ""}
-                          status={cand.status}
-                          hasCase={Boolean(m)}
-                          caseCode={m?.code ?? null}
-                          activity={m ? m._count.sessionLogs + m._count.tasks : 0}
-                        />
-                        {m && (
-                          <a
-                            href={`/coordinacion/casos?caseCode=${m.code}`}
-                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg text-[10px] inline-block shadow-sm transition"
-                          >
-                            👁️ Ver e Iniciar
-                          </a>
-                        )}
-                      </div>
+                      <PersonaEditModal
+                        candidateId={cand.id}
+                        name={cand.sourceCenter || ""}
+                        notes={cand.notes || ""}
+                        status={cand.status}
+                        hasCase={Boolean(m)}
+                        caseCode={m?.code ?? null}
+                        activity={m ? m._count.sessionLogs + m._count.tasks : 0}
+                        viewHref={m ? `/coordinacion/casos?caseCode=${m.code}` : null}
+                      />
                     </td>
                   </tr>
                 ))}

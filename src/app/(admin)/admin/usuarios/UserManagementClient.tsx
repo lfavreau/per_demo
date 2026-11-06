@@ -8,6 +8,7 @@ import {
   deletePERUserAction,
 } from "@/app/actions/admin";
 import { REGION_NAMES as REGIONS } from "@/lib/program-config";
+import RowActionsMenu from "@/components/shared/RowActionsMenu";
 
 interface UserWithProfile {
   id: string;
@@ -223,23 +224,20 @@ export default function UserManagementClient({
                             {per.active ? "Desactivar" : "Activar"}
                           </button>
                         </form>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingPer(per);
-                            setEditRegion(per.regionId || "Metropolitana");
-                          }}
-                          className="px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingPer(per)}
-                          className="px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
-                        >
-                          Eliminar
-                        </button>
+                        <RowActionsMenu
+                          label={`Acciones de ${per.name}`}
+                          actions={[
+                            {
+                              label: "Editar",
+                              icon: "✏️",
+                              onClick: () => {
+                                setEditingPer(per);
+                                setEditRegion(per.regionId || "Metropolitana");
+                              },
+                            },
+                            { label: "Eliminar", icon: "🗑️", tone: "danger", onClick: () => setDeletingPer(per) },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

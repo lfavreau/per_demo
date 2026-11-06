@@ -6,6 +6,7 @@ import { deletePersonaAction, updatePersonaAction } from "@/app/actions/coordina
 import type { ActionResult } from "@/app/actions/coordinator";
 import { CASE_ALIAS_MAX_LENGTH } from "@/lib/nomenclatures";
 import { REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
+import RowActionsMenu from "@/components/shared/RowActionsMenu";
 
 interface PersonaEditModalProps {
   candidateId: string;
@@ -18,6 +19,8 @@ interface PersonaEditModalProps {
   caseCode?: string | null;
   /** Actividad real del caso (tareas ya trabajadas + bitácoras), para advertir antes de borrar. */
   activity?: number;
+  /** Enlace al caso, si la persona ya tiene PER: aparece como «Ver e iniciar» en el menú de la fila. */
+  viewHref?: string | null;
 }
 
 const INITIAL: ActionResult = { status: "idle", message: "" };
@@ -57,6 +60,7 @@ export default function PersonaEditModal({
   hasCase,
   caseCode = null,
   activity = 0,
+  viewHref = null,
 }: PersonaEditModalProps) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -79,13 +83,13 @@ export default function PersonaEditModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="px-2.5 py-1 rounded-lg font-bold text-[10px] transition cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200"
-      >
-        ✏️ Editar
-      </button>
+      <RowActionsMenu
+        label={`Acciones de ${caseCode ?? (name || "la persona")}`}
+        actions={[
+          viewHref ? { label: "Ver e iniciar", icon: "👁️", href: viewHref } : null,
+          { label: "Editar", icon: "✏️", onClick: () => setOpen(true) },
+        ]}
+      />
 
       {open && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">

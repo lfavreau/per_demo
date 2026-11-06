@@ -158,6 +158,12 @@ interface NativeInstrumentFormProps {
   onSubmitted?: () => void;
   /** Texto del botón de envío (por defecto "Enviar a Coordinación"). */
   submitLabel?: string;
+  /** Acción que guarda el formulario (por defecto, el envío del PER). Coordinación pasa la suya al editar. */
+  submitAction?: (taskId: string, fieldValues: Record<string, unknown>) => Promise<{ success?: boolean; error?: string }>;
+  /** Mensaje al guardar con éxito. */
+  successMessage?: string;
+  /** Borradores en este dispositivo y cola sin conexión (solo para el PER). */
+  localDrafts?: boolean;
 }
 
 export default function NativeInstrumentForm({
@@ -170,6 +176,9 @@ export default function NativeInstrumentForm({
   domainPriorities = {},
   onSubmitted,
   submitLabel = "Enviar a Coordinación",
+  submitAction = submitItineraryStepAction,
+  successMessage = "Instrumento enviado a coordinación exitosamente",
+  localDrafts = true,
 }: NativeInstrumentFormProps) {
   const existing = existingContentJson ? safeParse(existingContentJson) : null;
 
@@ -209,11 +218,11 @@ export default function NativeInstrumentForm({
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    const stored = localStorage.getItem(storageKey);
+    const stored = localDrafts ? localStorage.getItem(storageKey) : null;
     if (stored) setOfflineDrafts(JSON.parse(stored));
 
     // Si esta actividad tenía un borrador en el dispositivo, se restaura.
-    const draft = readDraft(draftKey);
+    const draft = localDrafts ? readDraft(draftKey) : null;
     if (draft) {
       const restored = stateFromValues(draft.fieldValues);
       setFlatValues(restored.flat);
@@ -256,6 +265,7 @@ export default function NativeInstrumentForm({
 
   // Autoguardado: tras unos instantes sin escribir se guarda solo, para que recargar no pierda nada.
   useEffect(() => {
+    if (!localDrafts) return;
     const current = JSON.stringify(buildFieldValues());
     if (baseline.current === null) baseline.current = current;
     if (current === baseline.current) return; // sin cambios: no se crea un borrador vacío
@@ -296,14 +306,14 @@ export default function NativeInstrumentForm({
     setIsSubmitting(true);
     setMsg(null);
 
-    const res = await submitItineraryStepAction(taskId, buildFieldValues());
+    const res = await submitAction(taskId, buildFieldValues());
     setIsSubmitting(false);
 
     if (res.success) {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-      writeDraft(draftKey, null);
+      if (localDrafts) writeDraft(draftKey, null);
       setDraftSavedAt(null);
-      setMsg({ type: "success", text: "Instrumento enviado a coordinación exitosamente" });
+      setMsg({ type: "success", text: successMessage });
       if (onSubmitted) setTimeout(onSubmitted, 900);
     } else {
       setMsg({ type: "error", text: res.error || "Error al enviar el instrumento" });
@@ -586,13 +596,15 @@ export default function NativeInstrumentForm({
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border/30">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-border hover:bg-secondary/40 font-semibold transition cursor-pointer text-center"
-            >
-              💾 Guardar borrador
-            </button>
+            {localDrafts && (
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-border hover:bg-secondary/40 font-semibold transition cursor-pointer text-center"
+              >
+                💾 Guardar borrador
+              </button>
+            )}
             <button
               type="submit"
               disabled={!isOnline || isSubmitting}
