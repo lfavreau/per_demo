@@ -306,7 +306,16 @@ export default function AppShell({ children, user }: AppShellProps) {
                 </button>
                 
                 {isNotifOpen && (
-                  <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3 text-left">
+                  <>
+                  {/* Fondo transparente: tocar fuera cierra el panel. */}
+                  <button
+                    type="button"
+                    aria-label="Cerrar notificaciones"
+                    onClick={() => setIsNotifOpen(false)}
+                    className="fixed inset-0 z-40 cursor-default"
+                  />
+                  {/* En móvil el panel ocupa el ancho de la pantalla bajo la barra; desde sm se ancla a la campana. */}
+                  <div className="fixed inset-x-3 top-16 max-h-[calc(100dvh-5rem)] overflow-y-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2.5 sm:w-80 sm:max-h-none bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3 text-left break-words">
                     <div className="flex justify-between items-center border-b pb-2">
                       <h4 className="font-extrabold text-slate-800 text-xs uppercase tracking-wider">Notificaciones</h4>
                       {notifications.filter(n => !n.read).length > 0 && (
@@ -322,7 +331,7 @@ export default function AppShell({ children, user }: AppShellProps) {
                       )}
                     </div>
                     
-                    <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-[55dvh] sm:max-h-[250px] overflow-y-auto pr-1">
                       {notifications.map((notif) => (
                         <div 
                           key={notif.id} 
@@ -362,12 +371,13 @@ export default function AppShell({ children, user }: AppShellProps) {
                       )}
                     </div>
                   </div>
+                  </>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
                 {user.isDemo && (
-                  <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs">
+                  <span title="Los datos de prueba vuelven a su estado inicial tras 5 minutos de uso" className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold border border-amber-300 flex items-center gap-1 shadow-xs">
                     <span>🧪</span> Modo Demo
                   </span>
                 )}

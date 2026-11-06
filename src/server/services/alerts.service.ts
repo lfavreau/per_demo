@@ -5,7 +5,8 @@ export async function checkAllAlertRules(isDemo: boolean) {
   const now = new Date();
 
   // 1. Fetch settings for alert thresholds
-  const settings = await prisma.setting.findMany();
+  // Solo los umbrales: la línea base del modo demo es un JSON grande y no se necesita aquí.
+  const settings = await prisma.setting.findMany({ where: { key: { startsWith: "alert_" } } });
   const alertThresholds: Record<string, number> = {
     VINCULACION: 10,
     CONEXION: 14,

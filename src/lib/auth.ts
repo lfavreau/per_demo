@@ -1,7 +1,9 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { ensureDemoWindow } from "@/server/services/demo.service";
 import { DEMO_ACCOUNTS } from "./demo-accounts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -16,6 +18,9 @@ export interface SessionUser {
 
 const COOKIE_NAME = "per_session";
 const DEMO_EMAILS = new Set(DEMO_ACCOUNTS.map((account) => account.email));
+
+// Una sola evaluación por petición, aunque varias partes de la página pidan al usuario.
+const keepDemoDataFresh = cache(() => ensureDemoWindow());
 
 function sessionSecret() {
   const secret = process.env.AUTH_SESSION_SECRET?.trim();
@@ -124,6 +129,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
     const sessionUser = decodeSession(sessionCookie.value);
     if (!sessionUser) return null;
+
+    // Modo demo: si ya pasaron 5 minutos de uso, los datos demo vuelven a su estado inicial. No hay un proceso
+    // vigilando; se evalúa aquí, en el clic. Va antes de leer al usuario para ver ya los datos reiniciados.
+    if (sessionUser.isDemo) await keepDemoDataFresh();
 
     // Verify user is still active in database
     const dbUser = await prisma.user.findUnique({

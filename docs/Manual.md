@@ -659,6 +659,8 @@ La plataforma tiene **dos modos de operación** completamente independientes:
 
 > **Importante**: Los datos del modo demo **nunca se mezclan** con los datos del modo real. Son universos completamente separados.
 
+> **Reinicio automático del modo demo.** Lo que se hace en el modo demo no se queda: pasados **5 minutos de uso**, los datos demo vuelven a su estado inicial, como si nadie los hubiera usado. No hay un proceso vigilando el reloj: se comprueba en cada clic dentro del modo demo. La ventana de 5 minutos parte con el primer clic después del último reinicio; el primer clic que llega pasados los 5 minutos hace el reinicio (puede tardar unos segundos) y abre una ventana nueva. El reinicio es compartido: quien esté usando el demo en ese momento también ve los datos reiniciados. Solo se reinician los datos demo; el modo real no se toca. Para fijar el estado inicial al que se vuelve se usa `scripts/demo-linea-base.ts` (ver Estructura); mientras no se haya guardado, el reinicio está apagado.
+
 ---
 
 # PARTE III — GUÍA POR ROL
