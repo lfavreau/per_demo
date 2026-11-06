@@ -39,6 +39,11 @@ export function mapStageToLabel(stage: string): string {
 }
 
 /** "Etapa 1 · Vinculación", "Etapa 2 · Conexión", "Etapa 3 · Finalización". */
+/** Nombre de usuario con el que se inicia sesión: la cuenta sin el dominio del correo interno. */
+export function usernameFromEmail(email: string): string {
+  return email.split("@")[0];
+}
+
 export function formatStageHeading(stage: string): string {
   const number = ["VINCULACION", "CONEXION", "FINALIZACION"].indexOf(stage) + 1;
   return number > 0 ? `Etapa ${number} · ${mapStageToLabel(stage)}` : mapStageToLabel(stage);

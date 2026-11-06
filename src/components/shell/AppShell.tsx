@@ -10,6 +10,7 @@ import {
   UserNotification 
 } from "@/app/actions/notifications";
 import { getSwRegistration } from "@/components/PWARegistration";
+import { usernameFromEmail } from "@/lib/nomenclatures";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -246,7 +247,7 @@ export default function AppShell({ children, user }: AppShellProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate text-slate-800">{user.name}</p>
-                  <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{usernameFromEmail(user.email)}</p>
                 </div>
               </div>
               <button
@@ -527,7 +528,7 @@ export default function AppShell({ children, user }: AppShellProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold truncate text-slate-800">{user.name}</p>
-                  <p className="text-[9px] text-slate-500 truncate">{user.email}</p>
+                  <p className="text-[9px] text-slate-500 truncate">{usernameFromEmail(user.email)}</p>
                 </div>
               </div>
               <button

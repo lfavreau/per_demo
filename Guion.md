@@ -156,10 +156,10 @@ Casos protagonistas del video:
 **Acciones**:
 1. Mostrar las dos nóminas separadas: Acompañantes PER (editable) y los 5 Coordinadores Regionales (fijos).
 2. **➕ Crear Acompañante PER** → nombre `Rosa Aguilera`, usuario `per.rosa`, región `Valparaíso` → **Crear Usuario**.
-3. Señalar el correo institucional autogenerado `per.rosa@per2026.cl` y que la fila aparece de inmediato en la nómina.
+3. Señalar que la fila aparece de inmediato en la nómina con el usuario `per.rosa`, con el que la persona iniciará sesión.
 
 **Locución**:
-> «Aquí nacen las cuentas de los acompañantes. Se ingresa nombre, usuario y coordinación regional; el correo institucional se genera solo. Desde este momento la persona puede iniciar sesión y su coordinación regional puede asignarle casos.»
+> «Aquí nacen las cuentas de los acompañantes. Se ingresa nombre, usuario y coordinación regional; el usuario queda listo para iniciar sesión. Desde este momento la persona puede iniciar sesión y su coordinación regional puede asignarle casos.»
 
 **🧪 Respaldo**: `ADMN-01`, `ADMN-02`
 
@@ -172,7 +172,7 @@ Casos protagonistas del video:
 2. Repetir con la contraseña correcta → cambio aplicado.
 3. **Eliminar** sobre `per.carla` (que tiene casos) → el sistema **bloquea** la eliminación y sugiere desactivar.
 4. **Eliminar** sobre `per.rosa` (sin casos) → confirmar con contraseña → eliminada.
-5. Mostrar el botón **Desactivar** en otra fila y mencionar que la cuenta `admin@per2026.cl` no se puede desactivar.
+5. Mostrar el botón **Desactivar** en otra fila y mencionar que la cuenta `admin` no se puede desactivar.
 
 **Locución**:
 > «Editar y eliminar son acciones sensibles, así que ambas exigen volver a escribir la contraseña de administrador. Si la contraseña no coincide, no se guarda absolutamente nada.

@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/admin";
 import { REGION_NAMES as REGIONS } from "@/lib/program-config";
 import RowActionsMenu from "@/components/shared/RowActionsMenu";
+import { usernameFromEmail } from "@/lib/nomenclatures";
 
 interface UserWithProfile {
   id: string;
@@ -132,7 +133,7 @@ export default function UserManagementClient({
           <span>⚠️</span>
           <span>
             {errorMsg === "user_exists"
-              ? "El nombre de usuario o correo ya se encuentra registrado."
+              ? "El nombre de usuario ya se encuentra registrado."
               : errorMsg === "missing_fields"
               ? "Por favor, completa todos los campos requeridos."
               : errorMsg === "cannot_deactivate_admin"
@@ -182,7 +183,7 @@ export default function UserManagementClient({
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider bg-slate-50/50">
                   {sortHeader("name", "Acompañante")}
-                  <th className="py-3 px-4">Usuario / Email</th>
+                  <th className="py-3 px-4">Usuario</th>
                   {sortHeader("region", "Región / Coordinador")}
                   {sortHeader("status", "Estado", "center")}
                   <th className="py-3 px-4 text-right">Acción</th>
@@ -192,7 +193,7 @@ export default function UserManagementClient({
                 {sortedPers.map((per) => (
                   <tr key={per.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-4 font-bold text-slate-900">{per.name}</td>
-                    <td className="py-3 px-4 font-mono text-slate-600">{per.email.replace("@per2026.cl", "")}</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">{usernameFromEmail(per.email)}</td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold text-[10px] border border-blue-100">
                         📍 {per.regionId}
@@ -270,7 +271,7 @@ export default function UserManagementClient({
               <div>
                 <span className="font-bold text-slate-900 block">{coord.name}</span>
                 <span className="font-mono text-slate-500 text-[11px] block mt-0.5">
-                  {coord.email}
+                  {usernameFromEmail(coord.email)}
                 </span>
                 <span className="inline-block mt-2 px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
                   📍 {coord.regionId}
@@ -338,7 +339,7 @@ export default function UserManagementClient({
                   />
                 </div>
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Se generará la cuenta institucional <code>per.maria@per2026.cl</code>
+                  Con este usuario iniciará sesión
                 </span>
               </div>
 
@@ -428,7 +429,7 @@ export default function UserManagementClient({
                   name="username"
                   id="edit-username"
                   required
-                  defaultValue={editingPer.email.replace("@per2026.cl", "")}
+                  defaultValue={usernameFromEmail(editingPer.email)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-slate-900 font-mono text-sm"
                 />
               </div>
@@ -528,7 +529,7 @@ export default function UserManagementClient({
                 <input type="hidden" name="userId" value={deletingPer.id} />
                 <p className="text-slate-600">
                   Esta acción es permanente y no se puede deshacer. Se eliminará la cuenta y el perfil de{" "}
-                  <span className="font-bold">{deletingPer.name}</span> ({deletingPer.email}).
+                  <span className="font-bold">{deletingPer.name}</span> ({usernameFromEmail(deletingPer.email)}).
                 </p>
 
                 <div>

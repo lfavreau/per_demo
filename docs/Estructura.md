@@ -74,7 +74,7 @@ Panel de control centralizado enfocado en la transparencia, auditoría y control
 
 #### 1. Gestión de Usuarios (`/admin/usuarios`)
 * **Función**: Alta, edición, baja y activación/desactivación de las cuentas de Acompañantes PER. Muestra por separado la nómina de PER (editable) y la de los 5 Coordinadores Regionales (fijos).
-* **Crear**: Formulario con nombre, usuario y coordinación regional asignada; genera el correo institucional `usuario@per2026.cl` automáticamente. El PER nace **activo** — se asume que la contratación ya se resolvió en la reunión de coordinación, fuera de la app.
+* **Crear**: Formulario con nombre, usuario y coordinación regional asignada; la persona inicia sesión con ese usuario, sin escribir ningún dominio. El PER nace **activo** — se asume que la contratación ya se resolvió en la reunión de coordinación, fuera de la app.
 * **Estado (Activo / Inactivo)**: columna *Estado* y botón Desactivar / Activar (`toggleUserStatusAction`, campo `User.active`). Un PER inactivo no inicia sesión, no aparece para asignar casos y, si tiene tareas críticas, genera una alerta. Es el único estado del PER; `PERProfile.certificationStatus` quedó como campo legado sin uso en la lógica.
 * **Editar / Eliminar**: Ambas acciones abren un modal que exige la **contraseña compartida de modo real** (`verifyRealModePassword()` en `src/lib/auth.ts`) antes de aplicar el cambio. La eliminación se bloquea a nivel de servidor (`src/app/actions/admin.ts`) si el PER tiene algún `PACase` asociado, para no dejar casos huérfanos.
 * **Auditoría**: Creación, edición y eliminación quedan registradas como `CREACION_USUARIO_PER` / `EDICION_USUARIO_PER` / `ELIMINACION_USUARIO_PER` en `AuditLog`; activar o desactivar como `ACTIVACION_USUARIO` / `DESACTIVACION_USUARIO`.

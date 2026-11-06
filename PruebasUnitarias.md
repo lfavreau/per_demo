@@ -355,7 +355,7 @@ Con `next/headers` mockeado sobre un almacén de cookies en memoria.
 
 | ID | Caso | Escena | Aserción |
 |---|---|---|---|
-| `AUTH-01` | Usuario sin `@` resuelve el dominio institucional | E02 | `login("coord.metro", pass)` encuentra `coord.metro@per2026.cl` |
+| `AUTH-01` | Usuario sin `@` inicia sesión igual | E02 | `login("coord.metro", pass)` encuentra la cuenta `coord.metro` |
 | `AUTH-02` | Usuario inexistente o inactivo | E02 | `{ error: "email_not_found" }`; idem con `active: false` |
 | `AUTH-03` | Cuenta `isDemo: true` por el formulario real | E03 | `{ error: "account_is_demo_only" }` y **no** se emite cookie |
 | `AUTH-04` | Contraseña incorrecta en modo real | E03 | `{ error: "invalid_password" }` |
@@ -479,13 +479,13 @@ Todas con reloj congelado (`vi.setSystemTime`) para que los umbrales sean determ
 
 | ID | Caso | Escena | Aserción |
 |---|---|---|---|
-| `ADMN-01` | Crear PER genera correo institucional y perfil | E06 | `per.rosa` → `per.rosa@per2026.cl` + `PERProfile` en la región indicada |
+| `ADMN-01` | Crear PER genera la cuenta y el perfil | E06 | `per.rosa` → cuenta `per.rosa` + `PERProfile` en la región indicada |
 | `ADMN-02` | Crear PER queda auditado | E06 | `AuditLog` `CREACION_USUARIO_PER` |
 | `ADMN-03` | Editar con contraseña incorrecta no cambia nada | E07 | Redirige con `error=invalid_admin_password` y el usuario queda idéntico |
 | `ADMN-04` | Editar con contraseña correcta actualiza y audita | E07 | `EDICION_USUARIO_PER` con `previousValue` y `newValue` |
 | `ADMN-05` | **No se elimina un PER con casos asociados** | E07 | Redirige con `error=per_has_cases`; el usuario sigue existiendo |
 | `ADMN-06` | Eliminar un PER sin casos, con contraseña correcta | E07 | Usuario borrado + `ELIMINACION_USUARIO_PER` |
-| `ADMN-07` | La cuenta `admin@per2026.cl` no se puede desactivar | E07 | `error=cannot_deactivate_admin` |
+| `ADMN-07` | La cuenta `admin` no se puede desactivar | E07 | `error=cannot_deactivate_admin` |
 | `ADMN-08` | Usuario duplicado | E06 | `error=user_exists` |
 | `ADMN-09` | Todas las acciones exigen rol ADMIN | E06 | Con rol COORDINATOR → lanza *No autorizado* |
 | `ADMN-10` | Un usuario desactivado no puede iniciar sesión | E07 | Encadena con `AUTH-02` |
