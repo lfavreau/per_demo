@@ -566,6 +566,55 @@ export async function reopenValidation({
 }
 
 /**
+ * Coordinación (o el administrador) devuelve una actividad al PER con un texto que dice qué falta
+ * corregir. Sirve cuando la revisó por fuera de la app: la actividad puede estar enviada (se devuelve
+ * como una devolución normal) o ya validada (se pide como edición, destacada en rosa para el PER).
+ * El texto es obligatorio y le llega al PER en un aviso y dentro de la propia actividad.
+ */
+export async function requestCorrection({
+  taskId,
+  reason,
+  actorId,
+  isDemo,
+}: {
+  taskId: string;
+  reason: string;
+  actorId: string;
+  isDemo: boolean;
+}) {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error("Escribe qué hay que corregir.");
+
+  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { paCase: true } });
+  if (!task) throw new Error("Tarea no encontrada");
+  if (task.isDemo !== isDemo) throw new Error("La tarea no pertenece al modo de trabajo actual");
+
+  if (task.status === "VALIDADA") {
+    return reopenValidation({ taskId, mode: "REQUEST_EDIT", reason: trimmed, actorId, isDemo });
+  }
+  if (task.status !== "ENVIADA") {
+    throw new Error("Solo se puede pedir una corrección de una actividad enviada o validada.");
+  }
+
+  const actor = await prisma.user.findUnique({ where: { id: actorId } });
+  if (!actor || (actor.role !== "ADMIN" && !(actor.role === "COORDINATOR" && actor.regionId === task.regionId))) {
+    throw new Error("No autorizado para operar tareas de esta región");
+  }
+
+  const updated = await updateTaskStatus({ taskId, toStatus: "DEVUELTA", note: trimmed, actorId, isDemo });
+  if (task.assignedToUserId && task.paCase) {
+    await createNotificationWithPush({
+      userId: task.assignedToUserId,
+      title: "Actividad devuelta para corregir",
+      message: `Caso ${task.paCase.code}: «${task.title}». ${trimmed}`,
+      link: `/per/casos/${task.paCase.id}/etapa`,
+      isDemo,
+    });
+  }
+  return updated;
+}
+
+/**
  * Objetivos vigentes (isCurrent: true) del IAPRecord del caso, para poblar el selector
  * de "Objetivo" en el Registro de Acompañamiento (Actividad 4 o su reformulación).
  */

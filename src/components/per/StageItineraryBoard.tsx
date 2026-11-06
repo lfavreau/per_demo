@@ -129,15 +129,23 @@ export default function StageItineraryBoard({
             return <ExternalLinkStepForm taskId={current.taskId!} title={current.title} />;
           }
           return (
-            <NativeInstrumentForm
-              taskId={current.taskId!}
-              caseId={caseId}
-              title={current.title}
-              contentTarget={stepDef?.contentTarget ?? "TASK_JSON"}
-              fields={stepDef?.fields ?? []}
-              existingContentJson={current.status === "DEVUELTA" ? current.contentJson : null}
-              domainPriorities={domainPriorities}
-            />
+            <div className="space-y-3">
+              {current.status === "DEVUELTA" && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs space-y-1">
+                  <p className="font-bold text-rose-900">↩️ Coordinación devolvió esta actividad para corregir</p>
+                  {current.returnNote && <p className="text-rose-800 leading-relaxed whitespace-pre-wrap">{current.returnNote}</p>}
+                </div>
+              )}
+              <NativeInstrumentForm
+                taskId={current.taskId!}
+                caseId={caseId}
+                title={current.title}
+                contentTarget={stepDef?.contentTarget ?? "TASK_JSON"}
+                fields={stepDef?.fields ?? []}
+                existingContentJson={current.status === "DEVUELTA" ? current.contentJson : null}
+                domainPriorities={domainPriorities}
+              />
+            </div>
           );
         })()}
 

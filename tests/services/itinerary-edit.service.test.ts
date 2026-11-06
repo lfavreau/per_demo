@@ -6,9 +6,10 @@ import {
   getDomainPriorities,
   getItineraryState,
   reopenValidation,
+  requestCorrection,
   submitItineraryStep,
 } from "@/server/services/itinerary.service";
-import { createCoordinator, createPer, createCandidate, testRegion } from "../helpers/fixtures";
+import { createAdmin, createCoordinator, createPer, createCandidate, testRegion } from "../helpers/fixtures";
 
 async function caseWithPer() {
   const region = testRegion();
@@ -270,5 +271,50 @@ describe("itinerary.service — historial del caso", () => {
     expect(item.events.map((e) => e.by)).toEqual(["PER", "COORDINATOR"]);
     expect(JSON.stringify(history)).not.toContain(perUser.name);
     expect(JSON.stringify(history)).not.toContain(perUser.email);
+  });
+});
+
+describe("itinerary.service — pedir una corrección con texto", () => {
+  it("ED-12: una actividad enviada se devuelve al PER con el texto, aviso y feedback", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const task = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_1_MOTIVACIONES", "ENVIADA");
+
+    await expect(requestCorrection({ taskId: task.id, reason: "   ", actorId: coord.id, isDemo: true })).rejects.toThrow(/qué hay que corregir/);
+    await requestCorrection({ taskId: task.id, reason: "Falta detallar las expectativas", actorId: coord.id, isDemo: true });
+
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).status).toBe("DEVUELTA");
+    const feedback = await prisma.feedback.findFirstOrThrow({ where: { taskId: task.id } });
+    expect(feedback.text).toBe("Falta detallar las expectativas");
+    const notice = await prisma.notification.findFirstOrThrow({ where: { userId: perUser.id, title: "Actividad devuelta para corregir" } });
+    expect(notice.message).toContain("Falta detallar las expectativas");
+
+    // El PER ve el texto dentro de la actividad; no es una "edición" (nunca estuvo validada).
+    const step = (await getItineraryState(paCase.id, true)).steps.find((s) => s.activityKey === "ACTIVIDAD_1_MOTIVACIONES");
+    expect(step?.returnNote).toBe("Falta detallar las expectativas");
+    expect(step?.reopened).toBe(false);
+  });
+
+  it("ED-13: una validada se pide como edición (rosa) y el administrador de cualquier región puede hacerlo", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const admin = await createAdmin();
+    const task = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_1_MOTIVACIONES", "VALIDADA");
+
+    await requestCorrection({ taskId: task.id, reason: "La evalué aparte y falta la fecha", actorId: admin.id, isDemo: true });
+
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: task.id } })).status).toBe("DEVUELTA");
+    const step = (await getItineraryState(paCase.id, true)).steps.find((s) => s.activityKey === "ACTIVIDAD_1_MOTIVACIONES");
+    expect(step?.reopened).toBe(true);
+    expect(await prisma.auditLog.count({ where: { entityId: task.id, action: "REOPEN_VALIDATION", userId: admin.id } })).toBe(1);
+  });
+
+  it("ED-14: no se corrige una pendiente ni desde otra región", async () => {
+    const { coord, perUser, paCase } = await caseWithPer();
+    const outsider = await createCoordinator(testRegion());
+    const pending = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_1_MOTIVACIONES", "PENDIENTE");
+    const sent = await taskFor(paCase, perUser.id, coord.id, "ACTIVIDAD_2_ANTECEDENTES", "ENVIADA");
+
+    await expect(requestCorrection({ taskId: pending.id, reason: "x", actorId: coord.id, isDemo: true })).rejects.toThrow(/enviada o validada/);
+    await expect(requestCorrection({ taskId: sent.id, reason: "x", actorId: outsider.id, isDemo: true })).rejects.toThrow(/No autorizado/);
+    expect((await prisma.task.findUniqueOrThrow({ where: { id: sent.id } })).status).toBe("ENVIADA");
   });
 });

@@ -9,6 +9,7 @@ import {
   validateItineraryStep,
   returnItineraryStep,
   reopenValidation,
+  requestCorrection,
   markStepNotApplicable,
   triggerIntermediateEvaluation,
 } from "@/server/services/itinerary.service";
@@ -119,6 +120,24 @@ export async function reopenValidationAction(
     };
   } catch (err) {
     return { ok: false, message: err instanceof Error ? err.message : "No se pudo corregir la validación." };
+  }
+}
+
+/**
+ * Devuelve al PER una actividad enviada o validada con un texto que indica qué falta corregir.
+ * Lo pueden usar coordinación de la región y el administrador.
+ */
+export async function requestCorrectionAction(taskId: string, reason: string): Promise<{ ok: boolean; message: string }> {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "COORDINATOR" && user.role !== "ADMIN")) {
+    return { ok: false, message: "No autorizado" };
+  }
+  try {
+    await requestCorrection({ taskId, reason, actorId: user.id, isDemo: Boolean(user.isDemo) });
+    revalidateItineraryPaths();
+    return { ok: true, message: "Se la enviaste al PER con tu texto." };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : "No se pudo enviar la corrección." };
   }
 }
 

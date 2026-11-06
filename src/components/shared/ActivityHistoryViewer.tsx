@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { reopenValidationAction } from "@/app/actions/itinerary";
+import { reopenValidationAction, requestCorrectionAction } from "@/app/actions/itinerary";
 import NativeInstrumentForm from "@/components/per/NativeInstrumentForm";
 import { renderInstrumentContent } from "@/components/coordinator/renderInstrumentContent";
 import { getStepByActivityKey } from "@/lib/instrument-itinerary";
@@ -109,6 +109,57 @@ function CorrectValidation({ item, onDone }: { item: ActivityHistoryItem; onDone
           className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-bold cursor-pointer"
         >
           {isPending ? "Guardando…" : mode === "REVIEW" ? "Dejar en revisión" : "Pedir edición al PER"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Coordinación devuelve al PER una actividad ya enviada, con el texto de lo que falta corregir. */
+function RequestCorrection({ item, onDone }: { item: ActivityHistoryItem; onDone: () => void }) {
+  const [reason, setReason] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-3 text-xs">
+      <p className="font-bold text-rose-900">Devolver al PER para corregir</p>
+      <p className="text-rose-800 leading-relaxed">
+        Escribe qué falta o qué hay que cambiar. El PER lo ve dentro de la actividad y recibe un aviso; al reenviarla vuelve a
+        tu revisión.
+      </p>
+      <textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={3}
+        disabled={isPending}
+        placeholder="Ej. Falta detallar las expectativas concretas y la fecha del encuentro."
+        className="w-full p-2 bg-white border border-rose-300 rounded-lg outline-none resize-none"
+      />
+      {result && (
+        <p
+          role="status"
+          className={`px-3 py-2 rounded-lg border font-semibold ${
+            result.ok ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"
+          }`}
+        >
+          {result.message}
+        </p>
+      )}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          disabled={isPending || !reason.trim()}
+          onClick={() =>
+            startTransition(async () => {
+              const res = await requestCorrectionAction(item.taskId, reason);
+              setResult(res);
+              if (res.ok) setTimeout(onDone, 900);
+            })
+          }
+          className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 text-white font-bold cursor-pointer"
+        >
+          {isPending ? "Enviando…" : "Devolver al PER"}
         </button>
       </div>
     </div>
@@ -302,6 +353,7 @@ export default function ActivityHistoryViewer({ mode, caseId, items, domainPrior
                     </div>
                   )}
 
+                  {mode === "COORD" && open.status === "ENVIADA" && <RequestCorrection item={open} onDone={close} />}
                   {mode === "COORD" && open.status === "VALIDADA" && <CorrectValidation item={open} onDone={close} />}
                 </>
               )}

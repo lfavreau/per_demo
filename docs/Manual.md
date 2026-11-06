@@ -268,6 +268,8 @@ La plataforma no muestra todos los instrumentos del IAP a la vez. Cada caso avan
 
 > **Historial, edición y correcciones.** En tu pantalla del caso, el **Historial del proceso** tiene dos listas (etapa y actividad) y el botón **Cargar**: abre la actividad con lo que se registró y su historial de estados. Desde ahí puedes **✏️ Editar** una actividad ya enviada (sigue en revisión y coordinación recibe un aviso) o ya validada (vuelve a revisión de coordinación). Si coordinación te **pide una edición**, aparece primero y con fondo rosa, antes de tu actividad activa: conviene atenderla para estar al día.
 >
+> Coordinación (y el administrador, desde **Acompañamientos** en su menú) puede **devolverle una actividad al PER con un texto que indique qué falta**, esté enviada o ya validada: en el historial carga la actividad y escribe la corrección. El PER ve el texto dentro de la actividad y en un aviso; si estaba validada le aparece destacada en rosa.
+>
 > Coordinación, en el mismo historial, puede **corregir una validación hecha por error**: dejarla de nuevo *en revisión* (el PER no recibe aviso) o *pedir al PER que la edite*. Siempre se escribe un motivo. Toda edición y corrección queda en la bitácora de auditoría del administrador (qué campos cambiaron, no el texto).
 
 **Etapa Conexión**:

@@ -170,6 +170,7 @@ export default function AppShell({ children, user }: AppShellProps) {
     ADMIN: [
       { name: "Resumen", path: "/admin", icon: "📊" },
       { name: "Gestión de Usuarios", path: "/admin/usuarios", icon: "👥" },
+      { name: "Acompañamientos", path: "/admin/casos", icon: "🤝" },
       { name: "Instrumentos", path: "/admin/instrumentos", icon: "📋" },
       { name: "Catálogo de Redes", path: "/admin/redes", icon: "🌐" },
       { name: "Reportes SENDA", path: "/admin/reportes", icon: "📥" },
