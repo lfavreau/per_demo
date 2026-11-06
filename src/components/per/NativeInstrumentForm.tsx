@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { submitItineraryStepAction, syncOfflineItineraryStepsAction } from "@/app/actions/itinerary";
 import { RECOVERY_DOMAINS, type ItineraryFieldDef } from "@/lib/instrument-itinerary";
 import { MAX_PLAN_WEEK, REQUIRE_TEXT_FIELDS } from "@/lib/program-config";
@@ -110,6 +110,30 @@ interface OfflineStep {
   fieldValues: Record<string, unknown>;
 }
 
+/** Borrador de una actividad en este dispositivo: se restaura al volver a abrirla y se borra al enviarla. */
+interface LocalDraft {
+  fieldValues: Record<string, unknown>;
+  savedAt: string;
+}
+
+function readDraft(key: string): LocalDraft | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as LocalDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, draft: LocalDraft | null) {
+  try {
+    if (draft) localStorage.setItem(key, JSON.stringify(draft));
+    else localStorage.removeItem(key);
+  } catch {
+    // Almacenamiento lleno o bloqueado: el formulario sigue funcionando sin borrador.
+  }
+}
+
 function emptyFlatValues(fields: ItineraryFieldDef[]): Record<string, string> {
   const values: Record<string, string> = {};
   for (const f of fields) values[f.key] = "";
@@ -149,14 +173,25 @@ export default function NativeInstrumentForm({
 }: NativeInstrumentFormProps) {
   const existing = existingContentJson ? safeParse(existingContentJson) : null;
 
-  const [flatValues, setFlatValues] = useState<Record<string, string>>(
-    contentTarget === "TASK_JSON" ? { ...emptyFlatValues(fields), ...(existing || {}) } : {}
-  );
-  const [domainRows, setDomainRows] = useState<DomainRow[]>(
-    contentTarget === "IAP_DOMAIN_MAP" && Array.isArray(existing?.domains) ? existing.domains : defaultDomainRows()
-  );
-  const [goalRows, setGoalRows] = useState<GoalRow[]>(contentTarget === "IAP_GOAL" ? initialGoalRows(existing) : [emptyGoalRow()]);
-  const [mapDate, setMapDate] = useState<string>(typeof existing?.date === "string" ? existing.date : "");
+  // Estado del formulario a partir de valores guardados (envío anterior o borrador local).
+  function stateFromValues(values: any) {
+    return {
+      flat: contentTarget === "TASK_JSON" ? { ...emptyFlatValues(fields), ...(values || {}) } : ({} as Record<string, string>),
+      domains: (contentTarget === "IAP_DOMAIN_MAP" && Array.isArray(values?.domains) ? values.domains : defaultDomainRows()) as DomainRow[],
+      goals: contentTarget === "IAP_GOAL" ? initialGoalRows(values) : [emptyGoalRow()],
+      date: typeof values?.date === "string" ? (values.date as string) : "",
+    };
+  }
+  const initial = stateFromValues(existing);
+
+  const [flatValues, setFlatValues] = useState<Record<string, string>>(initial.flat);
+  const [domainRows, setDomainRows] = useState<DomainRow[]>(initial.domains);
+  const [goalRows, setGoalRows] = useState<GoalRow[]>(initial.goals);
+  const [mapDate, setMapDate] = useState<string>(initial.date);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  // Valores con que se abrió el formulario: el autoguardado solo actúa si algo cambió respecto de ellos.
+  const baseline = useRef<string | null>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isOnline, setIsOnline] = useState(true);
   const [offlineDrafts, setOfflineDrafts] = useState<OfflineStep[]>([]);
@@ -164,6 +199,7 @@ export default function NativeInstrumentForm({
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const storageKey = `per_offline_itinerary_${caseId}`;
+  const draftKey = `per_draft_${taskId}`;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -176,11 +212,24 @@ export default function NativeInstrumentForm({
     const stored = localStorage.getItem(storageKey);
     if (stored) setOfflineDrafts(JSON.parse(stored));
 
+    // Si esta actividad tenía un borrador en el dispositivo, se restaura.
+    const draft = readDraft(draftKey);
+    if (draft) {
+      const restored = stateFromValues(draft.fieldValues);
+      setFlatValues(restored.flat);
+      setDomainRows(restored.domains);
+      setGoalRows(restored.goals);
+      setMapDate(restored.date);
+      setDraftSavedAt(draft.savedAt);
+    }
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [storageKey]);
+    // Solo debe correr al abrir la actividad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, draftKey]);
 
   function buildFieldValues(): Record<string, unknown> {
     if (contentTarget === "IAP_DOMAIN_MAP") return { date: mapDate, domains: domainRows };
@@ -190,17 +239,56 @@ export default function NativeInstrumentForm({
     return flatValues;
   }
 
-  function handleSaveDraft() {
-    const draft: OfflineStep = {
-      id: `draft_${Date.now()}`,
-      taskId,
-      title,
-      fieldValues: buildFieldValues(),
+  /** Guarda el borrador de esta actividad (uno por actividad; reemplaza al anterior). */
+  function saveDraft(): string {
+    const fieldValues = buildFieldValues();
+    const previous = readDraft(draftKey);
+    // Si el contenido es el mismo del borrador ya guardado (p. ej. recién restaurado), se conserva su hora.
+    if (previous && JSON.stringify(previous.fieldValues) === JSON.stringify(fieldValues)) {
+      setDraftSavedAt(previous.savedAt);
+      return previous.savedAt;
+    }
+    const savedAt = new Date().toISOString();
+    writeDraft(draftKey, { fieldValues, savedAt });
+    setDraftSavedAt(savedAt);
+    return savedAt;
+  }
+
+  // Autoguardado: tras unos instantes sin escribir se guarda solo, para que recargar no pierda nada.
+  useEffect(() => {
+    const current = JSON.stringify(buildFieldValues());
+    if (baseline.current === null) baseline.current = current;
+    if (current === baseline.current) return; // sin cambios: no se crea un borrador vacío
+    autosaveTimer.current = setTimeout(saveDraft, 800);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
-    const updated = [...offlineDrafts, draft];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    setOfflineDrafts(updated);
-    setMsg({ type: "success", text: "Borrador guardado localmente" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flatValues, domainRows, goalRows, mapDate]);
+
+  function handleSaveDraft() {
+    saveDraft();
+    // Sin conexión, además queda en la cola para enviarse al volver (ver "Borradores guardados sin conexión").
+    if (!isOnline) {
+      const queued: OfflineStep = { id: `draft_${Date.now()}`, taskId, title, fieldValues: buildFieldValues() };
+      const updated = [...offlineDrafts.filter((d) => d.taskId !== taskId), queued];
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      setOfflineDrafts(updated);
+      setMsg({ type: "success", text: "Sin conexión: el borrador quedó en el dispositivo y se podrá enviar al volver." });
+      return;
+    }
+    setMsg({ type: "success", text: "Borrador guardado en este dispositivo. Se restaura si recargas o vuelves a abrir la actividad." });
+  }
+
+  function handleDiscardDraft() {
+    writeDraft(draftKey, null);
+    const fresh = stateFromValues(existing);
+    setFlatValues(fresh.flat);
+    setDomainRows(fresh.domains);
+    setGoalRows(fresh.goals);
+    setMapDate(fresh.date);
+    setDraftSavedAt(null);
+    setMsg({ type: "success", text: "Borrador descartado." });
   }
 
   async function handleSubmitOnline(e: React.FormEvent) {
@@ -212,6 +300,9 @@ export default function NativeInstrumentForm({
     setIsSubmitting(false);
 
     if (res.success) {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      writeDraft(draftKey, null);
+      setDraftSavedAt(null);
       setMsg({ type: "success", text: "Instrumento enviado a coordinación exitosamente" });
       if (onSubmitted) setTimeout(onSubmitted, 900);
     } else {
@@ -232,6 +323,9 @@ export default function NativeInstrumentForm({
       return;
     }
     if (res && res.success) {
+      for (const d of offlineDrafts) {
+        if (!res.errors?.some((e) => e.id === d.id)) writeDraft(`per_draft_${d.taskId}`, null);
+      }
       if (res.errors && res.errors.length > 0) {
         const failedIds = res.errors.map((e) => e.id);
         const remaining = offlineDrafts.filter((d) => failedIds.includes(d.id));
@@ -251,9 +345,9 @@ export default function NativeInstrumentForm({
       {offlineDrafts.length > 0 && (
         <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="space-y-1">
-            <h4 className="font-bold text-xs text-amber-500">Borradores Offline Pendientes</h4>
+            <h4 className="font-bold text-xs text-amber-500">Borradores guardados sin conexión</h4>
             <p className="text-[10px] text-slate-400">
-              Tienes {offlineDrafts.length} borrador(es) de instrumentos guardados en este dispositivo.
+              {offlineDrafts.length} borrador(es) guardado(s) sin conexión esperan ser enviados a coordinación.
             </p>
           </div>
           <button
@@ -268,6 +362,16 @@ export default function NativeInstrumentForm({
       )}
 
       <div className="p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4">
+        {draftSavedAt && (
+          <div className="px-3 py-2 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-[11px] flex flex-wrap items-center justify-between gap-2">
+            <span>
+              📝 Borrador guardado en este dispositivo ({new Date(draftSavedAt).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}). Aún no se envió a coordinación.
+            </span>
+            <button type="button" onClick={handleDiscardDraft} className="font-bold underline decoration-dotted cursor-pointer">
+              Descartar borrador
+            </button>
+          </div>
+        )}
         <div className="flex justify-between items-center border-b border-border/50 pb-3">
           <h3 className="font-bold text-sm text-slate-800">▶ {title}</h3>
           <span
@@ -487,7 +591,7 @@ export default function NativeInstrumentForm({
               onClick={handleSaveDraft}
               className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-border hover:bg-secondary/40 font-semibold transition cursor-pointer text-center"
             >
-              💾 Guardar Borrador Local
+              💾 Guardar borrador
             </button>
             <button
               type="submit"
