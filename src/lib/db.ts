@@ -58,9 +58,29 @@ export const getDb = (): PrismaClient => {
   }
 };
 
+// Un solo cliente por proceso: crear uno en cada acceso (el Proxy lo hacía) abre una conexión nueva a Turso
+// por consulta. El contexto de Cloudflare D1 es por petición, así que ese caso no se guarda.
+let sharedClient: PrismaClient | undefined;
+
+function resolveClient(): PrismaClient {
+  if (sharedClient) return sharedClient;
+  const client = getDb();
+  if (!isD1Context()) sharedClient = client;
+  return client;
+}
+
+function isD1Context(): boolean {
+  try {
+    const { getCloudflareContext } = require("@opennextjs/cloudflare");
+    return Boolean(getCloudflareContext()?.env?.DB);
+  } catch {
+    return false;
+  }
+}
+
 export const prisma = globalForPrisma.prisma || new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    const client = getDb() as any;
+    const client = resolveClient() as any;
     const value = client[prop];
     if (typeof value === "function") {
       return value.bind(client);

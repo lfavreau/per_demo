@@ -59,24 +59,23 @@ export default async function PERCaseStagePage({
   }
 
   await ensureCurrentStageTasks(paCase.id, user.id, isDemo);
-  const state = await getItineraryState(paCase.id, isDemo);
-  const [history, domainPriorities] = await Promise.all([
+  // Las lecturas no dependen entre sí: van juntas para no sumar la espera de cada consulta.
+  const isConexion = paCase.stage === "CONEXION";
+  const [state, history, domainPriorities, recentSessions, currentGoals, activeCaseCount] = await Promise.all([
+    getItineraryState(paCase.id, isDemo),
     getCaseActivityHistory(paCase.id, isDemo),
     getDomainPriorities(paCase.id),
+    isConexion
+      ? prisma.sessionLog.findMany({ where: { paCaseId: paCase.id, isDemo }, orderBy: { date: "desc" }, take: 5 })
+      : Promise.resolve([]),
+    isConexion ? getCurrentGoalsForCase(paCase.id) : Promise.resolve([]),
+    // Con un solo caso activo /per redirige acá mismo, así que el botón "Mis casos" solo tiene sentido si hay más de uno.
+    prisma.pACase.count({
+      where: { perId: profile.id, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
+    }),
   ]);
 
   const metaLine = `Iniciada ${daysAgo(paCase.startDate)} · Última sesión ${daysAgo(paCase.lastSessionDate)}`;
-
-  const recentSessions =
-    state.stage === "CONEXION"
-      ? await prisma.sessionLog.findMany({
-          where: { paCaseId: paCase.id, isDemo },
-          orderBy: { date: "desc" },
-          take: 5,
-        })
-      : [];
-
-  const currentGoals = state.stage === "CONEXION" ? await getCurrentGoalsForCase(paCase.id) : [];
 
   const highlightSessionVisible =
     !!highlightSessionId && recentSessions.some((s) => s.id === highlightSessionId);
@@ -95,11 +94,6 @@ export default async function PERCaseStagePage({
   }
 
   const isCaseHighlighted = highlightCaseId === paCase.id;
-
-  // Con un solo caso activo /per redirige acá mismo, así que el botón solo tiene sentido si hay más de uno.
-  const activeCaseCount = await prisma.pACase.count({
-    where: { perId: profile.id, isDemo, status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] } },
-  });
 
   return (
     <AppShell user={user}>

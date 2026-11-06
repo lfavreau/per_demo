@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 import AppShell from "@/components/shell/AppShell";
 import CaseName from "@/components/cases/CaseName";
 import { formatStageHeading, mapCaseStatusToLabel } from "@/lib/nomenclatures";
-import { getCaseAgendaPreview, type CaseAgendaPreview } from "@/server/services/itinerary.service";
+import { getCasesAgendaPreviews, type CaseAgendaPreview } from "@/server/services/itinerary.service";
 
 export default async function PERDashboardPage({
   searchParams,
@@ -59,7 +59,7 @@ export default async function PERDashboardPage({
       isDemo,
       status: { notIn: ["EGRESO", "RETIRO_VOLUNTARIO", "DESERCION"] },
     },
-    select: { id: true, code: true, alias: true, status: true },
+    select: { id: true, code: true, alias: true, status: true, stage: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -69,19 +69,10 @@ export default async function PERDashboardPage({
 
   // Qué le toca hacer en cada caso: lo que hay que corregir va primero, luego lo que sigue.
   const URGENCY: Record<CaseAgendaPreview["kind"], number> = { RETIRO: 0, CORREGIR: 1, SIGUIENTE: 2, REVISION: 3, COMPLETA: 4 };
-  const cases = (
-    await Promise.all(
-      activeCases.map(async (c) => {
-        let preview: CaseAgendaPreview | null = null;
-        try {
-          preview = await getCaseAgendaPreview(c.id, isDemo);
-        } catch {
-          // Si un caso no se puede resumir, igual aparece en la lista (sin vista previa).
-        }
-        return { ...c, preview };
-      })
-    )
-  ).sort((a, b) => (a.preview ? URGENCY[a.preview.kind] : 5) - (b.preview ? URGENCY[b.preview.kind] : 5));
+  const previews = await getCasesAgendaPreviews(activeCases.map((c) => ({ id: c.id, stage: c.stage })));
+  const cases = activeCases
+    .map((c) => ({ ...c, preview: previews.get(c.id) ?? null }))
+    .sort((a, b) => (a.preview ? URGENCY[a.preview.kind] : 5) - (b.preview ? URGENCY[b.preview.kind] : 5));
 
   return (
     <AppShell user={user}>

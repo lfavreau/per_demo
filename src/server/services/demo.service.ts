@@ -183,11 +183,14 @@ export async function resetDemoData(): Promise<boolean> {
  */
 export async function ensureDemoWindow(now = new Date()): Promise<{ reset: boolean }> {
   try {
-    const baseline = await prisma.setting.findUnique({ where: { key: DEMO_BASELINE_KEY }, select: { key: true } });
+    // La línea base es un JSON enorme: solo se pregunta si existe. Las dos lecturas van en paralelo.
+    const [baseline, current] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: DEMO_BASELINE_KEY }, select: { key: true } }),
+      prisma.setting.findUnique({ where: { key: DEMO_WINDOW_KEY } }),
+    ]);
     if (!baseline) return { reset: false }; // sin línea base el reinicio no está activo
 
     const stamp = now.toISOString();
-    const current = await prisma.setting.findUnique({ where: { key: DEMO_WINDOW_KEY } });
     const startedAt = current ? new Date(current.value).getTime() : NaN;
     if (current && Number.isFinite(startedAt) && now.getTime() - startedAt < DEMO_WINDOW_MINUTES * 60_000) {
       return { reset: false };

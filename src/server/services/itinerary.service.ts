@@ -331,9 +331,58 @@ export function summarizeCaseAgenda(state: ItineraryStateForAgenda): CaseAgendaP
   return about(undefined, "COMPLETA");
 }
 
-/** Vista previa del itinerario de un caso para el selector de casos del PER. */
-export async function getCaseAgendaPreview(paCaseId: string, isDemo: boolean): Promise<CaseAgendaPreview> {
-  return summarizeCaseAgenda(await getItineraryState(paCaseId, isDemo));
+/**
+ * Vista previa del itinerario de varios casos para el selector del PER, con una sola consulta en vez de armar
+ * el estado completo de cada caso (que incluye eventos, sesiones y la compuerta de avance de etapa).
+ * Una actividad de otra etapa que sigue abierta solo puede ser una reabierta: avanzar de etapa exige validarlas.
+ */
+export async function getCasesAgendaPreviews(cases: Array<{ id: string; stage: string }>): Promise<Map<string, CaseAgendaPreview>> {
+  const tasks = cases.length
+    ? await prisma.task.findMany({
+        where: { paCaseId: { in: cases.map((c) => c.id) }, instrument: { activityKey: { not: null } } },
+        select: { id: true, paCaseId: true, title: true, status: true, contentJson: true, instrument: { select: { activityKey: true, triggerCondition: true } } },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const OPEN_OUT = ["VALIDADA", "NO_APLICA", "CANCELADA"];
+  const result = new Map<string, CaseAgendaPreview>();
+
+  for (const paCase of cases) {
+    const stage = paCase.stage as CaseStage;
+    const own = tasks.filter((t) => t.paCaseId === paCase.id);
+    const byKey = new Map(own.map((t) => [t.instrument!.activityKey as string, t]));
+    const toState = (step: ItineraryStepDef, task: (typeof own)[number] | undefined): ItineraryStepState => ({
+      activityKey: step.activityKey,
+      title: step.title,
+      stage: step.stage,
+      kind: task && ["VALIDADA", "NO_APLICA"].includes(task.status) ? "COMPLETED" : task ? "CURRENT" : "UPCOMING",
+      taskId: task?.id,
+      status: task?.status,
+      submissionMode: step.submissionMode,
+      optional: step.optional,
+    });
+
+    const carriedOver: ItineraryStepState[] = [];
+    for (const task of own) {
+      const step = getStepByActivityKey(task.instrument!.activityKey as string);
+      if (!step || step.stage === stage || step.triggerCondition !== "SEQUENTIAL" || OPEN_OUT.includes(task.status)) continue;
+      carriedOver.push(toState(step, task));
+    }
+    const sequential = getStepsForStage(stage).filter((s) => s.triggerCondition === "SEQUENTIAL");
+    const withdrawal = own.find((t) => t.instrument?.triggerCondition === "ON_WITHDRAWAL");
+
+    result.set(
+      paCase.id,
+      summarizeCaseAgenda({
+        stage,
+        steps: [...carriedOver, ...sequential.map((step) => toState(step, byKey.get(step.activityKey)))],
+        pendingWithdrawalStep: withdrawal
+          ? { activityKey: withdrawal.instrument!.activityKey as string, title: withdrawal.title, taskId: withdrawal.id, status: withdrawal.status, contentJson: withdrawal.contentJson }
+          : null,
+      })
+    );
+  }
+  return result;
 }
 
 interface SubmitFieldValues {
